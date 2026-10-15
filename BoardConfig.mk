@@ -33,12 +33,13 @@ OVERRIDE_TARGET_FLATTEN_APEX := true
 # (cloned to /tmp/a5s_kernel). Verified: arch/arm64/configs/oppo6765_18511_defconfig
 # and arch/arm64/boot/dts/mediatek/oppo6765_18511.dts exist; defconfig sets
 # CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE=y with mediatek/mt6765, so Image.gz-dtb
-# = gzip Image + single 92534-byte mt6765 base DTB trailer (measured on both
-# the J0shua prebuilt and the A.46 dump kernel). The board overlay
+# = gzip Image + single 92534-byte mt6765 base DTB trailer (measured on the
+# prebuilt kernel; identical to the A.46 dump kernel). The board overlay
 # (oppo6765_18511) is merged at boot by LK from the odmdtbo partition — its
 # overlay build toggle is off in the defconfig; twrp.fstab carries /odmdtbo.
-# Device kernels are "4.9.77+" built with Linaro GCC 6.3.1 (J0shua prebuilt,
-# dump A.46); this source's Makefile is at 4.9.80 (same tree, minor bump).
+# Device kernel is "4.9.77+" built with Linaro GCC 6.3.1 (2021-03-19, the
+# same image as dump A.46); this source's Makefile is at 4.9.80 (same tree,
+# minor bump).
 # Touch drivers in the defconfig: ILI9881H, NT36xxx (novatek) host-dl SPI,
 # Himax HX83112, FT8006P — matching the vendored firmware set.
 TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
@@ -88,8 +89,11 @@ BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 
 # Kernel - prebuilt
-# J0shua reference ships prebuilt/Image.gz-dtb (9.3M, stock-derived);
-# copied here as prebuilt/kernel and enabled by default like his tree.
+# Kernel extracted from the working TWRP 3.7.0_9-1 recovery for this device
+# (tmp/oppo_a5s_twrp1_kernel.zip): kernel.gz is the complete Image.gz-dtb
+# (9979567 = gzip Image + 92534-byte mt6765 DTB), byte-identical to the
+# A.46 dump boot kernel (Linux 4.9.77+, built 2021-03-19; config identical
+# to stock recovery per the zip's INFO.txt).
 TARGET_FORCE_PREBUILT_KERNEL := true
 ifeq ($(TARGET_FORCE_PREBUILT_KERNEL),true)
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel

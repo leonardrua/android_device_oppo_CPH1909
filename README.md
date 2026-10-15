@@ -14,8 +14,10 @@ Minimal standalone TWRP tree. Builds `omni_CPH1909` recovery only
   populated `vendor/` tree.
 - `device.mk` — copies recovery ramdisk init scripts plus `recovery/root/vendor`
   blobs (gatekeeper/keymaster services, mcRegistry, touch firmware, manifest).
-- `prebuilt/kernel` — prebuilt `Image.gz-dtb` (9.3M) from the J0shua CPH1909
-  reference, enabled via `TARGET_FORCE_PREBUILT_KERNEL`.
+- `prebuilt/kernel` — prebuilt `Image.gz-dtb` (9979567) extracted from the
+  working TWRP 3.7.0_9-1 recovery for this device
+  (`tmp/oppo_a5s_twrp1_kernel.zip`, its `kernel.gz`), byte-identical to the
+  A.46 dump boot kernel; enabled via `TARGET_FORCE_PREBUILT_KERNEL`.
 - `recovery/root/etc/twrp.fstab` — TWRP mount table aligned with the stock
   recovery fstab from recovery.img (SHA-256
   `d95131864444640c91eac2352e79568928f822ef5b0706d7fc283c16934f462a`,
@@ -60,10 +62,11 @@ same ConfigFS `mtp.gs0` USB setup, FBE crypto flags
 (`TW_INCLUDE_CRYPTO_FBE + TW_INCLUDE_FBE_METADATA_DECRYPT`, unlike this
 tree's FDE-only setting). Its `recovery/root/vendor` (gatekeeper/keymaster
 services, mcRegistry, novatek firmware, manifest) and `prebuilt/Image.gz-dtb`
-are vendored here. Its prebuilt kernel differs from stock (`9738426` vs
-`9977596` bytes) — custom-built `Image.gz-dtb`, boots with the 27M Image +
-92k DTB layout. Its `twrp.fstab` is the minimal working set (no odm/modem
-backups); this tree keeps the superset with backup flags.
+are vendored here. Its own prebuilt kernel (`9738426` bytes, custom
+`Image.gz-dtb`) was later replaced in this tree by the kernel extracted
+from the working TWRP 3.7.0_9-1 build (see below). Its `twrp.fstab` is the
+minimal working set (no odm/modem backups); this tree keeps the superset
+with backup flags.
 
 ## ROM dump verification (tmp/cph1909-rom-dump)
 
@@ -87,8 +90,9 @@ build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
   `vendor/manifest.xml` differ from the A.46 dump but are byte-identical
   to the working TWRP ramdisk — kept as-is (working set).
 - Dump boot kernel (`9979567` bytes, gzip Image + 92534-byte DTB) is the
-  newer A.46 stock; this tree keeps the J0shua prebuilt kernel that the
-  working TWRP boots with.
+  A.46 stock — and exactly what this tree now uses as `prebuilt/kernel`
+  (extracted from the working TWRP 3.7.0_9-1 recovery; byte-identical,
+  config identical to stock recovery).
 - Dump `recovery.img` is an MTK `IMGDIF2` recovery-from-boot patch, not a
   flashable image; the stock ramdisk reference remains
   `tmp/oppo_a5s_stock_recovery_extracted.zip`.
@@ -110,17 +114,17 @@ Cloned to /tmp/a5s_kernel (1.1G) and verified against this tree:
 - The defconfig produces `Image.gz-dtb` the same way stock does:
   `CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE=y` with
   `CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES="mediatek/mt6765"` — a gzip
-  Image followed by a single FDT trailer. Measured: both the J0shua
-  prebuilt and the A.46 dump kernel carry an identical-size **92534-byte**
+  Image followed by a single FDT trailer. Measured on the prebuilt kernel
+  (identical to the A.46 dump kernel): a **92534-byte**
   appended `mt6765` base DTB. The board overlay `oppo6765_18511` is *not*
   built into the kernel image (`CONFIG_BUILD_ARM64_DTB_OVERLAY_IMAGE` is
   off; only its `_NAMES` var is set) — LK merges it at boot from the
   `odmdtbo` partition, which `twrp.fstab` exposes as the `/odmdtbo`
   backup/flash target.
-- Version: source Makefile is 4.9.80; both device kernels identify as
-  `Linux version 4.9.77+ ... (Linaro GCC 6.3-2017.02)` (J0shua prebuilt
-  built 2019-03-16, dump A.46 built 2021-03-19) — same tree, minor version
-  bump, same toolchain.
+- Version: source Makefile is 4.9.80; the device kernel identifies as
+  `Linux version 4.9.77+ ... (Linaro GCC 6.3-2017.02)` built 2021-03-19
+  (prebuilt == dump A.46 image) — same tree, minor version bump, same
+  toolchain.
 - Defconfig touch drivers confirm the vendored firmware set:
   `CONFIG_TOUCHSCREEN_ILI9881H=y`, `CONFIG_TOUCHSCREEN_NT36xxx_HOSTDL_SPI=y`
   (novatek), `CONFIG_TOUCHSCREEN_HIMAX_IC_HX83112=y`, FT8006P. Goodix
@@ -128,7 +132,7 @@ Cloned to /tmp/a5s_kernel (1.1G) and verified against this tree:
   though `CONFIG_GT1151_FIRMWARE="firmware2"` explains the
   `gt1151_default_firmware2.img` name — kept as harmless coverage.
 - Build stays prebuilt (`TARGET_FORCE_PREBUILT_KERNEL := true`, proven
-  J0shua Image.gz-dtb); the source settings above document what a
+  TWRP 3.7.0_9-1 Image.gz-dtb); the source settings above document what a
   from-source build would use.
 
 ## GitHub Actions Workflows
