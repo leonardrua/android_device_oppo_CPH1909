@@ -101,4 +101,35 @@ build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
   GT1151). Kernel drivers request these by the same names from
   `/vendor/firmware` in the ramdisk.
 
+## Kernel source (https://github.com/yeojhenrie/A5S-8.1-kernel-source)
+
+Cloned to /tmp/a5s_kernel (1.1G) and verified against this tree:
+
+- `arch/arm64/configs/oppo6765_18511_defconfig` — the exact
+  `TARGET_KERNEL_CONFIG` in `BoardConfig.mk` — exists, as does
+  `arch/arm64/boot/dts/mediatek/oppo6765_18511.dts`.
+- The defconfig produces `Image.gz-dtb` the same way stock does:
+  `CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE=y` with
+  `CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES="mediatek/mt6765"` — a gzip
+  Image followed by a single FDT trailer. Measured: both the J0shua
+  prebuilt and the A.46 dump kernel carry an identical-size **92534-byte**
+  appended `mt6765` base DTB. The board overlay `oppo6765_18511` is *not*
+  built into the kernel image (`CONFIG_BUILD_ARM64_DTB_OVERLAY_IMAGE` is
+  off; only its `_NAMES` var is set) — LK merges it at boot from the
+  `odmdtbo` partition, which `twrp.fstab` exposes as the `/odmdtbo`
+  backup/flash target.
+- Version: source Makefile is 4.9.80; both device kernels identify as
+  `Linux version 4.9.77+ ... (Linaro GCC 6.3-2017.02)` (J0shua prebuilt
+  built 2019-03-16, dump A.46 built 2021-03-19) — same tree, minor version
+  bump, same toolchain.
+- Defconfig touch drivers confirm the vendored firmware set:
+  `CONFIG_TOUCHSCREEN_ILI9881H=y`, `CONFIG_TOUCHSCREEN_NT36xxx_HOSTDL_SPI=y`
+  (novatek), `CONFIG_TOUCHSCREEN_HIMAX_IC_HX83112=y`, FT8006P. Goodix
+  GT1151 is left unconfigured (`# CONFIG_TOUCHSCREEN_MTK_GT1151 is not set`)
+  though `CONFIG_GT1151_FIRMWARE="firmware2"` explains the
+  `gt1151_default_firmware2.img` name — kept as harmless coverage.
+- Build stays prebuilt (`TARGET_FORCE_PREBUILT_KERNEL := true`, proven
+  J0shua Image.gz-dtb); the source settings above document what a
+  from-source build would use.
+
 

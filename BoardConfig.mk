@@ -29,8 +29,18 @@ BOARD_HAS_MTK_HARDWARE := true
 # APEX
 OVERRIDE_TARGET_FLATTEN_APEX := true
 
-# This repository's oppo6765_18511_defconfig builds Image.gz-dtb with the
-# MT6765 base DTB and the oppo6765_18511 board overlay.
+# Kernel source reference: https://github.com/yeojhenrie/A5S-8.1-kernel-source
+# (cloned to /tmp/a5s_kernel). Verified: arch/arm64/configs/oppo6765_18511_defconfig
+# and arch/arm64/boot/dts/mediatek/oppo6765_18511.dts exist; defconfig sets
+# CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE=y with mediatek/mt6765, so Image.gz-dtb
+# = gzip Image + single 92534-byte mt6765 base DTB trailer (measured on both
+# the J0shua prebuilt and the A.46 dump kernel). The board overlay
+# (oppo6765_18511) is merged at boot by LK from the odmdtbo partition — its
+# overlay build toggle is off in the defconfig; twrp.fstab carries /odmdtbo.
+# Device kernels are "4.9.77+" built with Linaro GCC 6.3.1 (J0shua prebuilt,
+# dump A.46); this source's Makefile is at 4.9.80 (same tree, minor bump).
+# Touch drivers in the defconfig: ILI9881H, NT36xxx (novatek) host-dl SPI,
+# Himax HX83112, FT8006P — matching the vendored firmware set.
 TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
 TARGET_KERNEL_ARCH := arm64
