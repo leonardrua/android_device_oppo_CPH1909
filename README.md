@@ -35,19 +35,18 @@ that build exactly.
 
 The recovery ramdisk uses `init.recovery.mt6765.rc` for Trustonic, Keymaster,
 Gatekeeper, keystore services, plus the stock MT6765 preloader aliases.
-`init.recovery.usb.rc` applies the CPH1920 MTP fix verbatim
-(SQR11211/android_device_OPPO_CPH1920, commit `4f007b8` tag `MTP-fix`,
-"Fix MTP via ConfigFS gadget", cloned to /tmp/sqr_cph1920): ConfigFS gadget
-`g1` on `on init` with FunctionFS MTP (`ffs.mtp` + `/dev/usb-ffs/mtp` mount),
-`musb-hdrc` UDC, single `mtp,adb` trigger, stock CPH1909 recovery USB ID
-`18d1:d001` (CPH1920 uses `22d9:2765`). The TWRP default USB init is disabled
-to avoid competing gadget setup. USB mass-storage LUNs map to
-`mass_storage.0` in `BoardConfig.mk` (same as CPH1920).
+`init.recovery.usb.rc` sets up the ConfigFS gadget `g1` on `on init`
+with FunctionFS MTP (`ffs.mtp` + `/dev/usb-ffs/mtp` mount), `musb-hdrc`
+UDC, stock CPH1909 recovery USB ID `18d1:d001`, and `mass_storage.0`
+function matching `BoardConfig.mk`. Includes robust triggers for `adb`,
+`sideload`, `mtp`, and `mtp,adb`. The TWRP default USB init is disabled
+to avoid competing gadget setup.
 `ueventd.reserve.rc` carries the stock opporeserve1 rules.
 `sbin/hwservicemanager`, `system/lib64` binder/crypto/hidl runtime, and
-`vendor/lib64` gatekeeper/keymaster libs are vendored from the CPH1920
-reference. `twrp.fstab` storage nodes match its reference fstab:
-`mmcblk1p1/mmcblk1` for SD, `sda1/sda` for OTG.
+`vendor/lib64` gatekeeper/keymaster/Trustonic libs (including `libMcClient.so`
+and `libkeymaster_staging.so` from the ROM dump, plus all 30 `mcRegistry`
+trustlets) are vendored. `twrp.fstab` storage nodes: `mmcblk1p1/mmcblk1` for
+SD, `sda1/sda` for OTG (`/usb_otg` auto).
 
 CPH1909 vs CPH1920: same MT6765/project 18511 hardware; per the CPH1920
 README the only difference is CPH1920 lacks fingerprint hardware. The CPH1920

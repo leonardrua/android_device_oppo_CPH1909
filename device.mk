@@ -31,14 +31,46 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libkeymaster_messages.so:root/vendor/lib64/libkeymaster_messages.so \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libkeymaster_portable.so:root/vendor/lib64/libkeymaster_portable.so \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libsoftkeymasterdevice.so:root/vendor/lib64/libsoftkeymasterdevice.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/libMcClient.so:root/vendor/lib64/libMcClient.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libbinder.so:root/system/lib64/libbinder.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libcrypto.so:root/system/lib64/libcrypto.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libcutils.so:root/system/lib64/libcutils.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libhidlbase.so:root/system/lib64/libhidlbase.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libhidltransport.so:root/system/lib64/libhidltransport.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libhwbinder.so:root/system/lib64/libhwbinder.so \
+    $(DEVICE_PATH)/recovery/root/system/lib64/libkeymaster_staging.so:root/system/lib64/libkeymaster_staging.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libutils.so:root/system/lib64/libutils.so \
     $(DEVICE_PATH)/recovery/root/system/lib64/libvndksupport.so:root/system/lib64/libvndksupport.so \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/020f0000000000000000000000000000.drbin:root/vendor/app/mcRegistry/020f0000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/020f0000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/020f0000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/030b0000000000000000000000000000.drbin:root/vendor/app/mcRegistry/030b0000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/030b0000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/030b0000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/030d0000000000000000000000000000.drbin:root/vendor/app/mcRegistry/030d0000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/030d0000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/030d0000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/04320000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/04320000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/05060000000000000000000000000000.tabin:root/vendor/app/mcRegistry/05060000000000000000000000000000.tabin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/05070000000000000000000000000000.drbin:root/vendor/app/mcRegistry/05070000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/05070000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/05070000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/05110000000000000000000000000000.tabin:root/vendor/app/mcRegistry/05110000000000000000000000000000.tabin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/05120000000000000000000000000000.drbin:root/vendor/app/mcRegistry/05120000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/05120000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/05120000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/07010000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/07010000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/0706000000000000000000000000004d.tlbin:root/vendor/app/mcRegistry/0706000000000000000000000000004d.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/07061000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/07061000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/070f0000000000000000000000000a0a.tlbin:root/vendor/app/mcRegistry/070f0000000000000000000000000a0a.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/07150000000000000000000000000000.drbin:root/vendor/app/mcRegistry/07150000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/07150000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/07150000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/07170000000000000000000000000000.drbin:root/vendor/app/mcRegistry/07170000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/07170000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/07170000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/08010203000000000000000000000000.tabin:root/vendor/app/mcRegistry/08010203000000000000000000000000.tabin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/08030000000000000000000000000000.tabin:root/vendor/app/mcRegistry/08030000000000000000000000000000.tabin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/08080000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/08080000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/09070000000000000000000000000000.drbin:root/vendor/app/mcRegistry/09070000000000000000000000000000.drbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/09070000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/09070000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/09080000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/09080000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/09080000000000000000000000000001.tlbin:root/vendor/app/mcRegistry/09080000000000000000000000000001.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/09190000000000000000000000000000.tlbin:root/vendor/app/mcRegistry/09190000000000000000000000000000.tlbin \
+    $(DEVICE_PATH)/recovery/root/vendor/app/mcRegistry/511ead0a000000000000000000000000.tabin:root/vendor/app/mcRegistry/511ead0a000000000000000000000000.tabin \
     $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_cost_fw.bin:root/vendor/firmware/novatek_cost_fw.bin \
     $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_cost_fw_mp.bin:root/vendor/firmware/novatek_cost_fw_mp.bin \
     $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_skyw_fw.bin:root/vendor/firmware/novatek_skyw_fw.bin \

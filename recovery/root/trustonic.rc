@@ -4,6 +4,8 @@ on init
     mount ext4 /dev/block/platform/bootdevice/by-name/persist /vendor/persist rw
 
 on post-fs
+    mkdir /vendor/persist 0771 system system
+    mount ext4 /dev/block/platform/bootdevice/by-name/persist /vendor/persist rw
     chown system system /vendor/persist
     chmod 0771 /vendor/persist
 
@@ -40,28 +42,11 @@ on property:vold.decrypt=trigger_restart_framework
     mkdir /data/misc/mcRegistry 0775 system system
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry -- (FDE encrypted)"
 
-#service rda /vendor/bin/rda
-#    class main
-#    user shell
-#    group shell
-
-# Start Daemon (Registry directories should already be present)
-##ifndef ODM_WT_EDIT
-#service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/070b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/020b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030c0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07070000000000000000000000000000.drbin  -r /vendor/app/mcRegistry/5020170115e016302017012521300000.drbin -r /vendor/app/mcRegistry/40188311faf343488db888ad39496f9a.drbin
-#    user system
-#    group system
-#    class core
-#    priority -20
-#    oneshot
-
-##else
-    #ifdef VENDOR_EDIT
-    #Hongdao.yu@BSP.Fingerprint.Basic, 2018/12/25, modify for drfp in TRUSTONIC
-service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/070b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/020b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030c0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07070000000000000000000000000000.drbin  -r /vendor/app/mcRegistry/5020170115e016302017012521300000.drbin -r /vendor/app/mcRegistry/40188311faf343488db888ad39496f9a.drbin -r /vendor/app/mcRegistry/030d0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/09070000000000000000000000000000.drbin
-    #endif /* VENDOR_EDIT */
+# Start Daemon with all Trustonic driver applets present in recovery ramdisk
+service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030d0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07150000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07170000000000000000000000000000.drbin -r /vendor/app/mcRegistry/09070000000000000000000000000000.drbin
     user system
     group system
     class core
     priority -20
     oneshot
-##endif
+
