@@ -53,6 +53,9 @@ TARGET_SCREEN_DENSITY := 480
 # Recovery image configuration
 TARGET_NO_KERNEL := false
 TARGET_NO_RECOVERY := false
+# build/core/config.mk: PRODUCT_SHIPPING_API_LEVEL >= 27 (Android 8.1)
+# requires mke2fs (e2fsprogs) for ext4 image tooling instead of make_ext4fs.
+TARGET_USES_MKE2FS := true
 BOARD_BUILD_SYSTEM_ROOT_IMAGE := false
 BOARD_USES_RECOVERY_AS_BOOT := false
 AB_OTA_UPDATER := false
