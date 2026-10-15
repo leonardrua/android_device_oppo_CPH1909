@@ -7,11 +7,24 @@ TARGET_NO_RADIOIMAGE := true
 
 TARGET_ARCH := arm64
 TARGET_ARCH_VARIANT := armv8-a
-TARGET_CPU_VARIANT := cortex-a53
+TARGET_CPU_ABI := arm64-v8a
+TARGET_CPU_ABI2 := 
+TARGET_CPU_VARIANT := generic
+TARGET_CPU_VARIANT_RUNTIME := generic
+
 TARGET_2ND_ARCH := arm
 TARGET_2ND_ARCH_VARIANT := armv7-a-neon
-TARGET_2ND_CPU_VARIANT := cortex-a53
-TARGET_USES_64_BIT_BINDER := true
+TARGET_2ND_CPU_ABI := armeabi-v7a
+TARGET_2ND_CPU_ABI2 := armeabi
+TARGET_2ND_CPU_VARIANT := generic
+TARGET_2ND_CPU_VARIANT_RUNTIME := generic
+
+# These two are for MTK Chipsets only
+BOARD_USES_MTK_HARDWARE := true
+BOARD_HAS_MTK_HARDWARE := true
+
+# APEX
+OVERRIDE_TARGET_FLATTEN_APEX := true
 
 # This repository's oppo6765_18511_defconfig builds Image.gz-dtb with the
 # MT6765 base DTB and the oppo6765_18511 board overlay.
@@ -19,7 +32,11 @@ TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
 TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
-BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
+BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
+BOARD_KERNEL_IMAGE_NAME := Image
+TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
+TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 
 # Values decoded from rom-dump/boot.img (legacy boot image, header v0).
 BOARD_KERNEL_BASE := 0x40078000
@@ -64,8 +81,15 @@ RECOVERY_SDCARD_ON_DATA := true
 TW_EXCLUDE_DEFAULT_USB_INIT := true
 TW_NO_USB_STORAGE := false
 TARGET_USE_CUSTOM_LUN_FILE_PATH := /config/usb_gadget/g1/functions/mass_storage.0/lun.%d/file
+TW_EXTERNAL_STORAGE_PATH := /external_sd
+TW_USB_STORAGE_PATH := /usb_otg
+TW_INCLUDE_NTFS_3G := true
+TW_INCLUDE_FUSE_EXFAT := true
 TW_Y_OFFSET := 50
 TW_H_OFFSET := -50
 TWRP_INCLUDE_LOGCAT := true
 TARGET_USES_LOGD := true
 
+# --- Reboot Menu Customization 
+TW_HAS_DOWNLOAD_MODE := false
+TW_NO_REBOOT_BOOTLOADER := false
