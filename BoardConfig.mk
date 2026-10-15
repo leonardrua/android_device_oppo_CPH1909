@@ -7,11 +7,24 @@ TARGET_NO_RADIOIMAGE := true
 
 TARGET_ARCH := arm64
 TARGET_ARCH_VARIANT := armv8-a
-TARGET_CPU_VARIANT := cortex-a53
+TARGET_CPU_ABI := arm64-v8a
+TARGET_CPU_ABI2 := 
+TARGET_CPU_VARIANT := generic
+TARGET_CPU_VARIANT_RUNTIME := generic
+
 TARGET_2ND_ARCH := arm
 TARGET_2ND_ARCH_VARIANT := armv7-a-neon
-TARGET_2ND_CPU_VARIANT := cortex-a53
-TARGET_USES_64_BIT_BINDER := true
+TARGET_2ND_CPU_ABI := armeabi-v7a
+TARGET_2ND_CPU_ABI2 := armeabi
+TARGET_2ND_CPU_VARIANT := generic
+TARGET_2ND_CPU_VARIANT_RUNTIME := generic
+
+# These two are for MTK Chipsets only
+BOARD_USES_MTK_HARDWARE := true
+BOARD_HAS_MTK_HARDWARE := true
+
+# APEX
+OVERRIDE_TARGET_FLATTEN_APEX := true
 
 # This repository's oppo6765_18511_defconfig builds Image.gz-dtb with the
 # MT6765 base DTB and the oppo6765_18511 board overlay.
@@ -19,15 +32,24 @@ TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
 TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
-BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
+BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
+BOARD_KERNEL_IMAGE_NAME := Image
+TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
+TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
+
+# Security patch level
+VENDOR_SECURITY_PATCH := 2021-08-01
+PLATFORM_SECURITY_PATCH := 2099-12-31
+PLATFORM_VERSION := 8.1.0
 
 # Values decoded from rom-dump/boot.img (legacy boot image, header v0).
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_OFFSET := 0x00008000
 BOARD_RAMDISK_OFFSET := 0x14f88000
-BOARD_TAGS_OFFSET := 0x13f88000
+BOARD_KERNEL_TAGS_OFFSET := 0x13f88000
 BOARD_KERNEL_PAGESIZE := 2048
-BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2
+BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 buildvariant=user androidboot.usbconfig=mtp,adb
 
 # Sizes from the supplied MT6765 EMMC scatter file; values are bytes.
 BOARD_FLASH_BLOCK_SIZE := 131072
@@ -44,10 +66,15 @@ BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_ODMIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := ext4
+TARGET_COPY_OUT_VENDOR := vendor
 
 # Keep Android recovery on the stock-format fstab. TWRP/Omni products use the
 # extended TWRP table; device.mk still copies the stock fstab into vendor.
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6765
+
+TARGET_USERIMAGES_USE_EXT4 := true
+TARGET_USERIMAGES_USE_F2FS := true
+
 ifneq ($(filter twrp_% omni_%,$(TARGET_PRODUCT)),)
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/etc/twrp.fstab
 endif
@@ -69,8 +96,15 @@ RECOVERY_SDCARD_ON_DATA := true
 TW_EXCLUDE_DEFAULT_USB_INIT := true
 TW_NO_USB_STORAGE := false
 TARGET_USE_CUSTOM_LUN_FILE_PATH := /config/usb_gadget/g1/functions/mass_storage.0/lun.%d/file
+TW_EXTERNAL_STORAGE_PATH := /external_sd
+TW_USB_STORAGE_PATH := /usb_otg
+TW_INCLUDE_NTFS_3G := true
+TW_INCLUDE_FUSE_EXFAT := true
 TW_Y_OFFSET := 50
 TW_H_OFFSET := -50
 TWRP_INCLUDE_LOGCAT := true
 TARGET_USES_LOGD := true
 
+# --- Reboot Menu Customization 
+TW_HAS_DOWNLOAD_MODE := false
+TW_NO_REBOOT_BOOTLOADER := false
