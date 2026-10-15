@@ -124,6 +124,17 @@ jobs:
           path: output/
           retention-days: 14
 
+      - name: Set Release Metadata
+        if: ${{ inputs.create_release == true || startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+            echo "RELEASE_TITLE=TWRP Recovery for OPPO A5s (CPH1909) ${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          else
+            echo "RELEASE_TAG=build-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+            echo "RELEASE_TITLE=TWRP Recovery Build #${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+          fi
+
       - name: Publish GitHub Release
         if: ${{ inputs.create_release == true || startsWith(github.ref, 'refs/tags/v') }}
         uses: softprops/action-gh-release@v2
@@ -132,11 +143,11 @@ jobs:
             output/recovery.img
             output/recovery.img.sha256
             output/recovery.img.md5
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
-          name: ${{ startsWith(github.ref, 'refs/tags/') && format('TWRP Recovery for OPPO A5s (CPH1909) {0}', github.ref_name) || format('TWRP Recovery Build #{0}', github.run_number) }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TITLE }}
           body: |
             ### Automated TWRP Recovery Build for OPPO A5s / AX5s (`CPH1909`)
             - Platform: MediaTek MT6765 (`oppo6765_18511`)
-            - Build Variant: `${{ inputs.build_type || 'eng' }}`
-            - Manifest: `${{ inputs.manifest_branch || 'twrp-9.0' }}`
-            - Commit: `${{ github.sha }}`
+            - Build Variant: ${{ inputs.build_type || 'eng' }}
+            - Manifest: ${{ inputs.manifest_branch || 'twrp-9.0' }}
+            - Commit: ${{ github.sha }}
