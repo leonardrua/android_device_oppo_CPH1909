@@ -38,6 +38,11 @@ BOARD_KERNEL_IMAGE_NAME := Image
 TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
 TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 
+# Security patch level
+VENDOR_SECURITY_PATCH := 2021-08-01
+PLATFORM_SECURITY_PATCH := 2099-12-31
+PLATFORM_VERSION := 8.1.0
+
 # Values decoded from rom-dump/boot.img (legacy boot image, header v0).
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_OFFSET := 0x00008000
