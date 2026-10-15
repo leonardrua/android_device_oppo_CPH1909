@@ -74,12 +74,16 @@ PLATFORM_VERSION := 8.1.0
 # and confirmed identical in the ROM dump boot.img (tmp/cph1909-rom-dump,
 # CPH1909EX_11.A.46: base 0x40078000, offsets, cmdline all match).
 # Stock cmdline carries only bootopt + buildvariant (verified: no usbconfig).
+# buildvariant is NOT included here: the build system appends
+# buildvariant=$(TARGET_BUILD_VARIANT) at mkbootimg time, and keeping the
+# stock buildvariant=user too produced a duplicated pair on the image
+# (buildvariant=user buildvariant=eng).
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_OFFSET := 0x00008000
 BOARD_RAMDISK_OFFSET := 0x14f88000
 BOARD_KERNEL_TAGS_OFFSET := 0x13f88000
 BOARD_KERNEL_PAGESIZE := 2048
-BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 buildvariant=user
+BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 
