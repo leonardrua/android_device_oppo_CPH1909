@@ -1,154 +1,172 @@
-name: Build TWRP Recovery
+name: Recovery Build (Legacy)
 
 on:
   workflow_dispatch:
     inputs:
-      manifest_branch:
-        description: 'Minimal TWRP manifest branch'
+      MANIFEST_URL:
+        description: 'MANIFEST_URL (if want to use SSH keys, use git@github.com:XXXXX)'
         required: true
-        default: 'twrp-9.0'
-        type: choice
-        options:
-          - 'twrp-9.0'
-          - 'twrp-8.1'
-      build_type:
-        description: 'Android build variant'
+        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni'
+      MANIFEST_BRANCH:
+        description: 'MANIFEST_BRANCH'
         required: true
-        default: 'eng'
-        type: choice
-        options:
-          - 'eng'
-          - 'userdebug'
-          - 'user'
-      device_branch:
-        description: 'Device tree branch to build'
+        default: 'twrp-8.1'
+      DEVICE_TREE_URL:
+        description: 'DEVICE_TREE_URL'
+        required: true
+        default: 'https://github.com/leonardrua/android_device_oppo_CPH1909'
+      DEVICE_TREE_BRANCH:
+        description: 'DEVICE_TREE_BRANCH'
         required: true
         default: 'recovery'
-        type: string
-      create_release:
-        description: 'Create a GitHub Release with the build artifacts'
+      DEVICE_PATH:
+        description: 'DEVICE_PATH'
+        required: true
+        default: 'device/oppo/CPH1909'
+      COMMON_TREE_URL:
+        description: 'COMMON_TREE_URL (if no common tree, leave blank)'
         required: false
-        default: false
-        type: boolean
-  push:
-    tags:
-      - 'v*'
+      COMMON_PATH:
+        description: 'COMMON_PATH (if no common tree, leave blank)'
+        required: false
+      DEVICE_NAME:
+        description: 'DEVICE_NAME'
+        required: true
+        default: 'CPH1909'
+      MAKEFILE_NAME:
+        description: 'MAKEFILE_NAME'
+        required: true
+        default: 'omni_CPH1909'
+      BUILD_TARGET:
+        description: 'BUILD_TARGET'
+        required: true
+        default: 'recovery'
 
 jobs:
   build:
-    name: Build Recovery Image
+    if: github.event.repository.owner.id == github.event.sender.id
     runs-on: ubuntu-22.04
     permissions:
       contents: write
-
     steps:
-      - name: Checkout Device Tree
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.device_branch || github.ref_name }}
-          path: device_tree
+    - name: Display Run Parameters
+      run: |
+        echo "::group::User Environment Variables"
+        echo "Manifest URL: ${{ github.event.inputs.MANIFEST_URL }}"
+        echo "Manifest Branch: ${{ github.event.inputs.MANIFEST_BRANCH }}"
+        echo "Device Tree URL: ${{ github.event.inputs.DEVICE_TREE_URL }}"
+        echo "Device Tree Branch: ${{ github.event.inputs.DEVICE_TREE_BRANCH }}"
+        echo "Device Path: ${{ github.event.inputs.DEVICE_PATH }}"
+        echo "Device Name: ${{ github.event.inputs.DEVICE_NAME }}"
+        echo "Makefile Name: ${{ github.event.inputs.MAKEFILE_NAME }}"
+        echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}.img"
+        echo "::endgroup::"
 
-      - name: Free Runner Disk Space
-        run: |
-          echo "Initial disk space:"
-          df -h
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
-          sudo docker image prune -a -f || true
-          echo "Disk space after cleanup:"
-          df -h
+    - name: Check Out
+      uses: actions/checkout@v4
 
-      - name: Set up Build Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            git-core gnupg flex bison build-essential zip curl zlib1g-dev \
-            libc6-dev-i386 libncurses5-dev libncurses-dev \
-            libx11-dev lib32z1-dev libgl1-mesa-dev libxml2 libxml2-utils \
-            xsltproc unzip fontconfig rsync bc lzip libssl-dev \
-            python-is-python3
-          sudo apt-get install -y libncurses5 || true
+    - name: Cleanup
+      uses: rokibhasansagar/slimhub_actions@main
 
-      - name: Install Repo Tool
-        run: |
-          mkdir -p ~/bin
-          curl -s https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-          chmod a+x ~/bin/repo
-          echo "$HOME/bin" >> $GITHUB_PATH
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+    - name: Prepare the environment
+      run: |
+        sudo apt update && sudo apt upgrade -y
+        DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
+            linux-modules-extra-$(uname -r) \
+            gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib \
+            libc6-dev lib32ncurses-dev x11proto-core-dev libx11-dev tree lib32z-dev libgl1-mesa-dev libxml2-utils \
+            xsltproc bc ccache lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev \
+            libwxgtk3.0-gtk3-dev libxml2 lzop pngcrush schedtool squashfs-tools \
+            imagemagick libbz2-dev lzma ncftp qemu-user-static libstdc++-10-dev libncurses5 python3 tar
 
-      - name: Initialize & Sync Minimal TWRP Manifest
-        run: |
-          mkdir -p $HOME/work
-          cd $HOME/work
-          MANIFEST_BRANCH="${{ inputs.manifest_branch || 'twrp-9.0' }}"
-          echo "Initializing repo with branch: ${MANIFEST_BRANCH}"
-          repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni.git \
-            -b "${MANIFEST_BRANCH}" --depth=1
-          repo sync -c --no-clone-bundle --no-tags -j$(nproc --all)
+    - name: Install OpenJDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '11'
 
-      - name: Inject Device Tree
-        run: |
-          TARGET_DIR="$HOME/work/device/oppo/CPH1909"
-          mkdir -p "${TARGET_DIR}"
-          rsync -av --exclude='.git' --exclude='tmp' "${GITHUB_WORKSPACE}/device_tree/" "${TARGET_DIR}/"
+    - name: Setup SSH Keys
+      if: ${{ startsWith(github.event.inputs.MANIFEST_URL, 'git@github.com') || 
+          startsWith(github.event.inputs.DEVICE_TREE_URL, 'git@github.com') ||
+          startsWith(github.event.inputs.COMMON_TREE_URL, 'git@github.com') }}
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Build TWRP Recovery Image
-        run: |
-          cd $HOME/work
-          export ALLOW_MISSING_DEPENDENCIES=true
-          source build/envsetup.sh
-          BUILD_TYPE="${{ inputs.build_type || 'eng' }}"
-          lunch "omni_CPH1909-${BUILD_TYPE}"
-          mka recoveryimage -j$(nproc --all)
+    - name: Install repo
+      run: |
+        mkdir ~/bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+        sudo ln -sf ~/bin/repo /usr/bin/repo
 
-      - name: Prepare Output Artifacts
-        run: |
-          OUT_DIR="$HOME/work/out/target/product/CPH1909"
-          mkdir -p "${GITHUB_WORKSPACE}/output"
-          if [ -f "${OUT_DIR}/recovery.img" ]; then
-            cp "${OUT_DIR}/recovery.img" "${GITHUB_WORKSPACE}/output/recovery.img"
-            cd "${GITHUB_WORKSPACE}/output"
-            sha256sum recovery.img > recovery.img.sha256
-            md5sum recovery.img > recovery.img.md5
-            echo "Artifacts prepared successfully:"
-            ls -lh "${GITHUB_WORKSPACE}/output"
-          else
-            echo "::error::recovery.img not found in ${OUT_DIR}"
-            exit 1
-          fi
+    - name: Initialize repo
+      run: |
+        mkdir workspace
+        cd workspace
+        echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
+        git config --global user.name "azwhikaru"
+        git config --global user.email "azwhikaru+37921907@github.com"
+        repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
+      id: pwd
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: TWRP-recovery-CPH1909
-          path: output/
-          retention-days: 14
+    - name: Repo Sync
+      run: |
+        repo sync -j$(nproc --all) --force-sync
+      working-directory: workspace
 
-      - name: Set Release Metadata
-        if: ${{ inputs.create_release == true || startsWith(github.ref, 'refs/tags/v') }}
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-            echo "RELEASE_TITLE=TWRP Recovery for OPPO A5s (CPH1909) ${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          else
-            echo "RELEASE_TAG=build-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
-            echo "RELEASE_TITLE=TWRP Recovery Build #${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
-          fi
+    - name: Clone device tree
+      run: |
+        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
-      - name: Publish GitHub Release
-        if: ${{ inputs.create_release == true || startsWith(github.ref, 'refs/tags/v') }}
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            output/recovery.img
-            output/recovery.img.sha256
-            output/recovery.img.md5
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: ${{ env.RELEASE_TITLE }}
-          body: |
-            ### Automated TWRP Recovery Build for OPPO A5s / AX5s (`CPH1909`)
-            - Platform: MediaTek MT6765 (`oppo6765_18511`)
-            - Build Variant: ${{ inputs.build_type || 'eng' }}
-            - Manifest: ${{ inputs.manifest_branch || 'twrp-9.0' }}
-            - Commit: ${{ github.sha }}
+    - name: Clone common tree
+      if: |
+        github.event.inputs.COMMON_TREE_URL != ''
+        && github.event.inputs.COMMON_PATH != ''
+      run: |
+        git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+
+    - name: Sync Device Dependencies
+      run: |
+        if [ -f "${{ github.event.inputs.DEVICE_PATH }}/${{ github.event.inputs.DEVICE_NAME }}.dependencies" ]; then
+          bash ${GITHUB_WORKSPACE}/scripts/convert.sh ${{ github.event.inputs.DEVICE_PATH }}/${{ github.event.inputs.DEVICE_NAME }}.dependencies
+          repo sync -j$(nproc --all)
+        fi
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+      continue-on-error: true
+
+    - name: Set Swap Space
+      uses: pierotofy/set-swap-space@master
+      with:
+        swap-size-gb: 12
+
+    - name: Switch to Python2
+      run: |
+        sudo apt -y install python2
+        sudo ln -sf /usr/bin/python2 /usr/bin/python
+
+    - name: Building recovery
+      run: |
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: | 
+          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
+          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.zip
+          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*vendor*.img
+        name: ${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_id }}
+        tag_name: ${{ github.run_id }}
+        body: |
+          Manifest: ${{ github.event.inputs.MANIFEST_BRANCH }}
+          Device: ${{ github.event.inputs.DEVICE_NAME }}
+          Target: ${{ github.event.inputs.BUILD_TARGET }}.img
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
