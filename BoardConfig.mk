@@ -57,7 +57,9 @@ VENDOR_SECURITY_PATCH := 2020-10-05
 PLATFORM_SECURITY_PATCH := 2099-12-31
 PLATFORM_VERSION := 8.1.0
 
-# Values decoded from the stock recovery.img header (header v0, pagesize 2048).
+# Values decoded from the stock recovery.img header (header v0, pagesize 2048)
+# and confirmed identical in the ROM dump boot.img (tmp/cph1909-rom-dump,
+# CPH1909EX_11.A.46: base 0x40078000, offsets, cmdline all match).
 # Stock cmdline carries only bootopt + buildvariant (verified: no usbconfig).
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_OFFSET := 0x00008000

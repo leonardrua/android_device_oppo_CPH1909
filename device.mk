@@ -42,7 +42,15 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_cost_fw.bin:root/vendor/firmware/novatek_cost_fw.bin \
     $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_cost_fw_mp.bin:root/vendor/firmware/novatek_cost_fw_mp.bin \
     $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_skyw_fw.bin:root/vendor/firmware/novatek_skyw_fw.bin \
-    $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_skyw_fw_mp.bin:root/vendor/firmware/novatek_skyw_fw_mp.bin
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/novatek_skyw_fw_mp.bin:root/vendor/firmware/novatek_skyw_fw_mp.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/Himax_firmware.bin:root/vendor/firmware/Himax_firmware.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/Himax_firmware_sort.bin:root/vendor/firmware/Himax_firmware_sort.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/ILITEK_FW_HLT.bin:root/vendor/firmware/ILITEK_FW_HLT.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/ILITEK_FW_INX.bin:root/vendor/firmware/ILITEK_FW_INX.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/ILITEK_FW_LEAD_TF.bin:root/vendor/firmware/ILITEK_FW_LEAD_TF.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/ILITEK_FW_TXD.bin:root/vendor/firmware/ILITEK_FW_TXD.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/ILITEK_FW_TXD_TF.bin:root/vendor/firmware/ILITEK_FW_TXD_TF.bin \
+    $(DEVICE_PATH)/recovery/root/vendor/firmware/gt1151_default_firmware2.img:root/vendor/firmware/gt1151_default_firmware2.img
 
 # Crypto / keymaster helpers needed by TWRP decryption live in vendor.
 # Populate vendor/oppo/CPH1909 from the stock dump when available.

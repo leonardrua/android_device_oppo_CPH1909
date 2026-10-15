@@ -66,4 +66,39 @@ are vendored here. Its prebuilt kernel differs from stock (`9738426` vs
 92k DTB layout. Its `twrp.fstab` is the minimal working set (no odm/modem
 backups); this tree keeps the superset with backup flags.
 
+## ROM dump verification (tmp/cph1909-rom-dump)
+
+A full CPH1909 ROM dump (firmware `CPH1909EX_11.A.46_0460_202103191930`,
+build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
+2021-04-05, kernel 4.9.77, ColorOS V5.2.1) was used as ground truth:
+
+- Boot image header (v0, pagesize 2048, base `0x40078000`, offsets
+  kernel `0x8000` / ramdisk `0x14f88000` / tags `0x13f88000`, cmdline
+  `bootopt=64S3,32N2,64N2 buildvariant=user`) matches every
+  `BOARD_*` value in `BoardConfig.mk` exactly.
+- `vendor/etc/fstab.mt6765` confirms `/data` with
+  `forceencrypt=/dev/block/.../metadata` — same flag carried in
+  `twrp.fstab`.
+- Blob cross-check vs dump `vendor/` and `system/`: all 8 vendored
+  `system/lib64` runtime libs, `hwservicemanager`, `mcDriverDaemon`,
+  `libion/libgatekeeper/libkeymaster_*/libsoftkeymasterdevice` and
+  `android.hardware.gatekeeper@1.0-impl.so` are **byte-identical** (the
+  CPH1920 MTP-fix reference blobs are exactly this device's ROM).
+- Gatekeeper/keymaster service binaries, novatek touch firmware and
+  `vendor/manifest.xml` differ from the A.46 dump but are byte-identical
+  to the working TWRP ramdisk — kept as-is (working set).
+- Dump boot kernel (`9979567` bytes, gzip Image + 92534-byte DTB) is the
+  newer A.46 stock; this tree keeps the J0shua prebuilt kernel that the
+  working TWRP boots with.
+- Dump `recovery.img` is an MTK `IMGDIF2` recovery-from-boot patch, not a
+  flashable image; the stock ramdisk reference remains
+  `tmp/oppo_a5s_stock_recovery_extracted.zip`.
+- Touch firmware: the working TWRP ramdisk only ships the 4 novatek blobs.
+  From the dump's `vendor/firmware/` the other panel-vendor firmwares were
+  added for full A5s TP coverage: Himax (`Himax_firmware.bin` +
+  `Himax_firmware_sort.bin`, HX83112), ILITEK (`ILITEK_FW_{HLT,INX,LEAD_TF,TXD,TXD_TF}.bin`,
+  ILI9881 variants per panel source) and Goodix (`gt1151_default_firmware2.img`,
+  GT1151). Kernel drivers request these by the same names from
+  `/vendor/firmware` in the ramdisk.
+
 
