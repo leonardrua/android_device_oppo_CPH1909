@@ -47,3 +47,22 @@ BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := ext4
 
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6765
 
+# Team Win Recovery Project settings. These are consumed only by a compatible
+# TWRP/Omni build; the AOSP product above remains unchanged.
+TW_INCLUDE_CRYPTO := true
+TW_INCLUDE_FBE := true
+TW_INCLUDE_FBE_METADATA_DECRYPT := true
+BOARD_USES_METADATA_PARTITION := true
+TARGET_OTA_ASSERT_DEVICE := CPH1909
+
+TW_THEME := portrait_hdpi
+TW_EXTRA_LANGUAGES := true
+TW_SCREEN_BLANK_ON_BOOT := true
+TW_INPUT_BLACKLIST := "hbtp_vm"
+TW_USE_TOOLBOX := true
+RECOVERY_SDCARD_ON_DATA := true
+TW_Y_OFFSET := 50
+TW_H_OFFSET := -50
+TWRP_INCLUDE_LOGCAT := true
+TARGET_USES_LOGD := true
+

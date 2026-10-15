@@ -48,3 +48,20 @@ confirmed to contain only zero bytes. It also defines `userdata` as 3 GiB
 (`0xC0000000`). There are no stock ODM files to add to the proprietary
 manifest; the manifest therefore covers the vendor partition only.
 
+## Recovery reference
+
+The recovery mount table at `recovery/root/etc/twrp.fstab` adapts the CPH1909
+TWRP reference tree and the stock fstab in the ROM dump. It leaves out ODM
+because that partition is empty on the supplied dump. TWRP-specific options in
+`BoardConfig.mk` are groundwork for a compatible TWRP/Omni build; this repo
+currently defines only the `aosp_CPH1909` product, so it is not yet a standalone
+TWRP build target. Encryption support also depends on the recovery tree and
+matching vendor libraries.
+
+The supplied stock `recovery.img` is a legacy Android boot image with 2048-byte
+pages. Its header reports kernel address `0x40080000`, ramdisk address
+`0x55000000`, and tags address `0x54000000`, matching the base and offsets in
+`BoardConfig.mk`. The compressed kernel carries the same valid base FDT as the
+boot dump. Its ramdisk `etc/recovery.fstab` confirms the metadata-based data
+encryption and the `odmdtbo` by-name node; TWRP exposes `odmdtbo` for backup.
+
