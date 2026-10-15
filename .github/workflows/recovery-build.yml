@@ -20,6 +20,11 @@ on:
           - 'eng'
           - 'userdebug'
           - 'user'
+      device_branch:
+        description: 'Device tree branch to build'
+        required: true
+        default: 'recovery'
+        type: string
       create_release:
         description: 'Create a GitHub Release with the build artifacts'
         required: false
@@ -40,6 +45,7 @@ jobs:
       - name: Checkout Device Tree
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.device_branch || github.ref_name }}
           path: device_tree
 
       - name: Free Runner Disk Space
@@ -126,8 +132,8 @@ jobs:
             output/recovery.img
             output/recovery.img.sha256
             output/recovery.img.md5
-          tag_name: ${{ github.ref_name }}
-          name: TWRP Recovery for OPPO A5s (CPH1909) ${{ github.ref_name }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && format('TWRP Recovery for OPPO A5s (CPH1909) {0}', github.ref_name) || format('TWRP Recovery Build #{0}', github.run_number) }}
           body: |
             ### Automated TWRP Recovery Build for OPPO A5s / AX5s (`CPH1909`)
             - Platform: MediaTek MT6765 (`oppo6765_18511`)
