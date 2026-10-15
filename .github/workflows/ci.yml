@@ -1,0 +1,98 @@
+name: Device Tree CI
+
+on:
+  push:
+    branches: [ "**" ]
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate Device Tree Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ELF utilities
+        run: sudo apt-get update && sudo apt-get install -y binutils file
+
+      - name: Validate PRODUCT_COPY_FILES & tree integrity
+        run: |
+          python3 - << 'EOF'
+          import os, sys, re, subprocess
+
+          print("=== Step 1: Checking PRODUCT_COPY_FILES exist on disk ===")
+          device_mk = open("device.mk").read()
+          copied = re.findall(r"\$\(DEVICE_PATH\)/([^\s:]+)", device_mk)
+          missing = [f for f in copied if not os.path.exists(f)]
+          if missing:
+              print(f"FAILED: {len(missing)} files listed in device.mk do not exist:")
+              for m in missing:
+                  print("  -", m)
+              sys.exit(1)
+          print(f"SUCCESS: All {len(copied)} files in PRODUCT_COPY_FILES exist.")
+
+          print("\n=== Step 2: Checking prebuilt kernel ===")
+          if not os.path.exists("prebuilt/kernel"):
+              print("FAILED: prebuilt/kernel is missing.")
+              sys.exit(1)
+          ksize = os.path.getsize("prebuilt/kernel")
+          if ksize < 5000000:
+              print(f"FAILED: prebuilt/kernel size too small ({ksize} bytes).")
+              sys.exit(1)
+          print(f"SUCCESS: prebuilt/kernel present ({ksize} bytes).")
+
+          print("\n=== Step 3: Checking twrp.fstab configuration ===")
+          fstab = open("recovery/root/etc/twrp.fstab").read()
+          required_mounts = ["/system", "/vendor", "/data", "/boot", "/recovery", "/external_sd", "/usb_otg"]
+          missing_mounts = [m for m in required_mounts if m not in fstab]
+          if missing_mounts:
+              print(f"FAILED: twrp.fstab missing critical mounts: {missing_mounts}")
+              sys.exit(1)
+          print("SUCCESS: twrp.fstab contains all required mount points.")
+
+          print("\n=== Step 4: Checking ELF binary dependencies ===")
+          local_libs = {f for root, dirs, files in os.walk("recovery/root") for f in files if f.endswith(".so")}
+          standard_libs = {
+              "libc.so", "libm.so", "libdl.so", "liblog.so", "libc++.so",
+              "libhardware.so", "android.hardware.keymaster@3.0.so",
+              "android.hardware.gatekeeper@1.0.so", "android.hidl.token@1.0.so"
+          }
+          all_known = local_libs | standard_libs
+
+          elfs = []
+          for root, dirs, files in os.walk("recovery/root"):
+              for f in files:
+                  p = os.path.join(root, f)
+                  try:
+                      out = subprocess.check_output(["file", p]).decode()
+                      if "ELF" in out:
+                          elfs.append(p)
+                  except:
+                      pass
+
+          unresolved = {}
+          for elf in elfs:
+              out = subprocess.check_output(["readelf", "-d", elf], stderr=subprocess.DEVNULL).decode()
+              deps = re.findall(r"\(NEEDED\)\s+Shared library:\s+\[(.*?)\]", out)
+              for d in deps:
+                  if d not in all_known:
+                      unresolved.setdefault(elf, []).append(d)
+
+          if unresolved:
+              print(f"FAILED: Unresolved library dependencies detected: {unresolved}")
+              sys.exit(1)
+          print(f"SUCCESS: All {len(elfs)} ELF binaries/libraries have dependencies accounted for.")
+
+          print("\n=== All validation checks passed successfully! ===")
+          EOF

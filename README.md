@@ -131,4 +131,17 @@ Cloned to /tmp/a5s_kernel (1.1G) and verified against this tree:
   J0shua Image.gz-dtb); the source settings above document what a
   from-source build would use.
 
+## GitHub Actions Workflows
+
+- **`.github/workflows/ci.yml` (Device Tree CI)**: Runs automated integrity and lint checks on every push and PR:
+  - Validates that all files listed in `device.mk` `PRODUCT_COPY_FILES` exist on disk.
+  - Verifies presence and valid size of `prebuilt/kernel`.
+  - Checks critical partition mount paths in `twrp.fstab`.
+  - Verifies ELF dynamic dependencies for all vendored binaries and libraries.
+- **`.github/workflows/recovery-build.yml` (Build TWRP Recovery)**: Automated end-to-end recovery builder via `workflow_dispatch` or release tags (`v*`):
+  - Syncs minimal TWRP manifest (`twrp-9.0` or `twrp-8.1`).
+  - Injects this device tree into `device/oppo/CPH1909`.
+  - Compiles `recoveryimage` using `lunch omni_CPH1909-{eng|userdebug|user}`.
+  - Generates checksums (`.sha256`, `.md5`) and uploads `recovery.img` as a workflow artifact or GitHub Release.
+
 
