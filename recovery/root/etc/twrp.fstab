@@ -1,6 +1,7 @@
-# TWRP mount table for OPPO A5s (CPH1909), adapted from the CPH1909 recovery
-# reference and checked against the stock vendor fstab.
-# The ODM partition is omitted because the supplied device dump confirmed it is empty.
+# TWRP mount table for OPPO A5s (CPH1909), aligned with the stock recovery
+# fstab. ODM is omitted because the supplied dump confirmed it is empty.
+# Stock partitions are exposed for backup; raw partitions use image backups.
+# No wipe flag is assigned to the stock raw partitions.
 # <mount_point> <fs_type> <device> <flags>
 
 /system ext4 /dev/block/platform/bootdevice/by-name/system
@@ -8,23 +9,40 @@
 /system_image emmc /dev/block/platform/bootdevice/by-name/system
 /vendor_image emmc /dev/block/platform/bootdevice/by-name/vendor
 
-/boot emmc /dev/block/platform/bootdevice/by-name/boot
-/recovery emmc /dev/block/platform/bootdevice/by-name/recovery
+/boot emmc /dev/block/platform/bootdevice/by-name/boot flags=backup;flashimg
+/recovery emmc /dev/block/platform/bootdevice/by-name/recovery flags=backup;flashimg
 /cache ext4 /dev/block/platform/bootdevice/by-name/cache
 /data ext4 /dev/block/platform/bootdevice/by-name/userdata flags=forceencrypt=/dev/block/platform/bootdevice/by-name/metadata
-/misc emmc /dev/block/platform/bootdevice/by-name/para
+/misc emmc /dev/block/platform/bootdevice/by-name/para flags=display="Misc";backup;flashimg
 
-/persistent emmc /dev/block/platform/bootdevice/by-name/frp flags=display="frp";backup
-/proinfo emmc /dev/block/platform/bootdevice/by-name/proinfo
-/nvram emmc /dev/block/platform/bootdevice/by-name/nvram flags=backup;flashimg
-/nvcfg ext4 /dev/block/platform/bootdevice/by-name/nvcfg
-/nvdata ext4 /dev/block/platform/bootdevice/by-name/nvdata
-/protect_f ext4 /dev/block/platform/bootdevice/by-name/protect1
-/protect_s ext4 /dev/block/platform/bootdevice/by-name/protect2
+/persistent emmc /dev/block/platform/bootdevice/by-name/frp flags=display="FRP";backup;flashimg
+/proinfo emmc /dev/block/platform/bootdevice/by-name/proinfo flags=backup;flashimg
+/nvram emmc /dev/block/platform/bootdevice/by-name/nvram flags=display="NVRAM";backup;flashimg
+/nvcfg ext4 /dev/block/platform/bootdevice/by-name/nvcfg flags=backup
+/nvdata ext4 /dev/block/platform/bootdevice/by-name/nvdata flags=backup
+/protect_f ext4 /dev/block/platform/bootdevice/by-name/protect1 flags=backup
+/protect_s ext4 /dev/block/platform/bootdevice/by-name/protect2 flags=backup
+/vendor/persist ext4 /dev/block/platform/bootdevice/by-name/persist flags=display="Persist";backup
+/opporeserve ext4 /dev/block/platform/bootdevice/by-name/opporeserve2 flags=display="OPPO Reserve";backup
 /bootloader emmc /dev/block/platform/bootdevice/by-name/lk flags=display="LK";backup;flashimg
-/bootloader2 emmc /dev/block/platform/bootdevice/by-name/lk2
-/logo emmc /dev/block/platform/bootdevice/by-name/logo
-/odmdtbo emmc /dev/block/platform/bootdevice/by-name/odmdtbo flags=display="ODM DTBO";backup
+/bootloader2 emmc /dev/block/platform/bootdevice/by-name/lk2 flags=display="LK2";backup;flashimg
+/logo emmc /dev/block/platform/bootdevice/by-name/logo flags=backup;flashimg
+/expdb emmc /dev/block/platform/bootdevice/by-name/expdb flags=backup;flashimg
+/seccfg emmc /dev/block/platform/bootdevice/by-name/seccfg flags=backup;flashimg
+/tee1 emmc /dev/block/platform/bootdevice/by-name/tee1 flags=display="TEE 1";backup;flashimg
+/tee2 emmc /dev/block/platform/bootdevice/by-name/tee2 flags=display="TEE 2";backup;flashimg
+/scp1 emmc /dev/block/platform/bootdevice/by-name/scp1 flags=display="SCP 1";backup;flashimg
+/scp2 emmc /dev/block/platform/bootdevice/by-name/scp2 flags=display="SCP 2";backup;flashimg
+/sspm_1 emmc /dev/block/platform/bootdevice/by-name/sspm_1 flags=display="SSPM 1";backup;flashimg
+/sspm_2 emmc /dev/block/platform/bootdevice/by-name/sspm_2 flags=display="SSPM 2";backup;flashimg
+/md1img emmc /dev/block/platform/bootdevice/by-name/md1img flags=display="MD1 Image";backup;flashimg
+/md1dsp emmc /dev/block/platform/bootdevice/by-name/md1dsp flags=display="MD1 DSP";backup;flashimg
+/md1arm7 emmc /dev/block/platform/bootdevice/by-name/md1arm7 flags=display="MD1 ARM7";backup;flashimg
+/md3img emmc /dev/block/platform/bootdevice/by-name/md3img flags=display="MD3 Image";backup;flashimg
+/spmfw emmc /dev/block/platform/bootdevice/by-name/spmfw flags=display="SPM Firmware";backup;flashimg
+/boot_para emmc /dev/block/platform/bootdevice/by-name/boot_para flags=display="Boot Parameters";backup;flashimg
+/reserve2 emmc /dev/block/platform/bootdevice/by-name/reserve2 flags=display="Reserve 2";backup;flashimg
+/odmdtbo emmc /dev/block/platform/bootdevice/by-name/odmdtbo flags=display="ODM DTBO";backup;flashimg
 
 /external_sd auto /devices/platform/externdevice* flags=voldmanaged=sdcard1:auto
 /usb-otg auto /devices/platform/mt_usb* flags=voldmanaged=usbotg:auto;storage;wipeingui;removable

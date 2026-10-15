@@ -45,13 +45,18 @@ BOARD_ODMIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := ext4
 
+# Keep Android recovery on the stock-format fstab. TWRP/Omni products use the
+# extended TWRP table; device.mk still copies the stock fstab into vendor.
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6765
+ifneq ($(filter twrp_% omni_%,$(TARGET_PRODUCT)),)
+TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/etc/twrp.fstab
+endif
 
-# Team Win Recovery Project settings. These are consumed only by a compatible
-# TWRP/Omni build; the AOSP product above remains unchanged.
+# Team Win Recovery Project settings for compatible TWRP/Omni builds.
 TW_INCLUDE_CRYPTO := true
-TW_INCLUDE_FBE := true
-TW_INCLUDE_FBE_METADATA_DECRYPT := true
+# Stock userdata fstab uses forceencrypt with the metadata partition (FDE).
+TW_INCLUDE_FBE := false
+TW_INCLUDE_FBE_METADATA_DECRYPT := false
 BOARD_USES_METADATA_PARTITION := true
 TARGET_OTA_ASSERT_DEVICE := CPH1909
 

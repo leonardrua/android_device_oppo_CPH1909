@@ -1,4 +1,14 @@
 import /trustonic.rc
+import /init.recovery.usb.rc
+
+# Match the stock MT6765 recovery's eMMC/UFS boot-region aliases.
+on property:ro.mtk_emmc_support=1
+    symlink /dev/block/mmcblk0boot0 /dev/block/platform/bootdevice/by-name/preloader_a
+    symlink /dev/block/mmcblk0boot1 /dev/block/platform/bootdevice/by-name/preloader_b
+
+on property:ro.mtk_ufs_booting=1
+    symlink /dev/block/sda /dev/block/platform/bootdevice/by-name/preloader_a
+    symlink /dev/block/sdb /dev/block/platform/bootdevice/by-name/preloader_b
 
 on post-fs
     start hwservicemanager
