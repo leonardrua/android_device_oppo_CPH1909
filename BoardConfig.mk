@@ -37,6 +37,9 @@ TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
 BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 
+# Display (same panel family as CPH1920 reference: 720x1520, density 480).
+TARGET_SCREEN_DENSITY := 480
+
 # Recovery image configuration
 TARGET_NO_KERNEL := false
 TARGET_NO_RECOVERY := false
@@ -65,6 +68,15 @@ BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 buildvariant=user
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 
+# Kernel - prebuilt
+# J0shua reference ships prebuilt/Image.gz-dtb (9.3M, stock-derived);
+# copied here as prebuilt/kernel and enabled by default like his tree.
+TARGET_FORCE_PREBUILT_KERNEL := true
+ifeq ($(TARGET_FORCE_PREBUILT_KERNEL),true)
+TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
+BOARD_KERNEL_SEPARATED_DTBO :=
+endif
+
 # Sizes from the supplied MT6765 EMMC scatter file; values are bytes.
 # Recovery-only: only boot/recovery sizes are needed to build the image.
 BOARD_FLASH_BLOCK_SIZE := 131072
@@ -85,6 +97,7 @@ TW_EXTRA_LANGUAGES := true
 TW_SCREEN_BLANK_ON_BOOT := true
 TW_INPUT_BLACKLIST := "hbtp_vm"
 TW_USE_TOOLBOX := true
+# ConfigFS-based USB with FunctionFS MTP (CPH1920 MTP fix).
 TW_EXCLUDE_DEFAULT_USB_INIT := true
 TW_NO_USB_STORAGE := false
 TARGET_USE_CUSTOM_LUN_FILE_PATH := /config/usb_gadget/g1/functions/mass_storage.0/lun.%d/file
@@ -103,7 +116,7 @@ TW_INCLUDE_FBE := false
 TW_INCLUDE_FBE_METADATA_DECRYPT := false
 BOARD_USES_METADATA_PARTITION := true
 
-# Reboot menu
+# Reboot menu (CPH1920 reference disables bootloader reboot on this platform).
 TW_HAS_DOWNLOAD_MODE := false
-TW_NO_REBOOT_BOOTLOADER := false
+TW_NO_REBOOT_BOOTLOADER := true
 

@@ -1,18 +1,13 @@
 import /trustonic.rc
-import /init.recovery.usb.rc
-
-# Match the stock MT6765 recovery's eMMC/UFS boot-region aliases.
-on property:ro.mtk_emmc_support=1
-    symlink /dev/block/mmcblk0boot0 /dev/block/platform/bootdevice/by-name/preloader_a
-    symlink /dev/block/mmcblk0boot1 /dev/block/platform/bootdevice/by-name/preloader_b
-
-on property:ro.mtk_ufs_booting=1
-    symlink /dev/block/sda /dev/block/platform/bootdevice/by-name/preloader_a
-    symlink /dev/block/sdb /dev/block/platform/bootdevice/by-name/preloader_b
 
 on post-fs
     start hwservicemanager
     start keymaster-3-0
+    start gatekeeper-1-0
+
+on fs
+    # USB
+    write /sys/class/power_supply/usb/otg_switch 1
 
 on property:ro.crypto.state=encrypted && property:ro.crypto.type=file
     install_keyring
@@ -20,6 +15,7 @@ on property:ro.crypto.state=encrypted && property:ro.crypto.type=file
 on property:twrp.all.users.decrypted=true
     stop mobicore
     stop keymaster-3-0
+    stop gatekeeper-1-0
 
 service hwservicemanager /sbin/hwservicemanager
     user root
@@ -42,20 +38,18 @@ service keystore /sbin/keystore /tmp/misc/keystore
     disabled
     seclabel u:r:recovery:s0
 
-# Gatekeeper HAL 1.0 is declared in the stock manifest, but the stock
-# recovery ramdisk ships no gatekeeper service binary. The FDE path only
-# restarts hwservicemanager + keymaster-3-0 on decrypt, so TWRP keeps the
-# same set. Drop this stub if a gatekeeper binary is added to vendor.
-#service gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
-#    user root
-#    group root
-#    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
-#    disabled
-#    oneshot
-#    seclabel u:r:recovery:s0
-
-service keymaster-3-0 /sbin/android.hardware.keymaster@3.0-service
+service gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
     user root
     group root
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
     disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+service keymaster-3-0 /vendor/bin/hw/android.hardware.keymaster@3.0-service
+    user root
+    group root
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
+    disabled
+    oneshot
     seclabel u:r:recovery:s0
