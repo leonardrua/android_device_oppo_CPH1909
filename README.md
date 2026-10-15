@@ -58,6 +58,13 @@ currently defines only the `aosp_CPH1909` product, so it is not yet a standalone
 TWRP build target. Encryption support also depends on the recovery tree and
 matching vendor libraries.
 
+The recovery ramdisk uses `init.recovery.mt6765.rc` for Trustonic, Keymaster,
+Gatekeeper, and recovery keystore services, and `init.recovery.usb.rc` for the
+MT6765 ConfigFS gadget with FunctionFS ADB/MTP. `recovery/root/trustonic.rc`
+supplies the Trustonic daemon setup imported by the MT6765 fragment. The TWRP
+default USB init is disabled to avoid competing gadget setup. USB mass-storage
+LUNs are mapped to the ConfigFS gadget path in `BoardConfig.mk`.
+
 The supplied stock `recovery.img` is a legacy Android boot image with 2048-byte
 pages. Its header reports kernel address `0x40080000`, ramdisk address
 `0x55000000`, and tags address `0x54000000`, matching the base and offsets in
