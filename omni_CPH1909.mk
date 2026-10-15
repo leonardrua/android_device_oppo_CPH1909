@@ -19,9 +19,9 @@ PRODUCT_SHIPPING_API_LEVEL := 27
 PRODUCT_USE_DYNAMIC_PARTITIONS := false
 PRODUCT_FULL_TREBLE_OVERRIDE := false
 
-# Stock fingerprint reference (CPH1909EX_11.A.46, Android 8.1, project 18511).
-# Update from stock build.prop if you re-dump firmware.
+# Stock fingerprint from recovery prop.default (CPH1909EX_11_A.42,
+# Android 8.1.0, patch 2020-10-05, project 18511).
 PRODUCT_BUILD_PROP_OVERRIDES += \
-    PRIVATE_BUILD_DESC="CPH1909-user 8.1.0 OPM1.171019.026 eng.root.20191127 release-keys"
+    PRIVATE_BUILD_DESC="full_oppo6765_18511-user 8.1.0 O11019 1603200649 release-keys"
 
-BUILD_FINGERPRINT := OPPO/CPH1909/CPH1909:8.1.0/OPM1.171019.026/1569297096:user/release-keys
+BUILD_FINGERPRINT := OPPO/CPH1909/CPH1909:8.1.0/O11019/1603200649:user/release-keys

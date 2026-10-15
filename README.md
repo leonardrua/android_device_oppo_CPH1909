@@ -13,12 +13,18 @@ Minimal standalone TWRP tree. Builds `omni_CPH1909` recovery only
 - `device.mk` — copies recovery ramdisk init scripts; optionally inherits
   `vendor/oppo/CPH1909` blobs for decryption when present.
 - `recovery/root/etc/twrp.fstab` — TWRP mount table aligned with the stock
-  recovery partition map. Includes stock raw partitions as image-backup
-  targets; omits ODM because that partition is empty in the supplied dump.
+  recovery fstab from recovery.img (SHA-256
+  `d95131864444640c91eac2352e79568928f822ef5b0706d7fc283c16934f462a`,
+  header v0, pagesize 2048, OS 8.1.0 patch 2020-10-05, project 18511).
+  Includes stock raw partitions as image-backup targets; keeps `/odm` as
+  mountable ext4 (stock ro) plus `/odm_image` raw target.
 
 Stock `/data` uses `forceencrypt` with the metadata partition (FDE), so TWRP
-enables `TW_INCLUDE_CRYPTO` and leaves FBE-only options disabled. Decryption
-still needs the stock keymaster/gatekeeper blobs in vendor when available.
+enables `TW_INCLUDE_CRYPTO` and leaves FBE-only options disabled. The stock
+recovery ramdisk ships only `/sbin/android.hardware.keymaster@3.0-service`
+(no gatekeeper binary), and its FDE path restarts hwservicemanager +
+keymaster only — `init.recovery.mt6765.rc` mirrors that and leaves a
+commented gatekeeper stub.
 
 The recovery ramdisk uses `init.recovery.mt6765.rc` for Trustonic, Keymaster,
 Gatekeeper, keystore services, and the stock MT6765 preloader aliases. It

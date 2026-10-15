@@ -49,18 +49,19 @@ BOARD_SUPPRESS_SECURE_ERASE := true
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
 RECOVERY_VARIANT := twrp
 
-# Security patch level
-VENDOR_SECURITY_PATCH := 2021-08-01
+# Stock security patch from recovery prop.default (anti-rollback dodge kept).
+VENDOR_SECURITY_PATCH := 2020-10-05
 PLATFORM_SECURITY_PATCH := 2099-12-31
 PLATFORM_VERSION := 8.1.0
 
-# Values decoded from rom-dump/boot.img (legacy boot image, header v0).
+# Values decoded from the stock recovery.img header (header v0, pagesize 2048).
+# Stock cmdline carries only bootopt + buildvariant (verified: no usbconfig).
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_OFFSET := 0x00008000
 BOARD_RAMDISK_OFFSET := 0x14f88000
 BOARD_KERNEL_TAGS_OFFSET := 0x13f88000
 BOARD_KERNEL_PAGESIZE := 2048
-BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 buildvariant=user androidboot.usbconfig=mtp,adb
+BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 buildvariant=user
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 

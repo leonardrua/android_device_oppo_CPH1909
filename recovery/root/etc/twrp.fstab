@@ -1,13 +1,16 @@
 # TWRP mount table for OPPO A5s (CPH1909), aligned with the stock recovery
-# fstab. ODM is omitted because the supplied dump confirmed it is empty.
+# fstab from recovery.img (SHA-256 d9513186..., OS 8.1.0 patch 2020-10-05).
+# ODM kept as mountable ext4 (stock ro) plus raw odmdtbo backup target.
 # Stock partitions are exposed for backup; raw partitions use image backups.
 # No wipe flag is assigned to the stock raw partitions.
 # <mount_point> <fs_type> <device> <flags>
 
 /system ext4 /dev/block/platform/bootdevice/by-name/system
 /vendor ext4 /dev/block/platform/bootdevice/by-name/vendor
+/odm ext4 /dev/block/platform/bootdevice/by-name/odm
 /system_image emmc /dev/block/platform/bootdevice/by-name/system
 /vendor_image emmc /dev/block/platform/bootdevice/by-name/vendor
+/odm_image emmc /dev/block/platform/bootdevice/by-name/odm
 
 /boot emmc /dev/block/platform/bootdevice/by-name/boot flags=backup;flashimg
 /recovery emmc /dev/block/platform/bootdevice/by-name/recovery flags=backup;flashimg

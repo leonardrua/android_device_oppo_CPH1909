@@ -13,7 +13,6 @@ on property:ro.mtk_ufs_booting=1
 on post-fs
     start hwservicemanager
     start keymaster-3-0
-    start gatekeeper-1-0
 
 on property:ro.crypto.state=encrypted && property:ro.crypto.type=file
     install_keyring
@@ -21,7 +20,6 @@ on property:ro.crypto.state=encrypted && property:ro.crypto.type=file
 on property:twrp.all.users.decrypted=true
     stop mobicore
     stop keymaster-3-0
-    stop gatekeeper-1-0
 
 service hwservicemanager /sbin/hwservicemanager
     user root
@@ -44,18 +42,20 @@ service keystore /sbin/keystore /tmp/misc/keystore
     disabled
     seclabel u:r:recovery:s0
 
-service gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
-    user root
-    group root
-    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
-    disabled
-    oneshot
-    seclabel u:r:recovery:s0
+# Gatekeeper HAL 1.0 is declared in the stock manifest, but the stock
+# recovery ramdisk ships no gatekeeper service binary. The FDE path only
+# restarts hwservicemanager + keymaster-3-0 on decrypt, so TWRP keeps the
+# same set. Drop this stub if a gatekeeper binary is added to vendor.
+#service gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
+#    user root
+#    group root
+#    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
+#    disabled
+#    oneshot
+#    seclabel u:r:recovery:s0
 
-service keymaster-3-0 /vendor/bin/hw/android.hardware.keymaster@3.0-service
+service keymaster-3-0 /sbin/android.hardware.keymaster@3.0-service
     user root
     group root
-    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
     disabled
-    oneshot
     seclabel u:r:recovery:s0
