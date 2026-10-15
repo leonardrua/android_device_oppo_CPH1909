@@ -98,6 +98,13 @@ BOARD_FLASH_BLOCK_SIZE := 131072
 BOARD_BOOTIMAGE_PARTITION_SIZE := 33554432
 BOARD_RECOVERYIMAGE_PARTITION_SIZE := 67108864
 
+# Separate /vendor partition (as in twrp.fstab). Lets the build system
+# create proper root/vendor directory rules in the recovery ramdisk
+# (fixes ninja mkdir ENOENT on root/vendor/app); does not force a
+# vendor.img build for the recoveryimage target.
+BOARD_USES_VENDORIMAGE := true
+TARGET_COPY_OUT_VENDOR := vendor
+
 TARGET_USERIMAGES_USE_EXT4 := true
 TARGET_USERIMAGES_USE_F2FS := true
 
