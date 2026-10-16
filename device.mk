@@ -50,6 +50,10 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/vendor/bin/hw/android.hardware.gatekeeper@1.0-service:root/vendor/bin/hw/android.hardware.gatekeeper@1.0-service \
     $(DEVICE_PATH)/recovery/root/vendor/bin/hw/android.hardware.keymaster@3.0-service:root/vendor/bin/hw/android.hardware.keymaster@3.0-service \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/android.hardware.gatekeeper@1.0-impl.so:root/vendor/lib64/hw/android.hardware.gatekeeper@1.0-impl.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/android.hardware.keymaster@3.0-impl.so:root/vendor/lib64/hw/android.hardware.keymaster@3.0-impl.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/libMcTeeKeymaster.so:root/vendor/lib64/hw/libMcTeeKeymaster.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/kmsetkey.trustonic.so:root/vendor/lib64/hw/kmsetkey.trustonic.so \
+    $(DEVICE_PATH)/recovery/root/vendor/bin/kmsetkey_ca.trustonic:root/vendor/bin/kmsetkey_ca.trustonic \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/gatekeeper.mt6765.so:root/vendor/lib64/hw/gatekeeper.mt6765.so \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libgatekeeper.so:root/vendor/lib64/libgatekeeper.so \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libion.so:root/vendor/lib64/libion.so \

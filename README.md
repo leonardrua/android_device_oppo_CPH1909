@@ -209,6 +209,43 @@ build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
   14 extras here are the added touch firmware plus the vendor-side crypto
   libs. `sbin/hwservicemanager` is the one file that differs from the working
   ramdisk (it is the dump's Oreo build, not the platform's own).
+
+### Keymaster chain completeness (added after the blob cross-check)
+
+The blob set had a real hole, found by tracing what the services actually load.
+The HIDL service binaries are only trampolines — the ROM's
+`android.hardware.keymaster@3.0-service` (11024 B) and the one this tree
+carries (66064 B) have identical `NEEDED` lists and no `dlopen` strings. The
+work happens in libraries that `hwservicemanager` loads via the vendored
+`vendor/manifest.xml`, which declares `android.hardware.keymaster` 3.0. The
+dump's manifest has no `<library>` tags, so passthrough falls back to the AOSP
+convention of `<name>@<version>-impl.so` — and that file was missing:
+
+| link | file | status |
+|---|---|---|
+| gatekeeper impl | `vendor/lib64/hw/android.hardware.gatekeeper@1.0-impl.so` | already present |
+| ↳ Trustonic gatekeeper | `vendor/lib64/hw/gatekeeper.mt6765.so` | already present, byte-identical to the dump's `libMcGatekeeper.so` |
+| keymaster impl | `vendor/lib64/hw/android.hardware.keymaster@3.0-impl.so` | **added** (40176 B, dump-identical) |
+| ↳ Trustonic TEE keymaster | `vendor/lib64/hw/libMcTeeKeymaster.so` | **added** (89256 B, dump-identical) |
+| MTK kmsetkey HAL | `vendor/lib64/hw/kmsetkey.trustonic.so` | **added** (15232 B, dump-identical) |
+| MTK kmsetkey CA helper | `vendor/bin/kmsetkey_ca.trustonic` | **added** (15344 B, dump-identical) |
+
+Without the keymaster impl there is no `IKeymasterDevice/default` at all, which
+is a plausible mechanical cause for the long-standing "decryption doesn't work"
+report for this device. Adding it turns that into "a software keymaster
+service", which may still be insufficient: this tree's
+`libsoftkeymasterdevice.so` contains no reference to kmsetkey or Trustonic, so
+the HAL in that last row has no link to it. The real consumer of
+`kmsetkey.trustonic.so` is the dump's `system/lib64/libkmsetkey.so` shim (it
+reads `ro.hardware.kmsetkey=trustonic` from `vendor/build.prop`), which this
+tree does not carry — deliberately, since nothing in the recovery crypto path
+links it. Whether the stock ROM's FDE salt is TEE-bound is untested; if decrypt
+still fails after a build, that shim is the next thing to pull.
+
+The last three rows explain the device difference from the MT6761 sibling
+trees that use a self-contained
+`android.hardware.keymaster@3.0-service.trustonic` binary: CPH1909 has no such
+binary, its only `.trustonic` files being kmsetkey and the SOTER service.
 - Dump boot kernel (`9979567` bytes, gzip Image + 92534-byte DTB) is the
   A.46 stock — and exactly what this tree now uses as `prebuilt/kernel`
   (extracted from the working TWRP 3.7.0_9-1 recovery; byte-identical,
