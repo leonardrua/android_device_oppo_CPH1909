@@ -49,19 +49,6 @@ jobs:
     permissions:
       contents: write
     steps:
-    - name: Verify manifest branch matches PLATFORM_VERSION
-      run: |
-        branch="${{ github.event.inputs.MANIFEST_BRANCH }}"
-        platform=$(sed -n 's/^PLATFORM_VERSION := //p' BoardConfig.mk)
-        echo "Manifest branch: $branch / BoardConfig PLATFORM_VERSION: $platform"
-        case "$branch:$platform" in
-          twrp-8.1:8.1.0|twrp-9.0:9.0.0|twrp-10.0:10.0.0) ;;
-          *)
-            echo "::error::Manifest branch '$branch' does not match PLATFORM_VERSION '$platform' in BoardConfig.mk"
-            exit 1
-            ;;
-        esac
-
     - name: Display Run Parameters
       run: |
         echo "::group::User Environment Variables"
@@ -77,6 +64,24 @@ jobs:
 
     - name: Check Out
       uses: actions/checkout@v4
+
+    - name: Verify manifest branch matches PLATFORM_VERSION
+      run: |
+        # Must run after Check Out: BoardConfig.mk comes from the checkout.
+        branch="${{ github.event.inputs.MANIFEST_BRANCH }}"
+        if [ ! -f BoardConfig.mk ]; then
+          echo "::error::BoardConfig.mk not found in $(pwd) -- is Check Out still running before this step?"
+          exit 1
+        fi
+        platform=$(sed -n 's/^PLATFORM_VERSION := //p' BoardConfig.mk)
+        echo "Manifest branch: $branch / BoardConfig PLATFORM_VERSION: $platform"
+        case "$branch:$platform" in
+          twrp-8.1:8.1.0|twrp-9.0:9.0.0|twrp-10.0:10.0.0) ;;
+          *)
+            echo "::error::Manifest branch '$branch' does not match PLATFORM_VERSION '$platform' in BoardConfig.mk"
+            exit 1
+            ;;
+        esac
 
     - name: Cleanup
       uses: rokibhasansagar/slimhub_actions@main
