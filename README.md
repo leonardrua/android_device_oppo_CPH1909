@@ -60,8 +60,29 @@ via `repo init -m <file>` — not a change to this tree.
   recovery fstab from recovery.img (SHA-256
   `d95131864444640c91eac2352e79568928f822ef5b0706d7fc283c16934f462a`,
   header v0, pagesize 2048, OS 8.1.0 patch 2020-10-05, project 18511).
-  Includes stock raw partitions as image-backup targets; keeps `/odm` as
-  mountable ext4 (stock ro) plus `/odm_image` raw target.
+  All 37 partitions of the MT6765 scatter table are mapped 1:1, including the
+  renames: `misc`→`para`, `persistent`→`frp`, `bootloader`→`lk`,
+  `bootloader2`→`lk2`, `opporeserve`→`opporeserve2`. `metadata` is
+  deliberately absent — it is reached through `forceencrypt=`, never mounted.
+- `system`, `vendor` and `odm` are each listed twice, which is the standard TWRP
+  convention rather than a mistake. The `ext4` entry marks a mountable
+  filesystem, so backup tars only its files; the `emmc` `*_image` entry marks
+  a raw disk image, so backup dd-clones the whole partition including free
+  space — the escape hatch for a filesystem that will not mount, or for
+  restoring a foreign ROM. Google's and TeamWin's own trees ship the same
+  pattern (see `recovery.fstab` in `android-9.0` for `xiaomi_beryllium` or
+  `google_shamrock`).
+  Those raw entries carry `flags=backup=0;flashimg=1`: `flashimg` keeps them
+  available for restore/flashing, `backup=0` keeps them out of the backup list.
+  Without it, "Select All partitions" archives the same three partitions twice
+  — **5.77 GiB** of redundant raw images (system 4.20, vendor 1.31, odm 0.25
+  GiB, sizes from the scatter table) on top of the tarballs, because a raw
+  image includes the partition's empty space.
+  The system-as-root caveat that sometimes makes only the `_image` form valid
+  does not apply here: the scatter table has `system`, `vendor`, `odm`,
+  `cache` and `userdata` as separate `EXT4_IMG` partitions, and this build sets
+  `BOARD_BUILD_SYSTEM_ROOT_IMAGE := false`, so both entries describe the same
+  whole partition.
 
 Stock `/data` uses `forceencrypt` with the metadata partition (FDE), so TWRP
 enables `TW_INCLUDE_CRYPTO`. The working TWRP build for this exact device

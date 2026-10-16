@@ -5,12 +5,25 @@
 # No wipe flag is assigned to the stock raw partitions.
 # <mount_point> <fs_type> <device> <flags>
 
+# system/vendor/odm appear twice on purpose. The ext4 entry tells TWRP the
+# partition is mountable, so backup archives only file contents into a tar.
+# The *_image entry (fs_type emmc) tells TWRP it is a raw disk image, so it
+# dd-clones the whole partition including free space -- the escape hatch for a
+# filesystem that will not mount, or for restoring a foreign ROM. Same
+# convention as Google's and TeamWin's own trees (e.g. android-9.0
+# recovery.fstab for xiaomi_beryllium, google_shamrock).
+#
+# The raw entries carry backup=0;flashimg=1: flashimg keeps them available for
+# restore/flashing, backup=0 keeps them out of the backup list. Without it,
+# "Select All partitions" would archive system, vendor and odm twice over --
+# 5.77 GiB of redundant raw images (4.20 + 1.31 + 0.25 GiB) on top of the
+# tarballs, since a raw image includes the partition's empty space.
 /system ext4 /dev/block/platform/bootdevice/by-name/system
 /vendor ext4 /dev/block/platform/bootdevice/by-name/vendor
 /odm ext4 /dev/block/platform/bootdevice/by-name/odm
-/system_image emmc /dev/block/platform/bootdevice/by-name/system
-/vendor_image emmc /dev/block/platform/bootdevice/by-name/vendor
-/odm_image emmc /dev/block/platform/bootdevice/by-name/odm
+/system_image emmc /dev/block/platform/bootdevice/by-name/system flags=backup=0;flashimg=1
+/vendor_image emmc /dev/block/platform/bootdevice/by-name/vendor flags=backup=0;flashimg=1
+/odm_image emmc /dev/block/platform/bootdevice/by-name/odm flags=backup=0;flashimg=1
 
 /boot emmc /dev/block/platform/bootdevice/by-name/boot flags=backup;flashimg
 /recovery emmc /dev/block/platform/bootdevice/by-name/recovery flags=backup;flashimg
