@@ -69,11 +69,15 @@ RECOVERY_VARIANT := twrp
 # Stock security patch from recovery prop.default (anti-rollback dodge kept).
 VENDOR_SECURITY_PATCH := 2020-10-05
 PLATFORM_SECURITY_PATCH := 2099-12-31
-# Pinned platform. Keep these two in lockstep with the manifest branch in
-# .github/workflows/recovery-build.yml (twrp-8.1 -> PLATFORM_SDK_VERSION 27):
-# PLATFORM_VERSION drives PLATFORM_SDK_VERSION, which is what gates the TWRP
-# crypto paths and the shipping-API ext4 tooling (TARGET_USES_MKE2FS above).
-# Moving to twrp-9.0 means PLATFORM_VERSION 9 + a matching platform tree.
+# Pinned platform version. PLATFORM_VERSION only feeds
+# ro.build.version.release -- it does NOT set PLATFORM_SDK_VERSION, which comes
+# from the platform branch in the manifest. That SDK level is what gates the
+# TWRP crypto paths (FDE at >= 24, FBE metadata decrypt at >= 28) and the
+# mke2fs image tooling (shipping API >= 27), so the manifest branch is the real
+# pin: twrp-8.1 -> SDK 27. Keep this value in agreement with that branch for
+# ro.build.version.release and OTA asserts; CI cross-checks the two. (The J0shua
+# reference pins PLATFORM_VERSION := 16.1.0 and still compiles at SDK 27, which
+# is the proof that these are independent.)
 PLATFORM_VERSION := 8.1.0
 
 # Values decoded from the stock recovery.img header (header v0, pagesize 2048)

@@ -25,12 +25,22 @@ on init
 
     mkdir /config/usb_gadget/g1/functions/mass_storage.0
     mkdir /config/usb_gadget/g1/functions/ffs.adb
-    mkdir /config/usb_gadget/g1/functions/ffs.mtp
+    # MTP uses the MTK mtp.gs0 gadget function (-> /dev/mtp_usb), NOT ffs.mtp.
+    # TWRP picks its MTP library by SDK level: PLATFORM_SDK_VERSION >= 28 gets
+    # mtp/ffs + libtwrpmtp-ffs (FunctionFS), anything lower gets mtp/legacy +
+    # libtwrpmtp-legacy, which talks to /dev/mtp_usb. This tree builds at
+    # PLATFORM_SDK_VERSION 27, so ffs.mtp would be advertised to the host while
+    # TWRP drove /dev/mtp_usb -- the two never meet and MTP stays dead. The
+    # working TWRP build for this device does exactly this (mtp.gs0 +
+    # libtwrpmtp-legacy.so). Switch back to ffs.mtp only alongside an SDK 28+
+    # platform.
+    mkdir /config/usb_gadget/g1/functions/mtp.gs0
+    mkdir /config/usb_gadget/g1/functions/mtp.gs0/os_desc
+    mkdir /config/usb_gadget/g1/functions/mtp.gs0/os_desc/interface.MTP
+    write /config/usb_gadget/g1/functions/mtp.gs0/os_desc/interface.MTP/compatible_id "MTP"
     mkdir /dev/usb-ffs 0775 shell shell
     mkdir /dev/usb-ffs/adb 0770 shell shell
-    mkdir /dev/usb-ffs/mtp 0770 mtp mtp
     mount functionfs adb /dev/usb-ffs/adb uid=2000,gid=2000
-    mount functionfs mtp /dev/usb-ffs/mtp rmode=0770,fmode=0660,uid=1024,gid=1024,no_disconnect=1
 
     setprop sys.usb.controller musb-hdrc
     setprop sys.usb.configfs 1
@@ -83,7 +93,7 @@ on property:sys.usb.config=mtp && property:sys.usb.configfs=1
     rm /config/usb_gadget/g1/configs/b.1/f1
     rm /config/usb_gadget/g1/configs/b.1/f2
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
-    symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
     write /config/usb_gadget/g1/UDC "musb-hdrc"
     setprop sys.usb.state ${sys.usb.config}
 
@@ -94,7 +104,7 @@ on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,adb && property:s
     rm /config/usb_gadget/g1/configs/b.1/f1
     rm /config/usb_gadget/g1/configs/b.1/f2
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
-    symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
     symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
     write /config/usb_gadget/g1/UDC "musb-hdrc"
     setprop sys.usb.state ${sys.usb.config}

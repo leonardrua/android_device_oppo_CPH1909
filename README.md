@@ -13,16 +13,25 @@ cp -r <this-tree> device/oppo/CPH1909
 . build/envsetup.sh && lunch omni_CPH1909-eng && mka recoveryimage
 ```
 
-`PLATFORM_VERSION := 8.1.0` in `BoardConfig.mk` and the `twrp-8.1` manifest
-branch are a matched pair — `PLATFORM_VERSION` sets `PLATFORM_SDK_VERSION 27`,
-which is what selects the FDE crypto path and the `mke2fs` image tooling. CI
-fails if the two drift apart.
+`PLATFORM_VERSION := 8.1.0` in `BoardConfig.mk` matches the `twrp-8.1` manifest
+branch: the branch is what sets `PLATFORM_SDK_VERSION 27`, and that in turn
+selects the FDE crypto path and the `mke2fs` image tooling. `PLATFORM_VERSION`
+itself only feeds `ro.build.version.release`, so the two are kept in agreement
+for documentation and OTA-assert purposes; CI fails if they drift apart.
+
+The reference build for this device was also an SDK 27 (8.1) build, which is
+what makes this branch the known-good choice. Confirmed from TWRP's own
+version-gated modules in its ramdisk: `sload.f2fs` is absent (added only for
+SDK >= 28), `event-log-tags` is present (added for SDK < 28), `ld.config.txt`
+is present (SDK >= 26), and `libtwrpmtp-legacy.so` is linked (SDK < 28). The
+"OmniROM 16.1.0" label in its tree is Omni's own version string, not Android 9.
 
 This uses the manifest's own pairing, unmodified: `build/make`, `vendor/omni`,
 boringssl and friends at android-8.1, with `bootable/recovery` at TeamWin
-android-9.0 (TWRP 3.7). Worth knowing when a build breaks: the recovery
-sources are a release newer than the platform they compile against. If TWRP 3.7
-sources turn out not to compile on the Oreo platform, the fix is a local
+android-9.0 (TWRP 3.7). That is deliberate, not an accident — TWRP's
+android-9.0 `Android.mk` is written to build on older platforms, gating its
+Pie-only bits behind `-gt 27` and carrying an explicit "build errors in 8.1"
+fix. If a future sync does break on the platform mismatch, the fix is a local
 manifest override re-pinning `bootable/recovery` to `android-8.1` (TWRP 3.5)
 via `repo init -m <file>` — not a change to this tree.
 
@@ -65,24 +74,56 @@ and `keymaster@3.0-service` (66k each) with `vendor/lib64/hw/*-impl.so` +
 that build exactly.
 
 What actually decides decrypt behaviour here is `PLATFORM_SDK_VERSION`, not
-the `TW_INCLUDE_*` flags: on `PLATFORM_SDK_VERSION 27` (the pinned 8.1 build)
-TWRP compiles the FDE path (`libcryptfsfde`, `libscrypt`) and force-enables
+the `TW_INCLUDE_*` flags: at `PLATFORM_SDK_VERSION 27` TWRP compiles the FDE
+path (`libcryptfsfde`, `libscrypt`) and force-enables
 `TW_INCLUDE_CRYPTO_FBE` for SDK >= 24, while `TW_INCLUDE_FBE_METADATA_DECRYPT`
 stays off because it needs SDK >= 28. TWRP 3.x has no `TW_INCLUDE_FBE`
 variable and neither FBE flag can be disabled from `BoardConfig.mk` — both are
-gated on the SDK version alone, so this tree's FDE setting costs nothing.
-The J0shua reference built against OmniROM 16.1.0 (Pie, SDK 28+) and so got
-FBE-with-metadata-decrypt for free; that difference is the platform, not the
-flags.
+gated on the SDK version alone. The J0shua reference set
+`TW_INCLUDE_FBE_METADATA_DECRYPT := true` explicitly and got nothing extra
+for it: it compiled at SDK 27 too (see below), so that flag was just as inert
+as anything this tree could set. Both trees end up with the same crypto build.
+
+Note that `PLATFORM_VERSION` in `BoardConfig.mk` is *not* what selects that SDK
+level — it only feeds `ro.build.version.release`. `PLATFORM_SDK_VERSION` comes
+from the platform branch in the manifest. The J0shua tree proves the
+distinction: it pins `PLATFORM_VERSION := 16.1.0` (OmniROM's label, not an
+Android version) yet compiles at SDK 27. The two must still be kept in
+agreement, so CI cross-checks them, but the branch is the real pin.
 
 The recovery ramdisk uses `init.recovery.mt6765.rc` for Trustonic, Keymaster,
 Gatekeeper, keystore services, plus the stock MT6765 preloader aliases.
 `init.recovery.usb.rc` sets up the ConfigFS gadget `g1` on `on init`
-with FunctionFS MTP (`ffs.mtp` + `/dev/usb-ffs/mtp` mount), `musb-hdrc`
-UDC, stock CPH1909 recovery USB ID `18d1:d001`, and `mass_storage.0`
-function matching `BoardConfig.mk`. Includes robust triggers for `adb`,
-`sideload`, `mtp`, and `mtp,adb`. The TWRP default USB init is disabled
-to avoid competing gadget setup.
+with MTK `mtp.gs0` MTP (`/dev/mtp_usb`), `musb-hdrc` UDC, stock CPH1909
+recovery USB ID `18d1:d001`, and `mass_storage.0` function matching
+`BoardConfig.mk`. Includes robust triggers for `adb`, `sideload`, `mtp`, and
+`mtp,adb`. The TWRP default USB init is disabled to avoid competing gadget
+setup.
+
+### MTP: why `mtp.gs0` and not `ffs.mtp`
+
+TWRP chooses its MTP implementation by SDK level in
+`bootable/recovery/Android.mk` (line 230): `PLATFORM_SDK_VERSION >= 28` builds
+`mtp/ffs` → `libtwrpmtp-ffs` over FunctionFS, anything lower builds
+`mtp/legacy` → `libtwrpmtp-legacy`, which talks to `/dev/mtp_usb`. The gadget
+function has to match the library.
+
+This tree inherits from the CPH1920 MTP fix
+([SQR11211 4f007b8](https://github.com/SQR11211/android_device_OPPO_CPH1920/commit/4f007b8d4ffdc432af70b066367a936c73b2badc)),
+which converted CPH1920 *from* `mtp.gs0` *to* `ffs.mtp` and dropped
+`TW_MTP_DEVICE := /dev/mtp_usb`. That is the right pairing for an SDK 28+
+platform and the wrong one here: at SDK 27 TWRP links `libtwrpmtp-legacy` and
+would drive `/dev/mtp_usb` while the gadget advertises `ffs.mtp`, so MTP never
+comes up. The working build for this device uses `mtp.gs0` together with
+`libtwrpmtp-legacy.so`, so this file is back on the pre-4f007b8 form. ADB,
+sideload and USB mass storage are unaffected either way.
+
+One runtime dependency to confirm on first boot: `/dev/mtp_usb` must exist and
+be reachable (`0660 root mtp`). The stock recovery `ueventd.rc` carries that
+line, so the platform's should as well, but this tree's `ueventd.reserve.rc`
+is never imported (ueventd only loads `ueventd.rc` + `ueventd.$hardware.rc`)
+and cannot be used to guarantee the perms.
+
 `ueventd.reserve.rc` carries the stock opporeserve1 rules.
 `sbin/hwservicemanager`, `system/lib64` binder/crypto/hidl runtime, and
 `vendor/lib64` gatekeeper/keymaster/Trustonic libs (including `libMcClient.so`
@@ -110,7 +151,7 @@ with backup flags. It carries no `device.mk` and no MTP packages.
 ships and starts 8 `.drbin` drivers (020f, 030b, 030d, 0507, 0512, 0715, 0717,
 0907) plus their 22 `.tlbin`/`.tabin` payloads, and drops the fingerprint
 applets (020b, 070b, 0707, `5020170115e016302017012521300000`,
-`40188311faf343488db888ad39496f9a`) that the Pie build loaded. Self-consistent
+`40188311faf343488db888ad39496f9a`) that the reference build loaded. Self-consistent
 — every shipped `.drbin` is passed to `mcDriverDaemon` — and gatekeeper/keymaster
 applets are present.
 
@@ -146,7 +187,7 @@ build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
   `vendor/*` files shared with the working ramdisk match byte-for-byte; the
   14 extras here are the added touch firmware plus the vendor-side crypto
   libs. `sbin/hwservicemanager` is the one file that differs from the working
-  ramdisk (it is the dump's Oreo build, not the Pie platform's).
+  ramdisk (it is the dump's Oreo build, not the platform's own).
 - Dump boot kernel (`9979567` bytes, gzip Image + 92534-byte DTB) is the
   A.46 stock — and exactly what this tree now uses as `prebuilt/kernel`
   (extracted from the working TWRP 3.7.0_9-1 recovery; byte-identical,
@@ -164,6 +205,42 @@ build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
   ILI9881 variants per panel source) and Goodix (`gt1151_default_firmware2.img`,
   GT1151). Kernel drivers request these by the same names from
   `/vendor/firmware` in the ramdisk.
+
+## Built image verification (`tmp/recovery (2).img`)
+
+A first build of this tree on the `twrp-8.1` manifest (SHA-256
+`6ac58585d6124f13122286e5182e7146c3e03dbc298699aa23c4df196baae037`,
+29,775,872 bytes) was checked against the tree:
+
+- Header matches `BoardConfig.mk` exactly: `kernel_addr 0x40080000`,
+  `ramdisk_addr 0x55000000`, `tags_addr 0x54000000`, page 2048,
+  `os_version` 8.1, cmdline `bootopt=64S3,32N2,64N2 buildvariant=eng`
+  (one `buildvariant`, as intended).
+- The kernel payload is byte-identical to `prebuilt/kernel`
+  (`76b59114fca90ce744c356c4a373714ea9f07299490d08b3ab52a92ba28bb6fc`).
+- All 68 `PRODUCT_COPY_FILES` land in the ramdisk byte-identical, none
+  missing — including the 9 `system/lib64` libs, `sbin/hwservicemanager`
+  (the ROM-dump Oreo build, so ours wins over the platform's) and the 54
+  `vendor/` blobs.
+- SDK level is 27, read off TWRP's own version-gated modules:
+  `sbin/libtwrpmtp-legacy.so` present and `libtwrpmtp-ffs.so` absent
+  (`< 28` vs `>= 28`), `system/etc/event-log-tags` present (`< 28`),
+  `sbin/sload.f2fs` absent (`>= 28`), `sbin/ld.config.txt` present
+  (`>= 26`). FDE is built (`libcryptfsfde`, `libopenaes`), FBE comes
+  along automatically (`libe4crypt`).
+- `sbin/ld.config.txt` is byte-identical to the working build's, so the
+  loader search order is unchanged: `/sbin` resolves before
+  `/system/lib64` and `/vendor/lib64`. Every colliding library differs
+  between those locations, so the vendored `system/lib64` copies are
+  additive rather than load-bearing — `libMcClient.so` exists only in
+  `vendor/lib64` and is what `gatekeeper.mt6765.so` actually needs.
+- Two oddities are inherited, not introduced: `/default.prop` is a
+  dangling symlink to `prop.default`, and `init.rc` imports
+  `/init.recovery.vold_decrypt.rc`, which is absent. init warns and
+  continues; the in-tree FDE path does not need it. Both behave
+  identically in the working build.
+- That image predates the `mtp.gs0` fix and still advertises `ffs.mtp`,
+  so its MTP is dead — see the MTP section above.
 
 ## Kernel source (https://github.com/yeojhenrie/A5S-8.1-kernel-source)
 

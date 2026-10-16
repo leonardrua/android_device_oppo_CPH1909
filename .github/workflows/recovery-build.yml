@@ -8,7 +8,7 @@ on:
         required: true
         default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni'
       MANIFEST_BRANCH:
-        description: 'MANIFEST_BRANCH (must stay in sync with PLATFORM_VERSION in BoardConfig.mk)'
+        description: 'MANIFEST_BRANCH (the real platform pin; keep PLATFORM_VERSION in BoardConfig.mk in agreement)'
         required: true
         default: 'twrp-8.1'
       DEVICE_TREE_URL:
