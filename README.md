@@ -118,9 +118,11 @@ does not archive each partition twice.
 
 Stock `/data` is `forceencrypt` with the `metadata` partition, so the tree sets
 `TW_INCLUDE_CRYPTO := true`. At `PLATFORM_SDK_VERSION 27`, TWRP builds the FDE
-path (`libcryptfsfde`, `libscrypt`). The FBE metadata-decrypt flag is not set,
-because TWRP only enables it for SDK 28 and above. Whether the FDE path decrypts
-`/data` on this device is still unconfirmed.
+path. That is one shared library, `sbin/libcryptfsfde.so`; there is no separate
+`libscrypt.so`, because `crypto/fde/Android.mk` links `libscrypttwrp_static`
+into it. The FBE metadata-decrypt flag is not set, because TWRP only enables it
+for SDK 28 and above. Whether the FDE path decrypts `/data` on this device is
+still unconfirmed.
 
 ### MTP
 
@@ -190,11 +192,61 @@ the manifest:
 - `vendor/bin/kmsetkey_ca.trustonic`
 
 Without the implementation, the keymaster HAL service has no default
-implementation to load. Whether the stock FDE salt is bound to the TEE is
-untested. If decryption still fails, the next file to investigate is the
-`libkmsetkey.so` shim from the stock ROM, which this tree does not include.
+implementation to load, so `e367bd6` is what lets `hwservicemanager` register
+`IKeymasterDevice/default` at all. The known-good TWRP build for this device does
+**not** ship `android.hardware.keymaster@3.0-impl.so`, which is why it never
+registers the HAL and spends boot time in a decrypt timeout before falling back to
+the password prompt.
 
-To revert, remove these files and their entries in `device.mk`.
+What registers is a **software** keymaster, checked against a built image rather
+than assumed: `android.hardware.keymaster@3.0-impl.so` has
+`libsoftkeymasterdevice.so` in its `DT_NEEDED` list, and that library imports no
+`dlopen` or `dlsym` and contains no reference to kmsetkey or Trustonic. The
+vendored `manifest.xml` has no `<library>` tags, so passthrough resolves to the
+AOSP `<name>@<version>-impl.so` convention and nothing else is loaded.
+
+### MTK attestation and cryptoeng HALs
+
+The manifest declares two more crypto HALs that this tree now carries. Both are
+the TEE-facing half of the keymaster chain on this device, and both were missing,
+so `hwservicemanager` logged a load failure for each on every boot:
+
+| HAL | files added |
+|---|---|
+| `vendor.mediatek.hardware.keymaster_attestation` 1.1 | `vendor/lib64/hw/…@1.1-impl.so`, `vendor/lib64/…@1.0_vendor.so`, `vendor/lib64/…@1.1_vendor.so`, `vendor/bin/hw/…@1.1-service`, `system/lib64/…@1.0.so`, `system/lib64/…@1.1.so` |
+| `vendor.oppo.hardware.cryptoeng` 1.0 | `vendor/lib64/…@1.0_vendor.so`, `vendor/bin/hw/…@1.0-service`, `system/lib64/…@1.0.so` |
+
+All ten are byte-identical to the A.46 dump, 651 KiB in total, and their
+dependency closure resolves entirely within the ramdisk.
+
+`system/lib64/libkmsetkey.so` is the keybox verifier: it carries
+`ree_check_attest_keybox` / `ree_import_attest_keybox` and has
+`vendor.mediatek.hardware.keymaster_attestation@1.1.so` in its `DT_NEEDED` list,
+so it talks to the attestation HAL over HIDL. An earlier revision of this file
+called it unsupported, because across the whole ROM dump only `system/bin/meta_tst`
+links it directly; that missed the HIDL link, which is the one that matters.
+
+`init.recovery.mt6765.rc` starts both services, and `kmsetkey_ca.trustonic` is
+now started as a oneshot. This tree has carried that binary since `e367bd6`
+without ever running it; the sibling MT6765 tree runs its equivalent
+(`bp_kmsetkey_ca -c`) as a `late_start` oneshot. It is a verification step, not
+part of the decrypt path, and failure is harmless.
+
+The HALs are re-started on `init.svc.hwservicemanager=running`. Starting them in
+the same `on post-fs` block as hwservicemanager is a race: a HIDL service that
+starts before hwservicemanager is listening loses its registration and exits. All
+the HAL services are `oneshot`, so the second start is a no-op when the first
+already worked.
+
+How the attestation service reaches the TEE is still not fully established. The
+impl carries `kmsetkey` and `Error to open kmsetkey device.` but imports no
+`dlopen` and holds no absolute paths. What is established is the shape: it
+registers through the manifest, and `kmsetkey.trustonic.so` — which this tree has
+carried all along — links `libMcClient.so` and so is a real TEE client through
+`mcDriverDaemon`. Whether this closes the decrypt gap is untested on hardware.
+
+To revert, remove the files and their entries in `device.mk`, and drop the three
+service blocks and the property trigger from `init.recovery.mt6765.rc`.
 
 ## CI and workflows
 

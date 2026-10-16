@@ -47,6 +47,16 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/kmsetkey.trustonic.so:root/vendor/lib64/hw/kmsetkey.trustonic.so \
     $(DEVICE_PATH)/recovery/root/vendor/bin/kmsetkey_ca.trustonic:root/vendor/bin/kmsetkey_ca.trustonic \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/gatekeeper.mt6765.so:root/vendor/lib64/hw/gatekeeper.mt6765.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/hw/vendor.mediatek.hardware.keymaster_attestation@1.1-impl.so:root/vendor/lib64/hw/vendor.mediatek.hardware.keymaster_attestation@1.1-impl.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/vendor.mediatek.hardware.keymaster_attestation@1.0_vendor.so:root/vendor/lib64/vendor.mediatek.hardware.keymaster_attestation@1.0_vendor.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/vendor.mediatek.hardware.keymaster_attestation@1.1_vendor.so:root/vendor/lib64/vendor.mediatek.hardware.keymaster_attestation@1.1_vendor.so \
+    $(DEVICE_PATH)/recovery/root/vendor/lib64/vendor.oppo.hardware.cryptoeng@1.0_vendor.so:root/vendor/lib64/vendor.oppo.hardware.cryptoeng@1.0_vendor.so \
+    $(DEVICE_PATH)/recovery/root/vendor/bin/hw/vendor.mediatek.hardware.keymaster_attestation@1.1-service:root/vendor/bin/hw/vendor.mediatek.hardware.keymaster_attestation@1.1-service \
+    $(DEVICE_PATH)/recovery/root/vendor/bin/hw/vendor.oppo.hardware.cryptoeng@1.0-service:root/vendor/bin/hw/vendor.oppo.hardware.cryptoeng@1.0-service \
+    $(DEVICE_PATH)/recovery/root/system/lib64/libkmsetkey.so:root/system/lib64/libkmsetkey.so \
+    $(DEVICE_PATH)/recovery/root/system/lib64/vendor.mediatek.hardware.keymaster_attestation@1.0.so:root/system/lib64/vendor.mediatek.hardware.keymaster_attestation@1.0.so \
+    $(DEVICE_PATH)/recovery/root/system/lib64/vendor.mediatek.hardware.keymaster_attestation@1.1.so:root/system/lib64/vendor.mediatek.hardware.keymaster_attestation@1.1.so \
+    $(DEVICE_PATH)/recovery/root/system/lib64/vendor.oppo.hardware.cryptoeng@1.0.so:root/system/lib64/vendor.oppo.hardware.cryptoeng@1.0.so \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libgatekeeper.so:root/vendor/lib64/libgatekeeper.so \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libion.so:root/vendor/lib64/libion.so \
     $(DEVICE_PATH)/recovery/root/vendor/lib64/libkeymaster_messages.so:root/vendor/lib64/libkeymaster_messages.so \

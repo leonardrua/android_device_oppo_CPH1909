@@ -5,6 +5,22 @@ on post-fs
     start keymaster-3-0
     start gatekeeper-1-0
 
+# The HALs register with hwservicemanager at startup, so starting them in the
+# same block as hwservicemanager is a race: a service that starts before
+# hwservicemanager is listening loses its registration and exits. Re-issue the
+# start once init reports hwservicemanager actually running. Both are oneshot,
+# so a second start on an already-registered service is a no-op.
+#
+# The attestation and cryptoeng services are the TEE-facing half of the
+# keymaster chain on this device: vendor/manifest.xml declares both HALs, so
+# without them hwservicemanager logs a load failure for each on every boot.
+on property:init.svc.hwservicemanager=running
+    start kmsetkey_ca
+    start keymaster-3-0
+    start gatekeeper-1-0
+    start keymaster_attestation-1-1
+    start oppo-cryptoeng-1-0
+
 on fs
     # USB
     write /sys/class/power_supply/usb/otg_switch 1
@@ -50,6 +66,39 @@ service keymaster-3-0 /vendor/bin/hw/android.hardware.keymaster@3.0-service
     user root
     group root
     setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+# MTK keymaster attestation. Reaches the TEE through libMcClient (already
+# needed by kmsetkey.trustonic.so), and is what libkmsetkey.so talks to when
+# it verifies the attest keybox. Registered via vendor/manifest.xml, which
+# resolves to the -impl.so in vendor/lib64/hw.
+service keymaster_attestation-1-1 /vendor/bin/hw/vendor.mediatek.hardware.keymaster_attestation@1.1-service
+    user root
+    group root
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+# OPPO crypto engine, declared as vendor.oppo.hardware.cryptoeng 1.0 in the
+# same manifest.
+service oppo-cryptoeng-1-0 /vendor/bin/hw/vendor.oppo.hardware.cryptoeng@1.0-service
+    user root
+    group root
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+# Trustonic keybox check/verify. The sibling MT6765 tree runs its equivalent
+# (bp_kmsetkey_ca) as a late_start oneshot. This tree has shipped the binary
+# since e367bd6 without ever starting it. Failure here is harmless: it is a
+# verification step, not part of the decrypt path.
+service kmsetkey_ca /vendor/bin/kmsetkey_ca.trustonic -c
+    user root
+    group root
     disabled
     oneshot
     seclabel u:r:recovery:s0
