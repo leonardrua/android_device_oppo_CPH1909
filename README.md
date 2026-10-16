@@ -118,11 +118,11 @@ comes up. The working build for this device uses `mtp.gs0` together with
 `libtwrpmtp-legacy.so`, so this file is back on the pre-4f007b8 form. ADB,
 sideload and USB mass storage are unaffected either way.
 
-One runtime dependency to confirm on first boot: `/dev/mtp_usb` must exist and
-be reachable (`0660 root mtp`). The stock recovery `ueventd.rc` carries that
-line, so the platform's should as well, but this tree's `ueventd.reserve.rc`
-is never imported (ueventd only loads `ueventd.rc` + `ueventd.$hardware.rc`)
-and cannot be used to guarantee the perms.
+The `/dev/mtp_usb` node this drives is set up by the platform's `ueventd.rc`,
+which carries `/dev/mtp_usb 0660 root mtp` — verified in this build, in the
+working CPH1909 build and in the stock 8.1 recovery. Note this tree's
+`ueventd.reserve.rc` is never imported (ueventd only loads `ueventd.rc` +
+`ueventd.$hardware.rc`), so it cannot be used to add rules.
 
 `ueventd.reserve.rc` carries the stock opporeserve1 rules.
 `sbin/hwservicemanager`, `system/lib64` binder/crypto/hidl runtime, and
@@ -234,10 +234,12 @@ A first build of this tree on the `twrp-8.1` manifest (SHA-256
   between those locations, so the vendored `system/lib64` copies are
   additive rather than load-bearing — `libMcClient.so` exists only in
   `vendor/lib64` and is what `gatekeeper.mt6765.so` actually needs.
-- Two oddities are inherited, not introduced: `/default.prop` is a
-  dangling symlink to `prop.default`, and `init.rc` imports
-  `/init.recovery.vold_decrypt.rc`, which is absent. init warns and
-  continues; the in-tree FDE path does not need it. Both behave
+- `/default.prop` is the standard 12-byte symlink to `prop.default`, and
+  `prop.default` is really there (3926 bytes of properties here, 3268 in the
+  working build, 3668 in the CPH1920 reference) — it only looks dangling if
+  you stop at the symlink. `init.rc` does import
+  `/init.recovery.vold_decrypt.rc`, which is absent: init warns and
+  continues, and the in-tree FDE path does not need it. Both behave
   identically in the working build.
 - That image predates the `mtp.gs0` fix and still advertises `ffs.mtp`,
   so its MTP is dead — see the MTP section above.
