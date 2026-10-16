@@ -149,9 +149,13 @@ from source, because `TARGET_FORCE_PREBUILT_KERNEL` is set.
 `BoardConfig.mk` sets the header values to match the stock image: page size
 2048, kernel base `0x40078000`, kernel offset `0x8000`, ramdisk offset
 `0x14f88000`, and tags offset `0x13f88000`. The kernel command line is
-`bootopt=64S3,32N2,64N2 buildvariant=user`. Stock `buildvariant=user` was dropped
-from the cmdline in an earlier commit, so check the header of a freshly built
-image before flashing.
+`bootopt=64S3,32N2,64N2`, without `buildvariant`. Stock carries
+`buildvariant=user`, but it is deliberately left out here: the build system
+appends `buildvariant=$(TARGET_BUILD_VARIANT)` at `mkbootimg` time, and keeping
+the stock value as well produced a duplicated pair on the image
+(`buildvariant=user buildvariant=eng`). A recovery built from this tree
+therefore carries `buildvariant=eng`. Check the header of a freshly built image
+before flashing.
 
 ## Experimental features
 
@@ -212,10 +216,12 @@ It uses OpenJDK 8, which the android-8.1 build requires.
 - **`ueventd.reserve.rc` is not used.** Ueventd only loads `ueventd.rc` and
   `ueventd.$hardware.rc`, so the stock `opporeserve1` rules in this file have no
   effect. Add the rules to a file that ueventd loads if they are needed.
-- **`TW_INCLUDE_FBE` and `TW_INCLUDE_FBE_METADATA_DECRYPT` in `BoardConfig.mk`.**
-  The `TW_INCLUDE_FBE` line is documented as inert, and the FBE metadata flag only
-  takes effect on SDK 28 and above. Both are kept for clarity. Remove them if
-  they confuse future maintainers.
+- **There is nothing to set for FBE.** TWRP 3.x has no `TW_INCLUDE_FBE`
+  variable, and neither FBE flag can be turned off from a device tree:
+  `TW_INCLUDE_CRYPTO_FBE` is force-enabled for SDK 24 and above, and the FBE
+  metadata-decrypt flag is gated on SDK 28. At `PLATFORM_SDK_VERSION 27` this
+  tree gets FDE decrypt plus FBE without metadata decrypt. `BoardConfig.mk`
+  records this in comments; do not add settings for it.
 - **Unverified on hardware.** Decryption, keymaster, MTP, and the boot header
   have not been checked on a device. Test each feature on a device before relying
   on it.
