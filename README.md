@@ -148,9 +148,11 @@ working CPH1909 build and in the stock 8.1 recovery. Note this tree's
 `ueventd.reserve.rc` carries the stock opporeserve1 rules.
 `sbin/hwservicemanager`, `system/lib64` binder/crypto/hidl runtime, and
 `vendor/lib64` gatekeeper/keymaster/Trustonic libs (including `libMcClient.so`
-and `libkeymaster_staging.so` from the ROM dump, plus all 30 `mcRegistry`
-trustlets) are vendored. `twrp.fstab` storage nodes: `mmcblk1p1/mmcblk1` for
-SD, `sda1/sda` for OTG (`/usb_otg` auto).
+and `libkeymaster_staging.so` from the ROM dump) are vendored. So are all 30
+`mcRegistry` trustlets, which are byte-identical to the A.46 dump's
+`vendor/app/mcRegistry/` by name and hash, so that set is this device's own
+rather than inherited from a reference tree. `twrp.fstab` storage nodes:
+`mmcblk1p1/mmcblk1` for SD, `sda1`/`sda` for OTG (`/usb_otg` auto).
 
 CPH1909 vs CPH1920: same MT6765/project 18511 hardware; per the CPH1920
 README the only difference is CPH1920 lacks fingerprint hardware. The CPH1920
@@ -168,13 +170,27 @@ from the working TWRP 3.7.0_9-1 build (see below). Its `twrp.fstab` is the
 minimal working set (no odm/modem backups); this tree keeps the superset
 with backup flags. It carries no `device.mk` and no MTP packages.
 
-`trustonic.rc` here loads a different applet set than the working build: it
-ships and starts 8 `.drbin` drivers (020f, 030b, 030d, 0507, 0512, 0715, 0717,
-0907) plus their 22 `.tlbin`/`.tabin` payloads, and drops the fingerprint
-applets (020b, 070b, 0707, `5020170115e016302017012521300000`,
-`40188311faf343488db888ad39496f9a`) that the reference build loaded. Self-consistent
-— every shipped `.drbin` is passed to `mcDriverDaemon` — and gatekeeper/keymaster
-applets are present.
+`trustonic.rc` starts all 8 `.drbin` drivers this device actually ships
+(020f, 030b, 030d, 0507, 0512, 0715, 0717, 0907), and every shipped `.drbin`
+is passed to `mcDriverDaemon` — self-consistent, with the gatekeeper and
+keymaster applets among them.
+
+Comparing against stock: the ROM's own `vendor/etc/init/trustonic.rc`
+references **12** applets in its active `#ifdef VENDOR_EDIT` block, but six
+of them — 020b, 030c, 070b, 070700, `5020170115e016302017012521300000` and
+`40188311faf343488db888ad39496f9a` — are not present in the device's
+`vendor/app/mcRegistry/` at all. The stock `-r` list is therefore aspirational,
+and mcDriverDaemon is evidently expected to cope with paths that do not
+exist. Restoring "the stock set" is not possible on this device: only the 8
+above exist.
+
+Measured against stock's loadable set, the only real difference is that this
+tree additionally loads 0715 and 0717. Stock ships both applets on disk but
+does not reference them, so they are loaded here and not there. An earlier
+revision of this file described the difference as dropping fingerprint
+applets the reference build loaded; that was wrong on two counts — those
+applets are absent from the device, and this tree's `mcRegistry` is the ROM's
+own set rather than anything inherited from a reference tree.
 
 ## ROM dump verification (tmp/cph1909-rom-dump)
 
@@ -209,6 +225,11 @@ build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
   14 extras here are the added touch firmware plus the vendor-side crypto
   libs. `sbin/hwservicemanager` is the one file that differs from the working
   ramdisk (it is the dump's Oreo build, not the platform's own).
+- The 30 `vendor/app/mcRegistry/` trustlets are also dump-identical, name for
+  name and hash for hash. They are absent from the working TWRP ramdisk
+  (which ships only the 4 novatek blobs), so this file's earlier reading —
+  that the mcRegistry set came from the J0shua reference — was an inference
+  from that one absence and is wrong: they are the device's own ROM blobs.
 
 ### Keymaster chain completeness (added after the blob cross-check)
 
