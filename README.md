@@ -4,8 +4,8 @@ Device tree for building a TWRP recovery image for the OPPO A5s (CPH1909),
 MediaTek MT6765 (project 18511), running Android 8.1 (`PLATFORM_SDK_VERSION 27`).
 
 > **Status: experimental.** The build pipeline is in place, but several parts of
-> this tree (decryption, keymaster, and the `TW_CRYPTO_USE_SYSTEM_VOLD` path) are
-> not yet confirmed on hardware. See [Experimental features](#experimental-features).
+> this tree (decryption, keymaster, and MTP) are not yet confirmed on
+> hardware. See [Experimental features](#experimental-features).
 
 ## Contents
 
@@ -74,7 +74,6 @@ mismatch before the build starts.
 | `device.mk` | Copies recovery init scripts, vendor blobs, firmware, and runtime libraries into the ramdisk through `PRODUCT_COPY_FILES`. |
 | `prebuilt/kernel` | Prebuilt `Image.gz-dtb`, enabled by `TARGET_FORCE_PREBUILT_KERNEL`. |
 | `recovery/root/etc/twrp.fstab` | TWRP mount table (`TARGET_RECOVERY_FSTAB`). |
-| `recovery/root/fstab.mt6765` | Experimental fstab for vold/fs_mgr, see [Experimental features](#experimental-features). |
 | `recovery/root/init.recovery.mt6765.rc` | Starts Trustonic, keymaster, gatekeeper, and keystore services in recovery. |
 | `recovery/root/init.recovery.usb.rc` | ConfigFS USB gadget `g1` with `mtp.gs0` MTP, ADB, sideload, and mass storage. |
 | `recovery/root/trustonic.rc` | Starts the `mcDriverDaemon` with the eight `.drbin` drivers shipped on this device. |
@@ -162,15 +161,23 @@ before flashing.
 These are included in the tree but are not yet verified on hardware. Each one can
 be reverted as described below.
 
-### vold-based decryption (`TW_CRYPTO_USE_SYSTEM_VOLD`)
+### vold-based decryption (`TW_CRYPTO_USE_SYSTEM_VOLD`) — removed
 
-`BoardConfig.mk` sets `TW_CRYPTO_USE_SYSTEM_VOLD := keymaster-3-0 hwservicemanager mobicore`
-and adds `recovery/root/fstab.mt6765` and
-`init.recovery.vold_decrypt.mobicore.rc`. With this set, TWRP runs the device's
-own vold for decryption instead of the in-tree FDE path.
+This was tried and taken back out. It set
+`TW_CRYPTO_USE_SYSTEM_VOLD := keymaster-3-0 hwservicemanager mobicore` and added
+`recovery/root/fstab.mt6765` plus `init.recovery.vold_decrypt.mobicore.rc`, so
+that TWRP would mount `/system` and let the OEM Oreo vold decrypt.
 
-To revert, comment out the `TW_CRYPTO_USE_SYSTEM_VOLD` line and remove the two
-`PRODUCT_COPY_FILES` entries for those files in `device.mk`.
+It could not have worked here. TWRP's `vold_decrypt` starts `/system/bin/vold`
+and this tree does not ship that binary, so the path had nothing to exec. The
+extra services did line up — `ven_keymaster-3-0` runs
+`/vendor/bin/hw/android.hardware.keymaster@3.0-service`, which this tree ships —
+but vold itself was the blocker.
+
+No MT6765 device tree sets this knob either: the eleven trees declaring
+`TARGET_BOARD_PLATFORM := mt6765` were checked, and none does.
+
+Decryption therefore goes through TWRP's own FDE path, as below.
 
 ### Keymaster HAL implementation
 
