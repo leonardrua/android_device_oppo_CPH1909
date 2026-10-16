@@ -31,7 +31,15 @@ LOCAL_PATH := $(DEVICE_PATH)
 # in /sbin is preferred over the copy here.
 # Do not add 32-bit (lib/) counterparts -- the recovery userspace built from
 # this tree is arm64-only, and an unpaired lib/ dir would just bloat the image.
+# System-vold decrypt support (TW_CRYPTO_USE_SYSTEM_VOLD, see BoardConfig.mk).
+# Two device-tree files TWRP does not provide itself:
+#   fstab.mt6765                          v1 table for the OEM vold, which cannot
+#                                        parse TWRP's v2 twrp.fstab
+#   init.recovery.vold_decrypt.mobicore.rc  Trustonic TEE daemon, which TWRP has no
+#                                        default for; the OEM keymaster needs it
 PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/recovery/root/fstab.mt6765:root/fstab.mt6765 \
+    $(DEVICE_PATH)/recovery/root/init.recovery.vold_decrypt.mobicore.rc:root/init.recovery.vold_decrypt.mobicore.rc \
     $(DEVICE_PATH)/recovery/root/init.recovery.mt6765.rc:root/init.recovery.mt6765.rc \
     $(DEVICE_PATH)/recovery/root/init.recovery.usb.rc:root/init.recovery.usb.rc \
     $(DEVICE_PATH)/recovery/root/trustonic.rc:root/trustonic.rc \

@@ -165,6 +165,33 @@ TARGET_USES_LOGD := true
 TW_INCLUDE_CRYPTO := true
 BOARD_USES_METADATA_PARTITION := true
 
+# EXPERIMENT: hand decryption to the device's own vold.
+#
+# TWRP's own FDE path is built (crypto/fde) but has never been shown to decrypt
+# on this device; the only public report for the A5s (XDA, "Oppo A5S (CPH1909)
+# Custom recovery and device Tree") is that decryption does not work. This knob
+# makes TWRP mount /system and let the OEM Oreo vold do the work, which is the
+# documented fallback for proprietary OEM crypto.
+#
+# TWRP picks the services by prefix in vold_decrypt.cpp: sys_* for /system
+# binaries, ven_* for /vendor ones. TWRP ships defaults for keymaster-3-0 and
+# hwservicemanager; mobicore is supplied by this tree because the OEM keymaster
+# lives in the Trustonic TEE. All three need a matching .rc: the first two come
+# from TWRP, the third from recovery/root/.
+#
+# Also required, and provided by this tree:
+#   recovery/root/fstab.mt6765 -- vold/fs_mgr cannot parse the v2 twrp.fstab, so
+#   TWRP points /etc/recovery.fstab at /fstab.${ro.hardware} while vold runs.
+#
+# gatekeeper-1-0 is deliberately left out: TWRP only enables a listed service if
+# a matching sys_*/ven_* definition exists, and there is no default rc for it.
+# TWRP stops and restarts its own recovery-domain keymaster-3-0 and
+# hwservicemanager around vold_decrypt, so nothing conflicts.
+#
+# To revert: comment out the line below and drop the two PRODUCT_COPY_FILES
+# entries for fstab.mt6765 and init.recovery.vold_decrypt.mobicore.rc.
+TW_CRYPTO_USE_SYSTEM_VOLD := keymaster-3-0 hwservicemanager mobicore
+
 # Reboot menu (CPH1920 reference disables bootloader reboot on this platform).
 TW_HAS_DOWNLOAD_MODE := false
 TW_NO_REBOOT_BOOTLOADER := true

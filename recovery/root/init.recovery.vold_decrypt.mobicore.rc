@@ -1,0 +1,25 @@
+# init.recovery.vold_decrypt.mobicore.rc
+#
+# TWRP's crypto/vold_decrypt ships default .rc files for keymaster-3-0 and
+# hwservicemanager only. On this MT6765 the OEM keymaster lives in the
+# Trustonic TEE, so vold also needs the mcDriverDaemon that hosts it --
+# otherwise the keymaster HAL registers but every keymaster call fails and
+# decryption silently never completes.
+#
+# Service names must be <sys_|ven_>NAME (vold_decrypt.cpp Get_List_Of_Additional_Services
+# only matches sys_*/ven_* prefixes). The binary is on /vendor, hence ven_.
+# Mirrors the mobicore service in trustonic.rc -- same binary and arguments --
+# but runs under the vold domain, because TWRP stops its recovery-domain copy
+# for the duration of vold_decrypt and restarts it afterwards.
+#
+# /vendor/persist is mounted by trustonic.rc on init and post-fs, so the --P1
+# target is in place by the time this runs.
+
+service ven_mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030d0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07150000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07170000000000000000000000000000.drbin -r /vendor/app/mcRegistry/09070000000000000000000000000000.drbin
+    user system
+    group system
+    setenv PATH /vendor/bin:/system/bin
+    setenv LD_LIBRARY_PATH /vendor/lib64:/system/lib64:/vendor/lib:/system/lib
+    disabled
+    oneshot
+    seclabel u:r:vold:s0
