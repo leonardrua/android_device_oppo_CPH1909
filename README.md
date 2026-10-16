@@ -3,6 +3,29 @@
 Minimal standalone TWRP tree. Builds `omni_CPH1909` recovery only
 (`lunch omni_CPH1909-eng && mka recoveryimage`).
 
+## Build (pinned to Android 8.1)
+
+```
+repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni \
+          -b twrp-8.1
+repo sync -j$(nproc)
+cp -r <this-tree> device/oppo/CPH1909
+. build/envsetup.sh && lunch omni_CPH1909-eng && mka recoveryimage
+```
+
+`PLATFORM_VERSION := 8.1.0` in `BoardConfig.mk` and the `twrp-8.1` manifest
+branch are a matched pair — `PLATFORM_VERSION` sets `PLATFORM_SDK_VERSION 27`,
+which is what selects the FDE crypto path and the `mke2fs` image tooling. CI
+fails if the two drift apart.
+
+This uses the manifest's own pairing, unmodified: `build/make`, `vendor/omni`,
+boringssl and friends at android-8.1, with `bootable/recovery` at TeamWin
+android-9.0 (TWRP 3.7). Worth knowing when a build breaks: the recovery
+sources are a release newer than the platform they compile against. If TWRP 3.7
+sources turn out not to compile on the Oreo platform, the fix is a local
+manifest override re-pinning `bootable/recovery` to `android-8.1` (TWRP 3.5)
+via `repo init -m <file>` — not a change to this tree.
+
 ## Layout
 
 - `omni_CPH1909.mk` — recovery-only product (core_64_bit + full_base_telephony
@@ -13,11 +36,17 @@ Minimal standalone TWRP tree. Builds `omni_CPH1909` recovery only
   definitions; `ALLOW_MISSING_DEPENDENCIES := true` so it builds without a
   populated `vendor/` tree.
 - `device.mk` — copies recovery ramdisk init scripts plus `recovery/root/vendor`
-  blobs (gatekeeper/keymaster services, mcRegistry, touch firmware, manifest).
+  blobs (gatekeeper/keymaster services, mcRegistry, touch firmware, manifest)
+  and the `recovery/root/system/lib64` + `recovery/root/sbin` runtime libs.
+  No `PRODUCT_PACKAGES` entries: TWRP builds MTP in-tree (`libtwrpmtp` on 8.1,
+  `libtwrpmtp-legacy` on 9.0) and the legacy `libmtp`/`mtp_server` modules are
+  stripped from the manifest.
 - `prebuilt/kernel` — prebuilt `Image.gz-dtb` (9979567) extracted from the
   working TWRP 3.7.0_9-1 recovery for this device
   (`tmp/oppo_a5s_twrp1_kernel.zip`, its `kernel.gz`), byte-identical to the
-  A.46 dump boot kernel; enabled via `TARGET_FORCE_PREBUILT_KERNEL`.
+  A.46 dump boot kernel (SHA-256
+  `76b59114fca90ce744c356c4a373714ea9f07299490d08b3ab52a92ba28bb6fc`);
+  enabled via `TARGET_FORCE_PREBUILT_KERNEL`.
 - `recovery/root/etc/twrp.fstab` — TWRP mount table aligned with the stock
   recovery fstab from recovery.img (SHA-256
   `d95131864444640c91eac2352e79568928f822ef5b0706d7fc283c16934f462a`,
@@ -26,14 +55,25 @@ Minimal standalone TWRP tree. Builds `omni_CPH1909` recovery only
   mountable ext4 (stock ro) plus `/odm_image` raw target.
 
 Stock `/data` uses `forceencrypt` with the metadata partition (FDE), so TWRP
-enables `TW_INCLUDE_CRYPTO` and leaves FBE-only options disabled. The working
-TWRP build for this exact device (`tmp/oppo_a5s_twrp_recovery_extracted.zip`,
-OmniROM 16.1.0 `eng.runner.20241027`, image SHA-256
+enables `TW_INCLUDE_CRYPTO`. The working TWRP build for this exact device
+(`tmp/oppo_a5s_twrp_recovery_extracted.zip`, OmniROM 16.1.0
+`eng.runner.20241027`, image SHA-256
 `55d79d7065fa5681652d078b1c64d47bd573f4779ea49eb56aeda1c10ca83ca8`)
 ships both vendor services — `vendor/bin/hw/android.hardware.gatekeeper@1.0-service`
 and `keymaster@3.0-service` (66k each) with `vendor/lib64/hw/*-impl.so` +
 `gatekeeper.mt6765.so` — so `init.recovery.mt6765.rc` starts both, matching
 that build exactly.
+
+What actually decides decrypt behaviour here is `PLATFORM_SDK_VERSION`, not
+the `TW_INCLUDE_*` flags: on `PLATFORM_SDK_VERSION 27` (the pinned 8.1 build)
+TWRP compiles the FDE path (`libcryptfsfde`, `libscrypt`) and force-enables
+`TW_INCLUDE_CRYPTO_FBE` for SDK >= 24, while `TW_INCLUDE_FBE_METADATA_DECRYPT`
+stays off because it needs SDK >= 28. TWRP 3.x has no `TW_INCLUDE_FBE`
+variable and neither FBE flag can be disabled from `BoardConfig.mk` — both are
+gated on the SDK version alone, so this tree's FDE setting costs nothing.
+The J0shua reference built against OmniROM 16.1.0 (Pie, SDK 28+) and so got
+FBE-with-metadata-decrypt for free; that difference is the platform, not the
+flags.
 
 The recovery ramdisk uses `init.recovery.mt6765.rc` for Trustonic, Keymaster,
 Gatekeeper, keystore services, plus the stock MT6765 preloader aliases.
@@ -58,15 +98,21 @@ keeps the FDE decrypt attempt per the CPH1909 stock analysis.
 The J0shua CPH1909 reference (https://github.com/J0shua-code/Oppo-CPH1909-Device-Tree,
 cloned to /tmp/j0shua_cph1909) is the source tree of the working TWRP build
 above: same `init.recovery.mt6765.rc` (gatekeeper+keymaster from vendor),
-same ConfigFS `mtp.gs0` USB setup, FBE crypto flags
-(`TW_INCLUDE_CRYPTO_FBE + TW_INCLUDE_FBE_METADATA_DECRYPT`, unlike this
-tree's FDE-only setting). Its `recovery/root/vendor` (gatekeeper/keymaster
+same ConfigFS `mtp.gs0` USB setup. Its `recovery/root/vendor` (gatekeeper/keymaster
 services, mcRegistry, novatek firmware, manifest) and `prebuilt/Image.gz-dtb`
 are vendored here. Its own prebuilt kernel (`9738426` bytes, custom
 `Image.gz-dtb`) was later replaced in this tree by the kernel extracted
 from the working TWRP 3.7.0_9-1 build (see below). Its `twrp.fstab` is the
 minimal working set (no odm/modem backups); this tree keeps the superset
-with backup flags.
+with backup flags. It carries no `device.mk` and no MTP packages.
+
+`trustonic.rc` here loads a different applet set than the working build: it
+ships and starts 8 `.drbin` drivers (020f, 030b, 030d, 0507, 0512, 0715, 0717,
+0907) plus their 22 `.tlbin`/`.tabin` payloads, and drops the fingerprint
+applets (020b, 070b, 0707, `5020170115e016302017012521300000`,
+`40188311faf343488db888ad39496f9a`) that the Pie build loaded. Self-consistent
+— every shipped `.drbin` is passed to `mcDriverDaemon` — and gatekeeper/keymaster
+applets are present.
 
 ## ROM dump verification (tmp/cph1909-rom-dump)
 
@@ -77,22 +123,37 @@ build `full_oppo6765_18511-user 8.1.0 O11019 1616154336`, security patch
 - Boot image header (v0, pagesize 2048, base `0x40078000`, offsets
   kernel `0x8000` / ramdisk `0x14f88000` / tags `0x13f88000`, cmdline
   `bootopt=64S3,32N2,64N2 buildvariant=user`) matches every
-  `BOARD_*` value in `BoardConfig.mk` exactly.
+  `BOARD_*` value in `BoardConfig.mk` exactly. Re-checkable: the header
+  stores absolute load addresses, and `kernel_addr 0x40080000`,
+  `ramdisk_addr 0x55000000`, `tags_addr 0x54000000` are precisely the base
+  plus the three offsets above.
 - `vendor/etc/fstab.mt6765` confirms `/data` with
   `forceencrypt=/dev/block/.../metadata` — same flag carried in
   `twrp.fstab`.
-- Blob cross-check vs dump `vendor/` and `system/`: all 8 vendored
-  `system/lib64` runtime libs, `hwservicemanager`, `mcDriverDaemon`,
-  `libion/libgatekeeper/libkeymaster_*/libsoftkeymasterdevice` and
-  `android.hardware.gatekeeper@1.0-impl.so` are **byte-identical** (the
-  CPH1920 MTP-fix reference blobs are exactly this device's ROM).
+- Blob cross-check vs dump `vendor/` and `system/`: the 8 vendored
+  `system/lib64` runtime libs, `sbin/hwservicemanager` (dump
+  `system/bin/hwservicemanager`) and `vendor/bin/mcDriverDaemon` are
+  **byte-identical** to the A.46 dump (the CPH1920 MTP-fix reference blobs
+  are exactly this device's ROM).
+- The 64-bit `vendor/lib64` set (`libion`, `libgatekeeper`, `libkeymaster_*`,
+  `libsoftkeymasterdevice`) and `vendor/lib64/hw/android.hardware.gatekeeper@1.0-impl.so`
+  are **not** dump-identical — the dump only carries 32-bit copies of those
+  names, under `system/lib/`. Their provenance is the working TWRP ramdisk,
+  which they match byte-for-byte; that is the set to trust.
 - Gatekeeper/keymaster service binaries, novatek touch firmware and
-  `vendor/manifest.xml` differ from the A.46 dump but are byte-identical
-  to the working TWRP ramdisk — kept as-is (working set).
+  `vendor/manifest.xml` also differ from the A.46 dump but are byte-identical
+  to the working TWRP ramdisk — kept as-is (working set). In total all 40
+  `vendor/*` files shared with the working ramdisk match byte-for-byte; the
+  14 extras here are the added touch firmware plus the vendor-side crypto
+  libs. `sbin/hwservicemanager` is the one file that differs from the working
+  ramdisk (it is the dump's Oreo build, not the Pie platform's).
 - Dump boot kernel (`9979567` bytes, gzip Image + 92534-byte DTB) is the
   A.46 stock — and exactly what this tree now uses as `prebuilt/kernel`
   (extracted from the working TWRP 3.7.0_9-1 recovery; byte-identical,
-  config identical to stock recovery).
+  config identical to stock recovery). Note that in the dump `boot.img` the
+  kernel payload sits at file offset `0x800`: mkbootimg packs sections
+  sequentially, so `BOARD_KERNEL_OFFSET` and friends are load addresses in
+  the header, not in-file offsets.
 - Dump `recovery.img` is an MTK `IMGDIF2` recovery-from-boot patch, not a
   flashable image; the stock ramdisk reference remains
   `tmp/oppo_a5s_stock_recovery_extracted.zip`.
@@ -133,7 +194,8 @@ Cloned to /tmp/a5s_kernel (1.1G) and verified against this tree:
   `gt1151_default_firmware2.img` name — kept as harmless coverage.
 - Build stays prebuilt (`TARGET_FORCE_PREBUILT_KERNEL := true`, proven
   TWRP 3.7.0_9-1 Image.gz-dtb); the source settings above document what a
-  from-source build would use.
+  from-source build would use. The kernel is reused as-is across platform
+  branches — only the ramdisk contents change with the manifest.
 
 ## GitHub Actions Workflows
 
@@ -142,10 +204,31 @@ Cloned to /tmp/a5s_kernel (1.1G) and verified against this tree:
   - Verifies presence and valid size of `prebuilt/kernel`.
   - Checks critical partition mount paths in `twrp.fstab`.
   - Verifies ELF dynamic dependencies for all vendored binaries and libraries.
-- **`.github/workflows/recovery-build.yml` (Build TWRP Recovery)**: Automated end-to-end recovery builder via `workflow_dispatch` or release tags (`v*`):
-  - Syncs minimal TWRP manifest (`twrp-9.0` or `twrp-8.1`).
+  - Checks `PLATFORM_VERSION` in `BoardConfig.mk` against the manifest branch
+    the build workflow defaults to.
+- **`.github/workflows/recovery-build.yml` (Build TWRP Recovery, legacy)**: end-to-end recovery builder, `workflow_dispatch` only (owner-triggered; there is no tag trigger):
+  - Asserts `MANIFEST_BRANCH` matches `PLATFORM_VERSION` before doing anything,
+    so the branch and the platform cannot drift apart.
+  - Syncs minimal TWRP manifest, default
+    `minimal-manifest-twrp/platform_manifest_twrp_omni` at **`twrp-8.1`**,
+    exactly as upstream publishes it.
   - Injects this device tree into `device/oppo/CPH1909`.
-  - Compiles `recoveryimage` using `lunch omni_CPH1909-{eng|userdebug|user}`.
-  - Generates checksums (`.sha256`, `.md5`) and uploads `recovery.img` as a workflow artifact or GitHub Release.
+  - Compiles `recoveryimage` using `lunch omni_CPH1909-eng`.
+  - Uploads `recovery.img` as a GitHub Release (tag = run id).
+
+## Where the ramdisk libraries come from
+
+TWRP's recovery tree installs its own modules into `root/sbin`
+(`LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin`, identical in its
+android-8.1 and android-9.0 `Android.mk`), which matches the proven build:
+that ramdisk holds ~90 libs in `/sbin` and has no `/system/lib64` at all. The
+nine `root/system/lib64` + `root/sbin` copies in `device.mk` are therefore
+additive rather than a replacement of platform output. They give the
+keymaster/gatekeeper/hwservicemanager stack an explicit Oreo-vintage runtime —
+all 8 libs verified byte-identical to the A.46 ROM dump — instead of leaving
+it to whatever the platform emits for the SDK. The vendor services run with
+`LD_LIBRARY_PATH=/vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib`
+from `init.recovery.mt6765.rc`, so where `/sbin` can satisfy a dependency it
+wins over the copy in `/system/lib64`.
 
 

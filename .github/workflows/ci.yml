@@ -180,5 +180,19 @@ jobs:
               sys.exit(1)
           print(f"SUCCESS: All {len(elfs)} ELF binaries/libraries have dependencies accounted for.")
 
+          print("\n=== Step 5: Checking platform pin ===")
+          board = open("BoardConfig.mk").read()
+          platform = re.search(r"^PLATFORM_VERSION := (\S+)", board, re.M).group(1)
+          workflow = open(".github/workflows/recovery-build.yml").read()
+          branch = re.search(r"MANIFEST_BRANCH:[\s\S]*?default:\s*'([^']+)'", workflow).group(1)
+          expected = {"twrp-8.1": "8.1.0", "twrp-9.0": "9.0.0", "twrp-10.0": "10.0.0"}
+          if branch not in expected:
+              print(f"FAILED: unknown manifest branch '{branch}'")
+              sys.exit(1)
+          if expected[branch] != platform:
+              print(f"FAILED: manifest branch '{branch}' expects PLATFORM_VERSION {expected[branch]}, BoardConfig.mk says {platform}")
+              sys.exit(1)
+          print(f"SUCCESS: manifest branch '{branch}' matches PLATFORM_VERSION {platform}.")
+
           print("\n=== All validation checks passed successfully! ===")
           EOF

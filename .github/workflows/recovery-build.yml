@@ -8,7 +8,7 @@ on:
         required: true
         default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni'
       MANIFEST_BRANCH:
-        description: 'MANIFEST_BRANCH'
+        description: 'MANIFEST_BRANCH (must stay in sync with PLATFORM_VERSION in BoardConfig.mk)'
         required: true
         default: 'twrp-8.1'
       DEVICE_TREE_URL:
@@ -49,6 +49,19 @@ jobs:
     permissions:
       contents: write
     steps:
+    - name: Verify manifest branch matches PLATFORM_VERSION
+      run: |
+        branch="${{ github.event.inputs.MANIFEST_BRANCH }}"
+        platform=$(sed -n 's/^PLATFORM_VERSION := //p' BoardConfig.mk)
+        echo "Manifest branch: $branch / BoardConfig PLATFORM_VERSION: $platform"
+        case "$branch:$platform" in
+          twrp-8.1:8.1.0|twrp-9.0:9.0.0|twrp-10.0:10.0.0) ;;
+          *)
+            echo "::error::Manifest branch '$branch' does not match PLATFORM_VERSION '$platform' in BoardConfig.mk"
+            exit 1
+            ;;
+        esac
+
     - name: Display Run Parameters
       run: |
         echo "::group::User Environment Variables"

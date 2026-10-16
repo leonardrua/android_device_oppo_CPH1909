@@ -69,6 +69,11 @@ RECOVERY_VARIANT := twrp
 # Stock security patch from recovery prop.default (anti-rollback dodge kept).
 VENDOR_SECURITY_PATCH := 2020-10-05
 PLATFORM_SECURITY_PATCH := 2099-12-31
+# Pinned platform. Keep these two in lockstep with the manifest branch in
+# .github/workflows/recovery-build.yml (twrp-8.1 -> PLATFORM_SDK_VERSION 27):
+# PLATFORM_VERSION drives PLATFORM_SDK_VERSION, which is what gates the TWRP
+# crypto paths and the shipping-API ext4 tooling (TARGET_USES_MKE2FS above).
+# Moving to twrp-9.0 means PLATFORM_VERSION 9 + a matching platform tree.
 PLATFORM_VERSION := 8.1.0
 
 # Values decoded from the stock recovery.img header (header v0, pagesize 2048)
@@ -140,10 +145,20 @@ TW_H_OFFSET := -50
 TWRP_INCLUDE_LOGCAT := true
 TARGET_USES_LOGD := true
 
-# Decryption: stock /data is forceencrypt (FDE) with the metadata partition.
+# Decryption: stock /data is forceencrypt (FDE) against the metadata partition
+# (confirmed in the stock recovery.fstab and the A.46 vendor/etc/fstab.mt6765).
+#
+# On the pinned twrp-8.1 manifest PLATFORM_SDK_VERSION is 27, so TWRP's
+# recovery/Android.mk compiles:
+#   TW_INCLUDE_CRYPTO -> FDE path (crypto/fde + crypto/scrypt, libcryptfsfde)
+#   TW_INCLUDE_CRYPTO_FBE -> force-enabled for SDK >= 24 (-DTW_INCLUDE_FBE,
+#                        links libe4crypt)
+#   TW_INCLUDE_FBE_METADATA_DECRYPT -> NOT set (needs SDK >= 28)
+# There is no TW_INCLUDE_FBE variable in TWRP 3.x, and neither FBE flag can
+# be turned off from BoardConfig -- both are gated on the SDK version alone.
+# So this device gets working FDE decrypt plus FBE-without-metadata-decrypt;
+# do not try to disable FBE by setting a variable here.
 TW_INCLUDE_CRYPTO := true
-TW_INCLUDE_FBE := false
-TW_INCLUDE_FBE_METADATA_DECRYPT := false
 BOARD_USES_METADATA_PARTITION := true
 
 # Reboot menu (CPH1920 reference disables bootloader reboot on this platform).

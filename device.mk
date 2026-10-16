@@ -1,10 +1,14 @@
 DEVICE_PATH := device/oppo/CPH1909
 LOCAL_PATH := $(DEVICE_PATH)
 
-# MTP helpers (same as proven CPH1920 reference: libmtp + mtp_server).
-PRODUCT_PACKAGES += \
-    libmtp \
-    mtp_server
+# No device-tree MTP packages: TWRP's own recovery tree builds its MTP
+# module in-tree (libtwrpmtp on android-8.1, libtwrpmtp-legacy on
+# android-9.0) and adds it to the ramdisk itself. The legacy AOSP
+# libmtp + mtp_server modules are stripped from the pinned minimal
+# twrp-8.1 manifest (remove-minimal.xml removes platform/external/libmtp
+# and platform/external/mtpd, and external/mtp is never included), so
+# naming them here fails the build. The CPH1920 reference needed them on
+# older TWRP; this tree does not.
 
 # Recovery ramdisk init scripts (TARGET_RECOVERY_FSTAB supplies twrp.fstab).
 # ueventd.reserve.rc carries the stock opporeserve1 partition rules.
@@ -14,6 +18,19 @@ PRODUCT_PACKAGES += \
 # MTP-fix reference (SQR11211, tag MTP-fix, cloned to /tmp/sqr_cph1920):
 # hwservicemanager + binder/crypto/cutils/hidl/hwbinder/utils/vndksupport and
 # gatekeeper/keymaster runtime libs.
+#
+# The root/system/lib64 + root/sbin entries are ADDITIVE, not a replacement
+# of platform output: TWRP's recovery tree installs its own modules into
+# root/sbin (LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin in both
+# its android-8.1 and android-9.0 Android.mk), which is why the proven ramdisk
+# keeps ~90 libs in /sbin and has no /system/lib64 at all. These copies give the
+# keymaster/gatekeeper/hwservicemanager stack an explicit Oreo-vintage runtime
+# (all 8 libs verified byte-identical to the A.46 ROM dump) instead of leaving
+# it to whatever the platform emits for the SDK. Note init.recovery.mt6765.rc
+# puts /sbin ahead of /system/lib64 in LD_LIBRARY_PATH, so a matching library
+# in /sbin is preferred over the copy here.
+# Do not add 32-bit (lib/) counterparts -- the recovery userspace built from
+# this tree is arm64-only, and an unpaired lib/ dir would just bloat the image.
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/init.recovery.mt6765.rc:root/init.recovery.mt6765.rc \
     $(DEVICE_PATH)/recovery/root/init.recovery.usb.rc:root/init.recovery.usb.rc \
