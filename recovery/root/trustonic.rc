@@ -53,9 +53,6 @@ on post-fs-data
 on property:ro.crypto.state=unsupported
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry ++ (unencrypted)"
     mkdir /data/misc/mcRegistry 0775 system system
-    # Expose the persisted auth token container in the registry directory.
-    # The daemon's first registry search path is /data/misc/mcRegistry, while
-    # the container itself lives on the persist partition.
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry -- (unencrypted)"
 
 # Normal mode, FBE
