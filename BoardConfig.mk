@@ -14,6 +14,11 @@ TARGET_CPU_ABI := arm64-v8a
 TARGET_CPU_ABI2 :=
 TARGET_CPU_VARIANT := generic
 TARGET_CPU_VARIANT_RUNTIME := generic
+# Android 9 (SDK 28) requires this for a 64-bit-only product. The build
+# already derives TARGET_IS_64_BIT=true from TARGET_ARCH=arm64, so the
+# check in build/core/config.mk passes either way; stating it explicitly
+# documents the intent.
+TARGET_USES_64_BIT_BINDER := true
 
 TARGET_2ND_ARCH := arm
 TARGET_2ND_ARCH_VARIANT := armv7-a-neon
@@ -74,11 +79,11 @@ PLATFORM_SECURITY_PATCH := 2099-12-31
 # from the platform branch in the manifest. That SDK level is what gates the
 # TWRP crypto paths (FDE at >= 24, FBE metadata decrypt at >= 28) and the
 # mke2fs image tooling (shipping API >= 27), so the manifest branch is the real
-# pin: twrp-8.1 -> SDK 27. Keep this value in agreement with that branch for
+# pin: twrp-9.0 -> SDK 28. Keep this value in agreement with that branch for
 # ro.build.version.release and OTA asserts; CI cross-checks the two. (The J0shua
 # reference pins PLATFORM_VERSION := 16.1.0 and still compiles at SDK 27, which
 # is the proof that these are independent.)
-PLATFORM_VERSION := 8.1.0
+PLATFORM_VERSION := 9.0.0
 
 # Values decoded from the stock recovery.img header (header v0, pagesize 2048)
 # and confirmed identical in the ROM dump boot.img (tmp/cph1909-rom-dump,
@@ -155,16 +160,18 @@ TARGET_USES_LOGD := true
 # Decryption: stock /data is forceencrypt (FDE) against the metadata partition
 # (confirmed in the stock recovery.fstab and the A.46 vendor/etc/fstab.mt6765).
 #
-# On the pinned twrp-8.1 manifest PLATFORM_SDK_VERSION is 27, so TWRP's
+# On the pinned twrp-9.0 manifest PLATFORM_SDK_VERSION is 28, so TWRP's
 # recovery/Android.mk compiles:
 #   TW_INCLUDE_CRYPTO -> FDE path (crypto/fde + crypto/scrypt, libcryptfsfde)
 #   TW_INCLUDE_CRYPTO_FBE -> force-enabled for SDK >= 24 (-DTW_INCLUDE_FBE,
 #                        links libe4crypt)
-#   TW_INCLUDE_FBE_METADATA_DECRYPT -> NOT set (needs SDK >= 28)
+#   TW_INCLUDE_FBE_METADATA_DECRYPT -> now also set (needs SDK >= 28), which
+#                        adds crypto/ext4crypt (MetadataCrypt, KeyStorage)
 # There is no TW_INCLUDE_FBE variable in TWRP 3.x, and neither FBE flag can
 # be turned off from BoardConfig -- both are gated on the SDK version alone.
-# So this device gets working FDE decrypt plus FBE-without-metadata-decrypt;
-# do not try to disable FBE by setting a variable here.
+# So this device gets working FDE decrypt, plus FBE with metadata decrypt.
+# The FBE metadata path is only taken for a file-encrypted /data; this device
+# is FDE, so it stays unused -- but it is compiled in now.
 TW_INCLUDE_CRYPTO := true
 BOARD_USES_METADATA_PARTITION := true
 

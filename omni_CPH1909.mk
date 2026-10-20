@@ -22,7 +22,12 @@ PRODUCT_MODEL := CPH1909
 PRODUCT_MANUFACTURER := OPPO
 PRODUCT_RELEASE_NAME := A5s
 
-PRODUCT_SHIPPING_API_LEVEL := 27
+# Matches the platform the build runs against (twrp-9.0 -> SDK 28). Android 9
+# defaults BOARD_SYSTEMSDK_VERSIONS to PLATFORM_SDK_VERSION only when this is
+# >= 28, and build/core/config.mk errors out if the shipping level is higher
+# than BOARD_SYSTEMSDK_VERSIONS. Treble and VNDK stay off via the explicit
+# overrides below, so this only has to be consistent with the platform.
+PRODUCT_SHIPPING_API_LEVEL := 28
 PRODUCT_USE_DYNAMIC_PARTITIONS := false
 PRODUCT_FULL_TREBLE_OVERRIDE := false
 

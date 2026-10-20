@@ -2,10 +2,11 @@ DEVICE_PATH := device/oppo/CPH1909
 LOCAL_PATH := $(DEVICE_PATH)
 
 # No device-tree MTP packages: TWRP's own recovery tree builds its MTP
-# module in-tree (libtwrpmtp on android-8.1, libtwrpmtp-legacy on
-# android-9.0) and adds it to the ramdisk itself. The legacy AOSP
-# libmtp + mtp_server modules are stripped from the pinned minimal
-# twrp-8.1 manifest (remove-minimal.xml removes platform/external/libmtp
+# module in-tree and adds it to the ramdisk itself. Which one it is depends
+# on PLATFORM_SDK_VERSION, not on the recovery tree's branch: SDK 28 and above
+# links libtwrpmtp-ffs (FunctionFS), lower levels link libtwrpmtp-legacy. The
+# legacy AOSP libmtp + mtp_server modules are stripped from the pinned minimal
+# twrp-9.0 manifest (remove-minimal.xml removes platform/external/libmtp
 # and platform/external/mtpd, and external/mtp is never included), so
 # naming them here fails the build. The CPH1920 reference needed them on
 # older TWRP; this tree does not.

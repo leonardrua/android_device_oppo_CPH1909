@@ -1,7 +1,8 @@
 # OPPO A5s (CPH1909) TWRP Recovery Device Tree
 
 Device tree for building a TWRP recovery image for the OPPO A5s (CPH1909),
-MediaTek MT6765 (project 18511), running Android 8.1 (`PLATFORM_SDK_VERSION 27`).
+MediaTek MT6765 (project 18511), running Android 8.1. Built against the
+`twrp-9.0` manifest, so `PLATFORM_SDK_VERSION` is 28.
 
 > **Status: experimental.** The build pipeline is in place, but several parts of
 > this tree (decryption, keymaster, and MTP) are not yet confirmed on
@@ -23,14 +24,14 @@ MediaTek MT6765 (project 18511), running Android 8.1 (`PLATFORM_SDK_VERSION 27`)
 
 - Ubuntu 22.04 (or the runner image used by the workflows)
 - Roughly 250 GB of free disk space for a full sync, or use the `--depth=1` sync below
-- OpenJDK 8, as used by the android-8.1 build
+- OpenJDK 8, as used by the android-9.0 build
 
 ### Local build
 
 ```bash
 repo init --depth=1 \
   -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni \
-  -b twrp-8.1
+  -b twrp-9.0
 repo sync -j$(nproc)
 
 # Place this tree at the path the product expects
@@ -53,7 +54,7 @@ match the values above:
 | Input | Default |
 |---|---|
 | `MANIFEST_URL` | `https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni` |
-| `MANIFEST_BRANCH` | `twrp-8.1` |
+| `MANIFEST_BRANCH` | `twrp-9.0` |
 | `DEVICE_TREE_BRANCH` | `recovery` |
 | `DEVICE_PATH` | `device/oppo/CPH1909` |
 | `DEVICE_NAME` | `CPH1909` |
@@ -86,22 +87,24 @@ mismatch before the build starts.
 
 ### Platform and manifest pairing
 
-`PLATFORM_VERSION := 8.1.0` in `BoardConfig.mk` must match the manifest branch.
-The branch sets `PLATFORM_SDK_VERSION` (27), and the SDK level decides several
+`PLATFORM_VERSION := 9.0.0` in `BoardConfig.mk` must match the manifest branch.
+The branch sets `PLATFORM_SDK_VERSION` (28), and the SDK level decides several
 things: crypto code paths, MTP library choice, and image tooling. The
 `PLATFORM_VERSION` value only sets `ro.build.version.release`. CI checks that the
 two agree for `twrp-8.1`, `twrp-9.0`, and `twrp-10.0`.
 
-The `twrp-8.1` manifest uses the platform sources as published. The one
-exception is `bootable/recovery`, which the `twrp-extras.xml` manifest overrides
-to the TeamWin `android-9.0` revision (TWRP 3.7). If a future sync breaks because
-of this platform mismatch, pin `bootable/recovery` to an `android-8.1` revision
-with a local manifest (`repo init -m <file>`). Do not change this tree for that.
+The `twrp-9.0` manifest pins the platform at `refs/tags/android-9.0.0_r47` and
+`bootable/recovery` at the TeamWin `android-9.0` revision, so the platform and
+the recovery tree are the same vintage — the mismatch the `twrp-8.1` manifest
+had (an Android 8.1 platform against a TeamWin `android-9.0` recovery tree).
+`bootable/recovery` is overridden by `twrp-extras.xml` in both manifests, and
+`remove-minimal.xml` drops `platform/external/libmtp` and
+`platform/external/mtpd` in both.
 
 ### Storage and fstab
 
 `BOARD_USES_VENDORIMAGE := true` and `TARGET_COPY_OUT_VENDOR := vendor` keep
-`root/vendor` as a real directory in the ramdisk. Without them, the Android 8.1
+`root/vendor` as a real directory in the ramdisk. Without them, the Android 9
 rootdir creates `root/vendor` as a symlink to `/system/vendor`, and the copy rules
 in `device.mk` fail on the build machine.
 
@@ -118,21 +121,26 @@ does not archive each partition twice.
 ### Decryption
 
 Stock `/data` is `forceencrypt` with the `metadata` partition, so the tree sets
-`TW_INCLUDE_CRYPTO := true`. At `PLATFORM_SDK_VERSION 27`, TWRP builds the FDE
+`TW_INCLUDE_CRYPTO := true`. At `PLATFORM_SDK_VERSION 28`, TWRP builds the FDE
 path. That is one shared library, `sbin/libcryptfsfde.so`; there is no separate
 `libscrypt.so`, because `crypto/fde/Android.mk` links `libscrypttwrp_static`
-into it. The FBE metadata-decrypt flag is not set, because TWRP only enables it
-for SDK 28 and above. Whether the FDE path decrypts `/data` on this device is
-still unconfirmed.
+into it. The FBE metadata-decrypt flag is now also set, because TWRP enables it
+for SDK 28 and above; that adds `crypto/ext4crypt` to the build. It is only
+taken for a file-encrypted `/data`, and this device is FDE, so it stays unused.
+Whether the FDE path decrypts `/data` on this device is still unconfirmed.
 
 ### MTP
 
 TWRP picks its MTP implementation by SDK level in `bootable/recovery/Android.mk`.
 SDK 28 and above builds FunctionFS (`libtwrpmtp-ffs`). Lower levels build the
 legacy implementation (`libtwrpmtp-legacy`), which talks to `/dev/mtp_usb`.
-This tree is at SDK 27, so `init.recovery.usb.rc` uses the legacy `mtp.gs0`
-function. A `ffs.mtp` gadget would not work with this library. The
-`/dev/mtp_usb` node comes from the platform `ueventd.rc`.
+This tree is at SDK 28, so `libtwrpmtp-ffs` is linked — but it only speaks
+FunctionFS-MTP when `/dev/usb-ffs/mtp/ep0` exists, which needs an `ffs.mtp`
+gadget function. This kernel has no `f_fs_mtp.c`, so the only FunctionFS
+instance available is `ffs.adb`; the ffs MTP server therefore falls back to
+`MtpDevHandle`, which opens `/dev/mtp_usb`. `init.recovery.usb.rc` keeps the
+`mtp.gs0` function, which is what provides that device. The `/dev/mtp_usb` node
+comes from the platform `ueventd.rc`.
 
 The gadget also advertises the Microsoft OS descriptor, so Windows recognises
 the MTP interface without a driver. That needs three things in
@@ -279,7 +287,7 @@ workflow. It runs a guard step right after checkout that fails if
 syncs the manifest, clones this tree into `device/oppo/CPH1909`, runs
 `lunch <MAKEFILE_NAME>-eng` and `make <BUILD_TARGET>image`, and publishes the
 resulting `.img` and any `vendor*.img` or `.zip` files as a GitHub Release.
-It uses OpenJDK 8, which the android-8.1 build requires.
+It uses OpenJDK 8, which the android-9.0 build requires.
 
 ## Known gaps
 
@@ -289,12 +297,23 @@ It uses OpenJDK 8, which the android-8.1 build requires.
 - **There is nothing to set for FBE.** TWRP 3.x has no `TW_INCLUDE_FBE`
   variable, and neither FBE flag can be turned off from a device tree:
   `TW_INCLUDE_CRYPTO_FBE` is force-enabled for SDK 24 and above, and the FBE
-  metadata-decrypt flag is gated on SDK 28. At `PLATFORM_SDK_VERSION 27` this
-  tree gets FDE decrypt plus FBE without metadata decrypt. `BoardConfig.mk`
-  records this in comments; do not add settings for it.
+  metadata-decrypt flag is gated on SDK 28. At `PLATFORM_SDK_VERSION 28` this
+  tree gets FDE decrypt plus FBE with metadata decrypt — the metadata path is
+  only taken for a file-encrypted `/data`, and this device is FDE, so it stays
+  unused. `BoardConfig.mk` records this in comments; do not add settings for it.
 - **Unverified on hardware.** Decryption, keymaster, MTP, and the boot header
   have not been checked on a device. Test each feature on a device before relying
   on it.
+- **The ramdisk carries Oreo-vintage runtime libraries.** `device.mk` copies
+  `libbinder`, `libcrypto`, `libcutils`, `libhidlbase`, `libhidltransport`,
+  `libhwbinder`, `libkeymaster_staging`, `libutils`, `libvndksupport` and
+  `libkmsetkey` from the A.46 ROM into `root/system/lib64`, plus
+  `root/sbin/hwservicemanager`, all verified byte-identical to the stock
+  dump. They are there to give the vendored keymaster/gatekeeper stack a
+  matching runtime rather than whatever the platform emits. Against an
+  Android 9 platform the platform's own copies are a different vintage, so
+  whether the copy or the platform module wins in `root/sbin` and `root/system`
+  is worth checking on a built image.
 - **Touch firmware coverage.** Firmware for the Himax, ILITEK, Novatek, and Goodix
   panels is included. Only the panel in use on a specific unit will load.
 - **The keymaster auth token is only half-wired.** `mcDriverDaemon` reads the
@@ -315,7 +334,7 @@ It uses OpenJDK 8, which the android-8.1 build requires.
 ## References
 
 - Base manifest: https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni
-  (branch `twrp-8.1`)
+  (branch `twrp-9.0`)
 - Reference device tree for the lunch and product structure:
   https://github.com/SQR11211/android_device_OPPO_CPH1920
 - Kernel source used for the defconfig reference:

@@ -37,11 +37,16 @@ on init
     # TWRP picks its MTP library by SDK level: PLATFORM_SDK_VERSION >= 28 gets
     # mtp/ffs + libtwrpmtp-ffs (FunctionFS), anything lower gets mtp/legacy +
     # libtwrpmtp-legacy, which talks to /dev/mtp_usb. This tree builds at
-    # PLATFORM_SDK_VERSION 27, so ffs.mtp would be advertised to the host while
-    # TWRP drove /dev/mtp_usb -- the two never meet and MTP stays dead. The
-    # working TWRP build for this device does exactly this (mtp.gs0 +
-    # libtwrpmtp-legacy.so). Switch back to ffs.mtp only alongside an SDK 28+
-    # platform.
+    # PLATFORM_SDK_VERSION 28, so libtwrpmtp-ffs is linked -- but it only
+    # speaks FunctionFS-MTP when /dev/usb-ffs/mtp/ep0 exists, which needs an
+    # ffs.mtp gadget function. There is none: this kernel has no f_fs_mtp.c,
+    # so the only FunctionFS instance available is ffs.adb. The ffs MTP server
+    # therefore falls back to MtpDevHandle, which opens /dev/mtp_usb -- the
+    # device the mtp.gs0 function provides. So mtp.gs0 is the right choice at
+    # SDK 28 as well.
+    # Do not switch to ffs.mtp: it would need a kernel with the FunctionFS
+    # MTP function, and on this one it would leave the MTP server with no
+    # device to talk to.
     mkdir /config/usb_gadget/g1/functions/mtp.gs0
     mkdir /config/usb_gadget/g1/functions/mtp.gs0/os_desc
     mkdir /config/usb_gadget/g1/functions/mtp.gs0/os_desc/interface.MTP
