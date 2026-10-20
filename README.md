@@ -101,6 +101,31 @@ had (an Android 8.1 platform against a TeamWin `android-9.0` recovery tree).
 `remove-minimal.xml` drops `platform/external/libmtp` and
 `platform/external/mtpd` in both.
 
+### Build variants
+
+This tree is maintained as two branches that differ only in the platform they
+are built against:
+
+| Branch | Manifest | `PLATFORM_SDK_VERSION` | Notes |
+|---|---|---|---|
+| `recovery` (this branch) | `twrp-9.0` | 28 | platform and recovery tree are the same vintage |
+| `recovery-twrp-8.1` | `twrp-8.1` | 27 | Android 8.1 platform against a TeamWin `android-9.0` recovery tree |
+
+Everything else — the init scripts, the vendored blobs, the fstab, the kernel —
+is identical on both. The differences that the SDK level causes are:
+
+- **Crypto.** SDK 28 also sets `TW_INCLUDE_FBE_METADATA_DECRYPT`, which adds
+  `crypto/ext4crypt`. It is only taken for a file-encrypted `/data`, and this
+  device is FDE, so it stays unused.
+- **MTP.** SDK 28 links `libtwrpmtp-ffs` instead of `libtwrpmtp-legacy`. It
+  still works here: the ffs MTP server falls back to `MtpDevHandle` when
+  `/dev/usb-ffs/mtp/ep0` is absent, and it is absent because this kernel has no
+  `f_fs_mtp.c`. `MtpDevHandle` opens `/dev/mtp_usb`, which the `mtp.gs0` gadget
+  function provides — so `init.recovery.usb.rc` keeps `mtp.gs0` on both branches.
+
+Pick the branch, then the matching `MANIFEST_BRANCH`; the build workflow's
+guard step rejects a mismatch.
+
 ### Storage and fstab
 
 `BOARD_USES_VENDORIMAGE := true` and `TARGET_COPY_OUT_VENDOR := vendor` keep

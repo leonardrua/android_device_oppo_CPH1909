@@ -16,7 +16,7 @@ on:
         required: true
         default: 'https://github.com/leonardrua/android_device_oppo_CPH1909'
       DEVICE_TREE_BRANCH:
-        description: 'DEVICE_TREE_BRANCH'
+        description: 'DEVICE_TREE_BRANCH (the tree must match MANIFEST_BRANCH; this branch is recovery, the twrp-8.1 variant is recovery-twrp-8.1)'
         required: true
         default: 'recovery'
       DEVICE_PATH:
