@@ -304,6 +304,13 @@ It uses OpenJDK 8, which the android-8.1 build requires.
   the daemon's first registry search path. The stock value is `/efs`, which
   does not exist on this device. Whether the keymaster TA actually stores and
   reuses the token has not been checked on hardware.
+- **TWRP does not run vold, so no `vold.decrypt=trigger_*` property is ever
+  set.** `trustonic.rc` therefore keys its FDE block off `ro.crypto.state` and
+  `ro.crypto.type`, which TWRP sets itself in `Decrypt_Device()`. The
+  unencrypted block keys off `ro.crypto.state=unsupported`, which is the Oreo
+  spelling, but TWRP never sets `ro.crypto.state` at all for an unencrypted
+  `/data` — on this device `/data` is always forceencrypt, so that block is
+  expected never to fire.
 
 ## References
 

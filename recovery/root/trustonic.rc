@@ -58,7 +58,11 @@ on property:ro.crypto.type=file && property:ro.crypto.state=encrypted
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry -- (FBE encrypted)"
 
 # Normal mode, FDE
-on property:vold.decrypt=trigger_restart_framework
+# TWRP does not run vold, so vold.decrypt=trigger_restart_framework is never
+# set here -- that is an Android trigger. The FDE path in TWRP sets
+# ro.crypto.state=encrypted and ro.crypto.type=block itself, in
+# TWPartitionManager::Decrypt_Device(), so key off those instead.
+on property:ro.crypto.state=encrypted && property:ro.crypto.type=block
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry ++ (FDE encrypted)"
     mkdir /data/misc/mcRegistry 0775 system system
     symlink /vendor/persist/00000000.authtokcont /data/misc/mcRegistry/00000000.authtokcont
