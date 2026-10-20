@@ -28,10 +28,43 @@ on fs
 on property:ro.crypto.state=encrypted && property:ro.crypto.type=file
     install_keyring
 
-on property:twrp.all.users.decrypted=true
-    stop mobicore
+# Tear the TEE stack down once /data is decrypted.
+#
+# The Trustonic daemon keeps the TEE resident and the keymaster/gatekeeper
+# HALs hold the keystore; none of it is needed once /data is readable. The
+# sibling MT6765 tree (TWRP Gerrit android_device_nokia_WSP_sprout) stops the
+# same set.
+#
+# twrp.decrypt.done is the signal that actually fires. TWRP sets it in
+# TWPartitionManager::Post_Decrypt(), which runs on a successful decrypt for
+# both the FBE and the FDE path, and only on success -- a failed decrypt
+# returns before reaching it. twrp.all.users.decrypted is only set for FBE
+# (Check_Users_Decryption_Status() is inside #ifdef TW_INCLUDE_FBE), so on
+# an FDE device, which is what this one is, it never fires.
+#
+# Stopping the keymaster HAL is safe on this device: the FDE path uses the
+# software keystore (/sbin/keystore), not the TEE keymaster. On an FBE device
+# the HAL would still be needed, so only stop the TEE-only services there.
+#
+# init can bring any of these back with "setprop ctl.start <service>", so a
+# later Format Data that re-encrypts /data can restart the stack.
+on property:twrp.decrypt.done=true
+    stop kmsetkey_ca
+    stop keymaster_attestation-1-1
+    stop oppo-cryptoeng-1-0
     stop keymaster-3-0
     stop gatekeeper-1-0
+    stop mobicore
+    stop hwservicemanager
+
+on property:twrp.all.users.decrypted=true
+    stop kmsetkey_ca
+    stop keymaster_attestation-1-1
+    stop oppo-cryptoeng-1-0
+    stop keymaster-3-0
+    stop gatekeeper-1-0
+    stop mobicore
+    stop hwservicemanager
 
 service hwservicemanager /sbin/hwservicemanager
     user root

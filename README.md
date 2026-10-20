@@ -75,7 +75,7 @@ mismatch before the build starts.
 | `prebuilt/kernel` | Prebuilt `Image.gz-dtb`, enabled by `TARGET_FORCE_PREBUILT_KERNEL`. |
 | `recovery/root/etc/twrp.fstab` | TWRP mount table (`TARGET_RECOVERY_FSTAB`). |
 | `recovery/root/etc/mke2fs.conf` | Stock AOSP `mke2fs` configuration, used when TWRP formats ext4 on the device. |
-| `recovery/root/init.recovery.mt6765.rc` | Starts Trustonic, keymaster, gatekeeper, and keystore services in recovery. |
+| `recovery/root/init.recovery.mt6765.rc` | Starts Trustonic, keymaster, gatekeeper, and keystore services in recovery, and tears the TEE stack down again once `/data` is decrypted. |
 | `recovery/root/init.recovery.usb.rc` | ConfigFS USB gadget `g1` with `mtp.gs0` MTP, ADB, sideload, and mass storage. |
 | `recovery/root/trustonic.rc` | Starts the `mcDriverDaemon` with the eight `.drbin` drivers shipped on this device. |
 | `recovery/root/ueventd.reserve.rc` | Stock `opporeserve1` rules. Not imported by ueventd, see [Known gaps](#known-gaps). |
