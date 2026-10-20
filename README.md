@@ -152,7 +152,10 @@ optional. TWRP only marks a few mount points as backup-able by itself —
 `/system`, `/data`, `/cache` and the adopted storage — so without an explicit
 `backup` those three never appear in the backup list at all. TWRP likewise
 only knows `/system_image` and `/vendor_image` by name
-(`Translate_Partition_Display_Names`), so `/odm_image` needs the flag too.
+(`Translate_Partition_Display_Names`), so `/odm_image` needs the flag too,
+and a `display=` name as well — without one TWRP shows the raw mount point,
+`odm_image`. The names follow the convention: "System" / "System Image",
+"Vendor" / "Vendor Image", "ODM" / "ODM Image".
 
 ### Decryption
 

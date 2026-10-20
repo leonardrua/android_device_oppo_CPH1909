@@ -28,7 +28,12 @@
 # without an explicit "backup" they never appear in the backup list at all.
 # The same goes for /odm_image: TWRP only knows /system_image and
 # /vendor_image by name (Translate_Partition_Display_Names), so the odm raw
-# entry needs the flag as well.
+# entry needs the flag as well, and it needs a display name for the same
+# reason -- without one TWRP shows the raw mount point, "odm_image".
+#
+# The names follow the convention: "System" and "System Image", "Vendor" and
+# "Vendor Image", "ODM" and "ODM Image". TWRP supplies the first two pairs
+# itself; the odm ones come from this file.
 #
 # flashimg keeps an entry available for restore and flashing even when it is
 # not in the backup list.
@@ -37,7 +42,7 @@
 /odm ext4 /dev/block/platform/bootdevice/by-name/odm flags=display="ODM";backup
 /system_image emmc /dev/block/platform/bootdevice/by-name/system flags=flashimg=1
 /vendor_image emmc /dev/block/platform/bootdevice/by-name/vendor flags=flashimg=1
-/odm_image emmc /dev/block/platform/bootdevice/by-name/odm flags=backup;flashimg=1
+/odm_image emmc /dev/block/platform/bootdevice/by-name/odm flags=display="ODM Image";backup;flashimg=1
 
 /boot emmc /dev/block/platform/bootdevice/by-name/boot flags=backup;flashimg
 /recovery emmc /dev/block/platform/bootdevice/by-name/recovery flags=backup;flashimg
