@@ -74,6 +74,7 @@ mismatch before the build starts.
 | `device.mk` | Copies recovery init scripts, vendor blobs, firmware, and runtime libraries into the ramdisk through `PRODUCT_COPY_FILES`. |
 | `prebuilt/kernel` | Prebuilt `Image.gz-dtb`, enabled by `TARGET_FORCE_PREBUILT_KERNEL`. |
 | `recovery/root/etc/twrp.fstab` | TWRP mount table (`TARGET_RECOVERY_FSTAB`). |
+| `recovery/root/etc/mke2fs.conf` | Stock AOSP `mke2fs` configuration, used when TWRP formats ext4 on the device. |
 | `recovery/root/init.recovery.mt6765.rc` | Starts Trustonic, keymaster, gatekeeper, and keystore services in recovery. |
 | `recovery/root/init.recovery.usb.rc` | ConfigFS USB gadget `g1` with `mtp.gs0` MTP, ADB, sideload, and mass storage. |
 | `recovery/root/trustonic.rc` | Starts the `mcDriverDaemon` with the eight `.drbin` drivers shipped on this device. |

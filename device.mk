@@ -12,6 +12,9 @@ LOCAL_PATH := $(DEVICE_PATH)
 
 # Recovery ramdisk init scripts (TARGET_RECOVERY_FSTAB supplies twrp.fstab).
 # ueventd.reserve.rc carries the stock opporeserve1 partition rules.
+# etc/mke2fs.conf is the stock AOSP mke2fs configuration, read when TWRP
+# formats an ext4 filesystem on the device; without it mke2fs uses its own
+# compiled-in defaults, which do not match the stock image feature set.
 # vendor/ blobs (gatekeeper/keymaster services, mcRegistry, touch firmware,
 # manifest) are copied from the J0shua CPH1909 reference into recovery ramdisk.
 # sbin/ + system/ + vendor/lib64 crypto support libs come from the CPH1920
@@ -36,6 +39,7 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/init.recovery.usb.rc:root/init.recovery.usb.rc \
     $(DEVICE_PATH)/recovery/root/trustonic.rc:root/trustonic.rc \
     $(DEVICE_PATH)/recovery/root/ueventd.reserve.rc:root/ueventd.reserve.rc \
+    $(DEVICE_PATH)/recovery/root/etc/mke2fs.conf:root/etc/mke2fs.conf \
     $(DEVICE_PATH)/recovery/root/sbin/hwservicemanager:root/sbin/hwservicemanager \
     $(DEVICE_PATH)/recovery/root/vendor/manifest.xml:root/vendor/manifest.xml \
     $(DEVICE_PATH)/recovery/root/vendor/bin/mcDriverDaemon:root/vendor/bin/mcDriverDaemon \
