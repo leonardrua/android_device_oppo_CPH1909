@@ -136,7 +136,10 @@ TW_EXTRA_LANGUAGES := true
 TW_SCREEN_BLANK_ON_BOOT := true
 TW_INPUT_BLACKLIST := "hbtp_vm"
 TW_USE_TOOLBOX := true
-# ConfigFS-based USB with FunctionFS MTP (CPH1920 MTP fix).
+# ConfigFS-based USB. MTP uses the MTK mtp.gs0 gadget function (-> /dev/mtp_usb)
+# with libtwrpmtp-legacy, matching PLATFORM_SDK_VERSION 27. The CPH1920
+# reference's FunctionFS-MTP approach (ffs.mtp) needs libtwrpmtp-ffs, i.e.
+# SDK 28+, and leaves /dev/mtp_usb unprovided at SDK 27.
 TW_EXCLUDE_DEFAULT_USB_INIT := true
 TW_NO_USB_STORAGE := false
 TARGET_USE_CUSTOM_LUN_FILE_PATH := /config/usb_gadget/g1/functions/mass_storage.0/lun.%d/file
