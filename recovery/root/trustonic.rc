@@ -12,11 +12,24 @@ on post-fs
     # We restorecon /vendor/persist to set SEPolicy label.
     restorecon /vendor/persist
 
+    # MobiCore Daemon Paths.
+    #
+    # mcDriverDaemon reads the keymaster auth token container from
+    # $MC_AUTH_TOKEN_PATH/00000000.authtokcont, so this has to be exported
+    # BEFORE the daemon is started: init hands its environment to the
+    # services it spawns, and a variable exported afterwards never reaches a
+    # process that is already running.
+    #
+    # The stock value is /efs, which does not exist on this device. The
+    # persist partition is the only persistent, writable location available
+    # when the daemon starts -- trustonic.rc mounts it in "on init", and the
+    # daemon already keeps its registry database (Store_XX.tf, So.Root,
+    # So.Sp, So.TrustletCont) there via --P1.
+    write /proc/bootprof "MOBICORE: export MC_AUTH_TOKEN_PATH /vendor/persist"
+    export MC_AUTH_TOKEN_PATH /vendor/persist
+
     write /proc/bootprof "MOBICORE: Starting mcDriverDaemon"
     start mobicore
-    # MobiCore Daemon Paths
-    write /proc/bootprof "MOBICORE: export MC_AUTH_TOKEN_PATH /efs"
-    export MC_AUTH_TOKEN_PATH /efs
 
 on post-fs-data
     # Create /data/key_provisioning dir and get proper encryption policy installed
@@ -28,18 +41,24 @@ on post-fs-data
 on property:ro.crypto.state=unencrypted
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry ++ (unencrypted)"
     mkdir /data/misc/mcRegistry 0775 system system
+    # Expose the persisted auth token container in the registry directory.
+    # The daemon's first registry search path is /data/misc/mcRegistry, while
+    # the container itself lives on the persist partition.
+    symlink /vendor/persist/00000000.authtokcont /data/misc/mcRegistry/00000000.authtokcont
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry -- (unencrypted)"
 
 # Normal mode, FBE
 on property:ro.crypto.type=file && property:ro.crypto.state=encrypted
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry ++ (FBE encrypted)"
     mkdir /data/misc/mcRegistry 0775 system system
+    symlink /vendor/persist/00000000.authtokcont /data/misc/mcRegistry/00000000.authtokcont
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry -- (FBE encrypted)"
 
 # Normal mode, FDE
 on property:vold.decrypt=trigger_restart_framework
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry ++ (FDE encrypted)"
     mkdir /data/misc/mcRegistry 0775 system system
+    symlink /vendor/persist/00000000.authtokcont /data/misc/mcRegistry/00000000.authtokcont
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry -- (FDE encrypted)"
 
 # Start Daemon with all Trustonic driver applets present in recovery ramdisk

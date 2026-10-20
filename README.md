@@ -297,6 +297,13 @@ It uses OpenJDK 8, which the android-8.1 build requires.
   on it.
 - **Touch firmware coverage.** Firmware for the Himax, ILITEK, Novatek, and Goodix
   panels is included. Only the panel in use on a specific unit will load.
+- **The keymaster auth token is only half-wired.** `mcDriverDaemon` reads the
+  auth token container from `$MC_AUTH_TOKEN_PATH/00000000.authtokcont`, so
+  `trustonic.rc` exports `MC_AUTH_TOKEN_PATH=/vendor/persist` before starting
+  the daemon and symlinks the container into `/data/misc/mcRegistry`, which is
+  the daemon's first registry search path. The stock value is `/efs`, which
+  does not exist on this device. Whether the keymaster TA actually stores and
+  reuses the token has not been checked on hardware.
 
 ## References
 
