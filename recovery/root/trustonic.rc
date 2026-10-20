@@ -38,7 +38,10 @@ on post-fs-data
     mkdir /vendor/persist/mcRegistry 0771 system system
 
 # For META/FACTORY mode
-on property:ro.crypto.state=unencrypted
+# Android 8.x reports the unencrypted state as "unsupported"; "unencrypted"
+# is the pre-Oreo value and never fires here, so /data/misc/mcRegistry was
+# never created for an unencrypted /data.
+on property:ro.crypto.state=unsupported
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry ++ (unencrypted)"
     mkdir /data/misc/mcRegistry 0775 system system
     # Expose the persisted auth token container in the registry directory.
