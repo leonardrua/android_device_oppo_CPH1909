@@ -117,11 +117,11 @@ is identical on both. The differences that the SDK level causes are:
 - **Crypto.** SDK 28 also sets `TW_INCLUDE_FBE_METADATA_DECRYPT`, which adds
   `crypto/ext4crypt`. It is only taken for a file-encrypted `/data`, and this
   device is FDE, so it stays unused.
-- **MTP.** SDK 28 links `libtwrpmtp-ffs` instead of `libtwrpmtp-legacy`. It
-  still works here: the ffs MTP server falls back to `MtpDevHandle` when
-  `/dev/usb-ffs/mtp/ep0` is absent, and it is absent because this kernel has no
-  `f_fs_mtp.c`. `MtpDevHandle` opens `/dev/mtp_usb`, which the `mtp.gs0` gadget
-  function provides — so `init.recovery.usb.rc` keeps `mtp.gs0` on both branches.
+- **MTP.** The two branches use different transports. SDK 28 links
+  `libtwrpmtp-ffs`, which drives a FunctionFS gadget function (`ffs.mtp`); SDK
+  27 links `libtwrpmtp-legacy`, which talks to `/dev/mtp_usb` and so needs the
+  MTK `mtp.gs0` gadget function. The legacy library cannot speak
+  FunctionFS-MTP, so the transport has to follow the SDK level.
 
 Pick the branch, then the matching `MANIFEST_BRANCH`; the build workflow's
 guard step rejects a mismatch.
@@ -159,33 +159,32 @@ Whether the FDE path decrypts `/data` on this device is still unconfirmed.
 TWRP picks its MTP implementation by SDK level in `bootable/recovery/Android.mk`.
 SDK 28 and above builds FunctionFS (`libtwrpmtp-ffs`). Lower levels build the
 legacy implementation (`libtwrpmtp-legacy`), which talks to `/dev/mtp_usb`.
-This tree is at SDK 28, so `libtwrpmtp-ffs` is linked — but it only speaks
-FunctionFS-MTP when `/dev/usb-ffs/mtp/ep0` exists, which needs an `ffs.mtp`
-gadget function. This tree does not create one, so the ffs MTP server falls
-back to `MtpDevHandle`, which opens `/dev/mtp_usb`. `init.recovery.usb.rc`
-keeps the `mtp.gs0` function, which is what provides that device. The
-`/dev/mtp_usb` node comes from the platform `ueventd.rc`.
+This branch is at SDK 28, so `libtwrpmtp-ffs` is linked and MTP is carried by
+a FunctionFS gadget function, `ffs.mtp`, with a `/dev/usb-ffs/mtp` mount —
+the approach the CPH1920 reference takes (SQR11211, tag `MTP-fix`, commit
+`4f007b8`).
 
-An `ffs.mtp` instance would be creatable — the configfs name is
-`FUNC.INSTANCE`, `configfs`'s `function_make()` splits it at the first dot, so
-FUNC is `ffs` (the f_fs driver, built in) and INSTANCE is `mtp`, and
-`f_fs`'s `set_inst_name()` accepts any name. There is no `f_fs_mtp.c` to look
-for because the MTP protocol over FunctionFS is implemented in userspace, by
-TWRP's `MtpFfsHandle`. This tree keeps `mtp.gs0` anyway, for two reasons: it
-is the transport the stock ROM's userspace MTP uses, and the MS OS
-descriptor's "MTP" compatible ID can only be published through it — only
-`f_mtp.c` creates a configfs `os_desc` group, via
-`usb_os_desc_prepare_interf_dir()`, so a FunctionFS instance has nowhere to
-put it.
+The configfs name is `FUNC.INSTANCE` and `configfs`'s `function_make()`
+splits it at the first dot, so `ffs.mtp` means the `f_fs` driver with the
+instance name `mtp`. `f_fs`'s `set_inst_name()` accepts any name, and there
+is no `f_fs_mtp.c` to look for because the MTP protocol over FunctionFS is
+implemented in userspace, by TWRP's `MtpFfsHandle`.
 
-The CPH1920 reference (SQR11211, tag `MTP-fix`) took the other route: it
-replaced `mtp.gs0` with an `ffs.mtp` gadget function and a
-`/dev/usb-ffs/mtp` mount, which needs `libtwrpmtp-ffs` and so an SDK 28+
-platform. Its README describes that change backwards — it says the fix went
-"from the old FunctionFS path (`ffs.mtp`, manual `/dev/usb-ffs/mtp` mount) to
-ConfigFS-based MTP (`mtp.gs0`)", while commit `4f007b8` did the reverse:
-`mtp.gs0` and the `os_desc` setup are what the tree had *before* it, and
-`ffs.mtp` is what it has *after*.
+Both functions have to be described by userspace before the gadget can be
+bound: a FunctionFS function has no endpoints until userspace has described
+them. `adbd` sets `sys.usb.ffs.ready` and TWRP's MTP server sets
+`sys.usb.ffs.mtp.ready`; the bind waits for both.
+
+The MS OS descriptor's "MTP" compatible ID comes from the descriptor set the
+MTP server writes (`mtp_os_desc_compat`, `CompatibleID "MTP"`, with
+`FUNCTIONFS_HAS_MS_OS_DESC`), so the branding survives the switch — it no
+longer comes from a function-level configfs attribute, because only
+`f_mtp.c` creates one of those.
+
+The `recovery-twrp-8.1` branch keeps the MTK `mtp.gs0` function and
+`libtwrpmtp-legacy`, which is the transport the stock ROM's userspace MTP
+uses; the legacy library cannot speak FunctionFS-MTP, so the two branches
+differ here.
 
 The gadget also advertises the Microsoft OS descriptor, so Windows recognises
 the MTP interface without a driver. That needs three things in
