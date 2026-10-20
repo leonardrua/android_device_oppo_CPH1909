@@ -140,8 +140,19 @@ mounted. It is reached through `forceencrypt=` on `/data`.
 
 Each of `system`, `vendor`, and `odm` appears twice: once as a mountable `ext4`
 entry, and once as a raw `emmc` `*_image` entry for full-partition backup or
-restore. The raw entries use `flags=backup=0;flashimg=1` so that "Select all"
-does not archive each partition twice.
+restore. Both variants are in the backup list, so "Select all" archives each
+partition twice — a file tarball plus the raw image, which also carries the
+partition's empty space. The raw images add 5.77 GiB (system 4.20, vendor 1.31,
+odm 0.25 GiB, from the MT6765 scatter table). The redundancy is deliberate:
+the raw image is the only thing that can be restored when the filesystem will
+not mount.
+
+The `backup` flag on the `vendor`, `odm` and `odm_image` entries is not
+optional. TWRP only marks a few mount points as backup-able by itself —
+`/system`, `/data`, `/cache` and the adopted storage — so without an explicit
+`backup` those three never appear in the backup list at all. TWRP likewise
+only knows `/system_image` and `/vendor_image` by name
+(`Translate_Partition_Display_Names`), so `/odm_image` needs the flag too.
 
 ### Decryption
 

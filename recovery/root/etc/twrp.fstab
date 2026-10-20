@@ -13,17 +13,31 @@
 # convention as Google's and TeamWin's own trees (e.g. android-9.0
 # recovery.fstab for xiaomi_beryllium, google_shamrock).
 #
-# The raw entries carry backup=0;flashimg=1: flashimg keeps them available for
-# restore/flashing, backup=0 keeps them out of the backup list. Without it,
-# "Select All partitions" would archive system, vendor and odm twice over --
-# 5.77 GiB of redundant raw images (4.20 + 1.31 + 0.25 GiB) on top of the
-# tarballs, since a raw image includes the partition's empty space.
+# Both variants are in the backup list, so "Select All partitions" archives
+# each of the three twice: a file tarball plus the raw image, which also
+# carries the partition's empty space. The raw images add 5.77 GiB (system
+# 4.20, vendor 1.31, odm 0.25 GiB, sizes from the MT6765 scatter table).
+# That redundancy is deliberate -- the raw image is the only thing that can be
+# restored when the filesystem will not mount, or when a foreign ROM has to be
+# put back. Drop "backup" from an entry that should not be in the backup
+# list.
+#
+# The flags on the ext4 entries are not optional. TWRP's fstab parser only
+# marks a few mount points as backup-able by itself -- /system, /data,
+# /cache and the adopted storage. /vendor and /odm are not in that list, so
+# without an explicit "backup" they never appear in the backup list at all.
+# The same goes for /odm_image: TWRP only knows /system_image and
+# /vendor_image by name (Translate_Partition_Display_Names), so the odm raw
+# entry needs the flag as well.
+#
+# flashimg keeps an entry available for restore and flashing even when it is
+# not in the backup list.
 /system ext4 /dev/block/platform/bootdevice/by-name/system
-/vendor ext4 /dev/block/platform/bootdevice/by-name/vendor
-/odm ext4 /dev/block/platform/bootdevice/by-name/odm
-/system_image emmc /dev/block/platform/bootdevice/by-name/system flags=backup=0;flashimg=1
-/vendor_image emmc /dev/block/platform/bootdevice/by-name/vendor flags=backup=0;flashimg=1
-/odm_image emmc /dev/block/platform/bootdevice/by-name/odm flags=backup=0;flashimg=1
+/vendor ext4 /dev/block/platform/bootdevice/by-name/vendor flags=backup
+/odm ext4 /dev/block/platform/bootdevice/by-name/odm flags=display="ODM";backup
+/system_image emmc /dev/block/platform/bootdevice/by-name/system flags=flashimg=1
+/vendor_image emmc /dev/block/platform/bootdevice/by-name/vendor flags=flashimg=1
+/odm_image emmc /dev/block/platform/bootdevice/by-name/odm flags=backup;flashimg=1
 
 /boot emmc /dev/block/platform/bootdevice/by-name/boot flags=backup;flashimg
 /recovery emmc /dev/block/platform/bootdevice/by-name/recovery flags=backup;flashimg
