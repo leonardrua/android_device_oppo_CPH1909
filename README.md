@@ -339,6 +339,13 @@ It uses OpenJDK 8, which the android-9.0 build requires.
 - **`ueventd.reserve.rc` is not used.** Ueventd only loads `ueventd.rc` and
   `ueventd.$hardware.rc`, so the stock `opporeserve1` rules in this file have no
   effect. Add the rules to a file that ueventd loads if they are needed.
+- **The fstab uses a flag TWRP does not know.** `twrp.fstab` marks `/data`
+  with `flags=forceencrypt=.../metadata`, but TWRP's fstab flag table
+  (`partition.cpp`) only knows `encryptable=` and `fileencryption=` —
+  `forceencrypt=` is not in it, so it does not set `Crypto_Key_Location`
+  and TWRP has to detect the FDE footer from blkid instead. The stock MTK
+  fstab uses the same flag, so this is not a local mistake, but it is worth
+  checking that TWRP does see `/data` as encrypted.
 - **There is nothing to set for FBE.** TWRP 3.x has no `TW_INCLUDE_FBE`
   variable, and neither FBE flag can be turned off from a device tree:
   `TW_INCLUDE_CRYPTO_FBE` is force-enabled for SDK 24 and above, and the FBE
@@ -361,24 +368,32 @@ It uses OpenJDK 8, which the android-9.0 build requires.
   is worth checking on a built image.
 - **Touch firmware coverage.** Firmware for the Himax, ILITEK, Novatek, and Goodix
   panels is included. Only the panel in use on a specific unit will load.
-- **The keymaster auth token is only half-wired.** `mcDriverDaemon` reads the
-  auth token container from `$MC_AUTH_TOKEN_PATH/00000000.authtokcont`, so
-  `trustonic.rc` exports `MC_AUTH_TOKEN_PATH=/vendor/persist` before starting
-  the daemon and symlinks the container into `/data/misc/mcRegistry`, which is
-  the daemon's first registry search path. The stock value is `/efs`, which
-  does not exist on this device.
-  The container is **not shipped by the tree and cannot be created by it**: the
-  daemon writes it once the keymaster TA has issued an auth token, so its
-  absence means the TEE path never ran — it is a symptom, not a missing file.
-  Its appearing in `/vendor/persist` after a successful decrypt is the
-  indicator that the stack came up. The daemon's own messages are on the
-  kernel console while it is running (`console` in the `mobicore` service).
-  The daemon opens `/dev/mobicore` and `/dev/mobicore-user` by absolute
-  path; the kernel creates them in the `trustonic_tee` class with
-  `class_create()` and no devnode callback, so devtmpfs applies its
-  default of `0600 root:root`, and the stock MTK `ueventd.rc` has no rule
-  for them. The service therefore runs as root, not as `system` — see the
-  comment on the `mobicore` service.
+- **There is no keymaster auth token container on this device.**
+  `mcDriverDaemon` reads `00000000.authtokcont` from `$MC_AUTH_TOKEN_PATH`,
+  but the file does not exist — not in `/vendor/persist`, not in
+  `/data/misc/mcRegistry`, not in `/vendor/nvcfg`, and not on the stock ROM
+  either. Nothing in the tree can create it: it is written by the keymaster TA
+  once it has issued an auth token. The export in `trustonic.rc` keeps the
+  stock `/efs` value and is ordered before the daemon start (init hands its
+  environment to the services it spawns), but the lookup is a no-op on this
+  device and there is nothing to point at a different directory.
+- **The TEE stack is not on TWRP's FDE decrypt path.** TWRP's FDE code
+  (`crypto/fde/cryptfs.cpp`) asks for a *legacy* hardware module by class:
+  `hw_get_module_by_class(KEYSTORE_HARDWARE_MODULE_ID, ...)`, which is
+  `"keystore"`. In a recovery ramdisk the only module with that id is AOSP's
+  software keymaster (`libsoftkeymaster.so`, which registers
+  `struct keystore_module`), and TWRP relinks it in at SDK < 28. The vendor
+  keymaster on this device is HIDL-only
+  (`android.hardware.keymaster@3.0-service`, registered with
+  hwservicemanager) and cannot be reached through that API at all. So
+  `mobicore`, the vendor keymaster and the gatekeeper serve the fingerprint
+  gatekeeper and FBE — neither of which is the FDE decrypt.
+- **The daemon opens `/dev/mobicore` and `/dev/mobicore-user` by absolute
+  path.** The kernel creates them in the `trustonic_tee` class with
+  `class_create()` and no devnode callback, so devtmpfs applies its default
+  of `0600 root:root`, and the stock MTK `ueventd.rc` has no rule for them.
+  The `mobicore` service therefore runs as root, not as `system` — see the
+  comment on the service.
 - **TWRP does not run vold, so no `vold.decrypt=trigger_*` property is ever
   set.** `trustonic.rc` therefore keys its FDE block off `ro.crypto.state` and
   `ro.crypto.type`, which TWRP sets itself in `Decrypt_Device()`. The
