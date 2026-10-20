@@ -69,10 +69,24 @@ on property:ro.crypto.state=encrypted && property:ro.crypto.type=block
     write /proc/bootprof "MOBICORE: create /data/misc/mcRegistry -- (FDE encrypted)"
 
 # Start Daemon with all Trustonic driver applets present in recovery ramdisk
+#
+# The seclabel is required. init only calls setexeccon() for a service that
+# declares one (system/core/init/service.cpp), so a service without it stays
+# in init's own domain, u:r:init:s0. The recovery policy does not let init
+# exec a program without changing domain -- system/sepolicy public/init.te
+# has "neverallow init { file_type fs_type }:file execute_no_trans;" -- so
+# such a service cannot exec its binary at all.
+#
+# u:r:recovery:s0 is the right label because TWRP makes that domain
+# permissive (bootable/recovery/sepolicy/twrp.te: "permissive recovery;"),
+# which is what lets the daemon open the TEE node and the registry files.
+# Every other service in this tree, and the mobicore service in the sibling
+# MT6765 tree, uses the same label.
 service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030d0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07150000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07170000000000000000000000000000.drbin -r /vendor/app/mcRegistry/09070000000000000000000000000000.drbin
     user system
     group system
     class core
     priority -20
     oneshot
+    seclabel u:r:recovery:s0
 
