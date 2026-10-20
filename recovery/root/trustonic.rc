@@ -95,8 +95,21 @@ on property:ro.crypto.state=encrypted && property:ro.crypto.type=block
 # Every other service in this tree, and the mobicore service in the sibling
 # MT6765 tree, uses the same label.
 service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030d0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07150000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07170000000000000000000000000000.drbin -r /vendor/app/mcRegistry/09070000000000000000000000000000.drbin
-    user system
-    group system
+    # The daemon opens the TEE device nodes by absolute path: /dev/mobicore
+    # (the admin node, for "Initialise Secure World") and /dev/mobicore-user
+    # (the user node, for the TA clients). The kernel creates them in the
+    # trustonic_tee class with class_create() and no devnode callback, so
+    # devtmpfs applies its default of 0600 root:root, and the stock MTK
+    # ueventd.rc has no rule for them. As "system" the daemon cannot open
+    # them, and it dies at "Can't open secure world" -- which leaves the
+    # whole TEE stack down and is why the keymaster auth token container
+    # never appears anywhere.
+    #
+    # Root is also what the sibling MT6833 tree uses for this daemon, and
+    # it is consistent with the rest of this tree: TWRP's keymaster,
+    # gatekeeper and keystore all run as root here.
+    user root
+    group root
     class core
     priority -20
     oneshot

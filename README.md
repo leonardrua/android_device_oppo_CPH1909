@@ -373,6 +373,12 @@ It uses OpenJDK 8, which the android-9.0 build requires.
   Its appearing in `/vendor/persist` after a successful decrypt is the
   indicator that the stack came up. The daemon's own messages are on the
   kernel console while it is running (`console` in the `mobicore` service).
+  The daemon opens `/dev/mobicore` and `/dev/mobicore-user` by absolute
+  path; the kernel creates them in the `trustonic_tee` class with
+  `class_create()` and no devnode callback, so devtmpfs applies its
+  default of `0600 root:root`, and the stock MTK `ueventd.rc` has no rule
+  for them. The service therefore runs as root, not as `system` — see the
+  comment on the `mobicore` service.
 - **TWRP does not run vold, so no `vold.decrypt=trigger_*` property is ever
   set.** `trustonic.rc` therefore keys its FDE block off `ro.crypto.state` and
   `ro.crypto.type`, which TWRP sets itself in `Decrypt_Device()`. The
