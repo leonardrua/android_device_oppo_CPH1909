@@ -70,12 +70,15 @@ on property:ro.crypto.state=encrypted && property:ro.crypto.type=block
 
 # Start Daemon with all Trustonic driver applets present in recovery ramdisk
 #
-# The seclabel is required. init only calls setexeccon() for a service that
-# declares one (system/core/init/service.cpp), so a service without it stays
-# in init's own domain, u:r:init:s0. The recovery policy does not let init
-# exec a program without changing domain -- system/sepolicy public/init.te
-# has "neverallow init { file_type fs_type }:file execute_no_trans;" -- so
-# such a service cannot exec its binary at all.
+# The seclabel is required. Without one, init falls back to computing the
+# domain transition from the executable's own file label
+# (system/core/init/service.cpp, ComputeContextFromExecutable). mcDriverDaemon
+# is a vendor file with no init->vendor_file transition in the recovery
+# policy, so security_compute_create() hands back init's own context, init
+# logs "service mobicore does not have a SELinux domain defined", and it
+# refuses to start the service at all. The policy states the same rule from
+# the other side: system/sepolicy public/init.te has
+# "neverallow init { file_type fs_type }:file execute_no_trans;".
 #
 # u:r:recovery:s0 is the right label because TWRP makes that domain
 # permissive (bootable/recovery/sepolicy/twrp.te: "permissive recovery;"),
