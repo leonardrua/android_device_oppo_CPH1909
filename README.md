@@ -134,6 +134,16 @@ This tree is at SDK 27, so `init.recovery.usb.rc` uses the legacy `mtp.gs0`
 function. A `ffs.mtp` gadget would not work with this library. The
 `/dev/mtp_usb` node comes from the platform `ueventd.rc`.
 
+The gadget also advertises the Microsoft OS descriptor, so Windows recognises
+the MTP interface without a driver. That needs three things in
+`init.recovery.usb.rc`: the `os_desc` attributes (`b_vendor_code`, `qw_sign`),
+a symlink from `os_desc/b.1` to `configs/b.1`, and `os_desc/use 1`. The
+symlink has to be created after `configs/b.1` exists, because the kernel
+only accepts an `os_desc` link whose target is already a registered
+configuration. `os_desc/use` is latched into `cdev->use_os_string` when the
+controller is bound, so it is set before the first bind and re-armed before
+every later one.
+
 ### Kernel
 
 The kernel is a prebuilt `Image.gz-dtb` (9,979,567 bytes, SHA-256
