@@ -28,6 +28,15 @@ on post-fs
     write /proc/bootprof "MOBICORE: export MC_AUTH_TOKEN_PATH /vendor/persist"
     export MC_AUTH_TOKEN_PATH /vendor/persist
 
+    # The daemon's first registry search path is /data/misc/mcRegistry. On
+    # this device /data is encrypted and TWRP cannot mount it until the user
+    # has decrypted, so at this point that path does not exist. Create it in
+    # the ramdisk so the daemon's registry update thread has a directory to
+    # work with; its registry-update failure path is a hard
+    # "*** ABORT TRUSTONIC DAEMON ***". The real /data copy is created later,
+    # by the crypto-state blocks below, once /data is mounted.
+    mkdir /data/misc/mcRegistry 0775 system system
+
     write /proc/bootprof "MOBICORE: Starting mcDriverDaemon"
     start mobicore
 
@@ -92,4 +101,9 @@ service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/
     priority -20
     oneshot
     seclabel u:r:recovery:s0
+    # Send the daemon's diagnostics to the kernel console instead of /dev/null.
+    # This is how to tell how far it gets: "Initialise Secure World", "Can't
+    # open secure world", "Driver %s couldn't be loaded", "*** ABORT
+    # TRUSTONIC DAEMON ***". Remove once the TEE path works.
+    console
 

@@ -366,8 +366,13 @@ It uses OpenJDK 8, which the android-9.0 build requires.
   `trustonic.rc` exports `MC_AUTH_TOKEN_PATH=/vendor/persist` before starting
   the daemon and symlinks the container into `/data/misc/mcRegistry`, which is
   the daemon's first registry search path. The stock value is `/efs`, which
-  does not exist on this device. Whether the keymaster TA actually stores and
-  reuses the token has not been checked on hardware.
+  does not exist on this device.
+  The container is **not shipped by the tree and cannot be created by it**: the
+  daemon writes it once the keymaster TA has issued an auth token, so its
+  absence means the TEE path never ran — it is a symptom, not a missing file.
+  Its appearing in `/vendor/persist` after a successful decrypt is the
+  indicator that the stack came up. The daemon's own messages are on the
+  kernel console while it is running (`console` in the `mobicore` service).
 - **TWRP does not run vold, so no `vold.decrypt=trigger_*` property is ever
   set.** `trustonic.rc` therefore keys its FDE block off `ro.crypto.state` and
   `ro.crypto.type`, which TWRP sets itself in `Decrypt_Device()`. The
