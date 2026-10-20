@@ -39,14 +39,16 @@ on init
     # libtwrpmtp-legacy, which talks to /dev/mtp_usb. This tree builds at
     # PLATFORM_SDK_VERSION 28, so libtwrpmtp-ffs is linked -- but it only
     # speaks FunctionFS-MTP when /dev/usb-ffs/mtp/ep0 exists, which needs an
-    # ffs.mtp gadget function. There is none: this kernel has no f_fs_mtp.c,
-    # so the only FunctionFS instance available is ffs.adb. The ffs MTP server
-    # therefore falls back to MtpDevHandle, which opens /dev/mtp_usb -- the
-    # device the mtp.gs0 function provides. So mtp.gs0 is the right choice at
-    # SDK 28 as well.
-    # Do not switch to ffs.mtp: it would need a kernel with the FunctionFS
-    # MTP function, and on this one it would leave the MTP server with no
-    # device to talk to.
+    # ffs.mtp gadget function. This tree does not create one, so the ffs MTP
+    # server falls back to MtpDevHandle, which opens /dev/mtp_usb -- the
+    # device the mtp.gs0 function provides.
+    #
+    # Two reasons for keeping mtp.gs0 rather than switching to ffs.mtp: it is
+    # the transport the stock ROM's userspace MTP uses, and the MS OS
+    # descriptor's "MTP" compatible ID can only be published through it --
+    # only f_mtp.c creates a configfs os_desc group, via
+    # usb_os_desc_prepare_interf_dir(), so a FunctionFS instance has nowhere
+    # to put it.
     mkdir /config/usb_gadget/g1/functions/mtp.gs0
     mkdir /config/usb_gadget/g1/functions/mtp.gs0/os_desc
     mkdir /config/usb_gadget/g1/functions/mtp.gs0/os_desc/interface.MTP

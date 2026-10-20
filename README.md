@@ -161,11 +161,31 @@ SDK 28 and above builds FunctionFS (`libtwrpmtp-ffs`). Lower levels build the
 legacy implementation (`libtwrpmtp-legacy`), which talks to `/dev/mtp_usb`.
 This tree is at SDK 28, so `libtwrpmtp-ffs` is linked — but it only speaks
 FunctionFS-MTP when `/dev/usb-ffs/mtp/ep0` exists, which needs an `ffs.mtp`
-gadget function. This kernel has no `f_fs_mtp.c`, so the only FunctionFS
-instance available is `ffs.adb`; the ffs MTP server therefore falls back to
-`MtpDevHandle`, which opens `/dev/mtp_usb`. `init.recovery.usb.rc` keeps the
-`mtp.gs0` function, which is what provides that device. The `/dev/mtp_usb` node
-comes from the platform `ueventd.rc`.
+gadget function. This tree does not create one, so the ffs MTP server falls
+back to `MtpDevHandle`, which opens `/dev/mtp_usb`. `init.recovery.usb.rc`
+keeps the `mtp.gs0` function, which is what provides that device. The
+`/dev/mtp_usb` node comes from the platform `ueventd.rc`.
+
+An `ffs.mtp` instance would be creatable — the configfs name is
+`FUNC.INSTANCE`, `configfs`'s `function_make()` splits it at the first dot, so
+FUNC is `ffs` (the f_fs driver, built in) and INSTANCE is `mtp`, and
+`f_fs`'s `set_inst_name()` accepts any name. There is no `f_fs_mtp.c` to look
+for because the MTP protocol over FunctionFS is implemented in userspace, by
+TWRP's `MtpFfsHandle`. This tree keeps `mtp.gs0` anyway, for two reasons: it
+is the transport the stock ROM's userspace MTP uses, and the MS OS
+descriptor's "MTP" compatible ID can only be published through it — only
+`f_mtp.c` creates a configfs `os_desc` group, via
+`usb_os_desc_prepare_interf_dir()`, so a FunctionFS instance has nowhere to
+put it.
+
+The CPH1920 reference (SQR11211, tag `MTP-fix`) took the other route: it
+replaced `mtp.gs0` with an `ffs.mtp` gadget function and a
+`/dev/usb-ffs/mtp` mount, which needs `libtwrpmtp-ffs` and so an SDK 28+
+platform. Its README describes that change backwards — it says the fix went
+"from the old FunctionFS path (`ffs.mtp`, manual `/dev/usb-ffs/mtp` mount) to
+ConfigFS-based MTP (`mtp.gs0`)", while commit `4f007b8` did the reverse:
+`mtp.gs0` and the `os_desc` setup are what the tree had *before* it, and
+`ffs.mtp` is what it has *after*.
 
 The gadget also advertises the Microsoft OS descriptor, so Windows recognises
 the MTP interface without a driver. That needs three things in
