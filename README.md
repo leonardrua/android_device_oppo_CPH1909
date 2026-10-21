@@ -407,6 +407,17 @@ It uses OpenJDK 8, which the android-9.0 build requires.
   of `0600 root:root`, and the stock MTK `ueventd.rc` has no rule for them.
   The `mobicore` service therefore runs as root, not as `system` — see the
   comment on the service.
+- **The Trustonic setup is modelled on the realme C2 tree.** That device is
+  the same MT6765 family and its `trustonic.rc` is a working reference:
+  `--P1` points at the `mcRegistry` directory inside the persist partition
+  (`/mnt/vendor/persist/mcRegistry` there, `/vendor/persist/mcRegistry`
+  here), that directory is created before the daemon is started, and the
+  service runs as root with `seclabel u:r:recovery:s0` and `disabled` so it
+  is started exactly once. The driver list differs — the C2 ships applets
+  this device does not have (`cmdq`, `spi5`, `widevine`, `isp`, `sensor`,
+  `drm keyinstall`, `DrTui`, `IRIS_I2C`) and this device has ones the C2
+  does not list (`030d`, `0715`, `0717`, `0907`) — so the list stays as the
+  eight applets this tree actually ships.
 - **TWRP does not run vold, so no `vold.decrypt=trigger_*` property is ever
   set.** `trustonic.rc` therefore keys its FDE block off `ro.crypto.state` and
   `ro.crypto.type`, which TWRP sets itself in `Decrypt_Device()`. The

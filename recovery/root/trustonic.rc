@@ -28,14 +28,12 @@ on post-fs
     write /proc/bootprof "MOBICORE: export MC_AUTH_TOKEN_PATH /efs"
     export MC_AUTH_TOKEN_PATH /efs
 
-    # The daemon's first registry search path is /data/misc/mcRegistry. On
-    # this device /data is encrypted and TWRP cannot mount it until the user
-    # has decrypted, so at this point that path does not exist. Create it in
-    # the ramdisk so the daemon's registry update thread has a directory to
-    # work with; its registry-update failure path is a hard
-    # "*** ABORT TRUSTONIC DAEMON ***". The real /data copy is created later,
-    # by the crypto-state blocks below, once /data is mounted.
-    mkdir /data/misc/mcRegistry 0775 system system
+    # The daemon keeps its registry database here: --P1 is the path it
+    # writes Store_XX.tf and the So.Root / So.Sp / So.TrustletCont
+    # containers to. The directory has to exist before the daemon starts, so
+    # it is created here rather than in "on post-fs-data". Same layout as
+    # the realme C2 tree, which uses /mnt/vendor/persist/mcRegistry.
+    mkdir /vendor/persist/mcRegistry 0771 system system
 
     write /proc/bootprof "MOBICORE: Starting mcDriverDaemon"
     start mobicore
@@ -44,7 +42,6 @@ on post-fs-data
     # Create /data/key_provisioning dir and get proper encryption policy installed
     # Key Installation
     mkdir /data/key_provisioning 0771 system system
-    mkdir /vendor/persist/mcRegistry 0771 system system
 
 # For META/FACTORY mode
 # Android 8.x reports the unencrypted state as "unsupported"; "unencrypted"
@@ -86,27 +83,29 @@ on property:ro.crypto.state=encrypted && property:ro.crypto.type=block
 # u:r:recovery:s0 is the right label because TWRP makes that domain
 # permissive (bootable/recovery/sepolicy/twrp.te: "permissive recovery;"),
 # which is what lets the daemon open the TEE node and the registry files.
-# Every other service in this tree, and the mobicore service in the sibling
-# MT6765 tree, uses the same label.
-service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030d0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07150000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07170000000000000000000000000000.drbin -r /vendor/app/mcRegistry/09070000000000000000000000000000.drbin
+# Every other service in this tree uses the same label, and so does the
+# mobicore service in the realme C2 and Nokia MT6765 trees.
+service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist/mcRegistry -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030b0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/030d0000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05070000000000000000000000000000.drbin -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07150000000000000000000000000000.drbin -r /vendor/app/mcRegistry/07170000000000000000000000000000.drbin -r /vendor/app/mcRegistry/09070000000000000000000000000000.drbin
     # The daemon opens the TEE device nodes by absolute path: /dev/mobicore
     # (the admin node, for "Initialise Secure World") and /dev/mobicore-user
     # (the user node, for the TA clients). The kernel creates them in the
     # trustonic_tee class with class_create() and no devnode callback, so
     # devtmpfs applies its default of 0600 root:root, and the stock MTK
     # ueventd.rc has no rule for them. As "system" the daemon cannot open
-    # them, and it dies at "Can't open secure world" -- which leaves the
-    # whole TEE stack down and is why the keymaster auth token container
-    # never appears anywhere.
+    # them and dies at "Can't open secure world", which leaves the whole TEE
+    # stack down.
     #
-    # Root is also what the sibling MT6833 tree uses for this daemon, and
-    # it is consistent with the rest of this tree: TWRP's keymaster,
-    # gatekeeper and keystore all run as root here.
+    # Root is what the realme C2 tree (same MT6765 family) uses for this
+    # daemon, and what the sibling MT6833 tree uses, and it is consistent
+    # with the rest of this tree: TWRP's keymaster, gatekeeper and keystore
+    # all run as root here.
     user root
     group root
-    class core
+    # Started explicitly from "on post-fs" below, once the registry
+    # directory exists. "disabled" keeps the class from starting it a
+    # second time at an unpredictable point.
+    disabled
     priority -20
-    oneshot
     seclabel u:r:recovery:s0
     # Send the daemon's diagnostics to the kernel console instead of /dev/null.
     # This is how to tell how far it gets: "Initialise Secure World", "Can't
