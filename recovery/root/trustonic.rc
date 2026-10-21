@@ -89,11 +89,12 @@ service mobicore /vendor/bin/mcDriverDaemon --P1 /vendor/persist/mcRegistry -r /
     # The daemon opens the TEE device nodes by absolute path: /dev/mobicore
     # (the admin node, for "Initialise Secure World") and /dev/mobicore-user
     # (the user node, for the TA clients). The kernel creates them in the
-    # trustonic_tee class with class_create() and no devnode callback, so
-    # devtmpfs applies its default of 0600 root:root, and the stock MTK
-    # ueventd.rc has no rule for them. As "system" the daemon cannot open
-    # them and dies at "Can't open secure world", which leaves the whole TEE
-    # stack down.
+    # trustonic_tee class with device_create() and an explicit devnode name
+    # (MC_ADMIN_DEVNODE and MC_USER_DEVNODE), so devtmpfs applies its
+    # default of 0600 root:root. The platform's own ueventd.rc has no rule
+    # for them; ueventd.mt6765.rc in this tree adds one, but as "system" the
+    # daemon would still be denied them, which leaves the whole TEE stack
+    # down.
     #
     # Root is what the realme C2 tree (same MT6765 family) uses for this
     # daemon, and what the sibling MT6833 tree uses, and it is consistent

@@ -79,7 +79,7 @@ mismatch before the build starts.
 | `recovery/root/init.recovery.mt6765.rc` | Starts Trustonic, keymaster, gatekeeper, and keystore services in recovery, and tears the TEE stack down again once `/data` is decrypted. |
 | `recovery/root/init.recovery.usb.rc` | ConfigFS USB gadget `g1` with `mtp.gs0` MTP, ADB, sideload, and mass storage. |
 | `recovery/root/trustonic.rc` | Starts the `mcDriverDaemon` with the eight `.drbin` drivers shipped on this device. |
-| `recovery/root/ueventd.reserve.rc` | Stock `opporeserve1` rules. Not imported by ueventd, see [Known gaps](#known-gaps). |
+| `recovery/root/ueventd.mt6765.rc` | Device-specific ueventd rules, installed as `/vendor/ueventd.rc`. See [Ueventd rules](#ueventd-rules). |
 | `recovery/root/vendor/` | Gatekeeper and keymaster services, Trustonic libraries, `mcRegistry` trustlets, `manifest.xml`, and touch firmware. |
 | `recovery/root/system/lib64/`, `recovery/root/sbin/` | Runtime libraries for the binder, HIDL, and crypto stack, and `hwservicemanager`. |
 
@@ -222,6 +222,53 @@ at boot from the `odmdtbo` partition, which is exposed in `twrp.fstab`.
 `oppo6765_18511_defconfig` for reference. The build does not compile the kernel
 from source, because `TARGET_FORCE_PREBUILT_KERNEL` is set.
 
+### Ueventd rules
+
+Ueventd runs as part of init and parses four files, in this order:
+
+```
+/ueventd.rc                 the platform's own rules
+/vendor/ueventd.rc
+/odm/ueventd.rc
+/ueventd.$ro.hardware.rc
+```
+
+It then searches the resulting permission list in reverse, so the file parsed
+last wins (`system/core/init/devices.cpp`: *"Search the perms list in reverse
+so that ueventd.$hardware can override ueventd.rc"*). Both the SDK 27 and the
+SDK 28 platform parse all four paths.
+
+`recovery/root/ueventd.mt6765.rc` is installed as `/vendor/ueventd.rc`, so it
+overrides the platform's `/ueventd.rc`. The `/ueventd.$ro.hardware.rc` path was
+not used because it is only read when `ro.boot.hardware` — which the
+bootloader sets, not the device tree — is exactly `mt6765`; `/vendor/ueventd.rc`
+is always read. Ueventd starts long before TWRP mounts the stock `/vendor`
+partition, so the copy in the ramdisk is the one that is parsed.
+
+The file carries only what is specific to this device:
+
+- `/dev/mobicore` and `/dev/mobicore-user` — the Trustonic TEE nodes. The
+  driver creates them in the `trustonic_tee` class with `device_create()` and
+  an explicit devnode name (`MC_ADMIN_DEVNODE`, `MC_USER_DEVNODE` in
+  `drivers/misc/mediatek/gud/311c/MobiCoreDriver/public/`), so devtmpfs creates
+  them with its default of `0600 root:root`.
+- the stock `opporeserve1` partition rules.
+
+Everything else that the realme C2 tree lists in its `ueventd.mt6765.rc` is
+already in the platform's `/ueventd.rc`: `/dev/binder`, `/dev/hwbinder` and
+`/dev/vndbinder` (the HIDL transport the keymaster/gatekeeper stack and
+`hwservicemanager` use), `/dev/dri/*` and `/dev/graphics/*` (the GPU),
+`/dev/mtp_usb` (the MTK MTP function), `/dev/bus/usb/*`, `/dev/usb_accessory`,
+`/dev/tun`, `/dev/ppp`, the graphics, drm, input and sound subsystems, and the
+sysfs rules for `trusty_version`, the input devices, `usb_composite` and
+`cpufreq`.
+
+The C2's file also carries two commands that the ueventd.rc parser no longer
+knows, `firmware_directories` and `uevent_socket_rcvbuf_size`, which ueventd
+logs as parse errors. The firmware search path is hardcoded in
+`init/firmware_handler.cpp` and already covers `/vendor/firmware`, which is
+where this tree ships the touch firmware.
+
 ### Boot header
 
 `BoardConfig.mk` sets the header values to match the stock image: page size
@@ -353,9 +400,6 @@ It uses OpenJDK 8, which the android-9.0 build requires.
 
 ## Known gaps
 
-- **`ueventd.reserve.rc` is not used.** Ueventd only loads `ueventd.rc` and
-  `ueventd.$hardware.rc`, so the stock `opporeserve1` rules in this file have no
-  effect. Add the rules to a file that ueventd loads if they are needed.
 - **The fstab uses a flag TWRP does not know.** `twrp.fstab` marks `/data`
   with `flags=forceencrypt=.../metadata`, but TWRP's fstab flag table
   (`partition.cpp`) only knows `encryptable=` and `fileencryption=` —
@@ -407,10 +451,12 @@ It uses OpenJDK 8, which the android-9.0 build requires.
   gatekeeper and FBE — neither of which is the FDE decrypt.
 - **The daemon opens `/dev/mobicore` and `/dev/mobicore-user` by absolute
   path.** The kernel creates them in the `trustonic_tee` class with
-  `class_create()` and no devnode callback, so devtmpfs applies its default
-  of `0600 root:root`, and the stock MTK `ueventd.rc` has no rule for them.
-  The `mobicore` service therefore runs as root, not as `system` — see the
-  comment on the service.
+  `device_create()` and an explicit devnode name, and devtmpfs applies its
+  default of `0600 root:root` to them. The `mobicore` service therefore runs
+  as root, not as `system` — see the comment on the service. The
+  `ueventd.mt6765.rc` in this tree adds a rule for the two nodes, but the
+  daemon still runs as root because it needs the TEE node and the registry
+  files at the same time.
 - **The Trustonic setup is modelled on the realme C2 tree.** That device is
   the same MT6765 family and its `trustonic.rc` is a working reference:
   `--P1` points at the `mcRegistry` directory inside the persist partition

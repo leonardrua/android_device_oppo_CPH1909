@@ -1,0 +1,63 @@
+# Device-specific ueventd rules for the OPPO A5s (CPH1909, MT6765).
+#
+# Ueventd runs as part of init and parses, in this order:
+#
+#     /ueventd.rc                 the platform's own rules
+#     /vendor/ueventd.rc          <- this file
+#     /odm/ueventd.rc
+#     /ueventd.$ro.hardware.rc
+#
+# It then searches the resulting permission list in reverse, so the file
+# parsed last wins (system/core/init/devices.cpp: "Search the perms list in
+# reverse so that ueventd.$hardware can override ueventd.rc"). This file
+# therefore overrides the platform's /ueventd.rc.
+#
+# It is installed as /vendor/ueventd.rc rather than /ueventd.mt6765.rc
+# because the latter is only read when ro.boot.hardware -- which the
+# bootloader sets, not the device tree -- is exactly "mt6765", while
+# /vendor/ueventd.rc is always read. Ueventd starts long before TWRP mounts
+# the stock /vendor partition, so the copy in the ramdisk is the one that
+# gets parsed.
+#
+# What is deliberately NOT here: everything the realme C2 tree lists in its
+# ueventd.mt6765.rc that this device also needs is already in the
+# platform's /ueventd.rc --
+#
+#     /dev/binder, /dev/hwbinder, /dev/vndbinder   the HIDL transport the
+#                                                   keymaster/gatekeeper stack
+#                                                   and hwservicemanager use
+#     /dev/dri/*, /dev/graphics/*                   the GPU
+#     /dev/mtp_usb                                 the MTK MTP function
+#     /dev/bus/usb/*, /dev/usb_accessory, /dev/tun, /dev/ppp
+#     the graphics, drm, input and sound subsystems
+#     the sysfs rules for trusty_version, the input devices, usb_composite
+#     and cpufreq
+#
+# The C2's file also carries two commands that the ueventd.rc parser no
+# longer knows, "firmware_directories" and "uevent_socket_rcvbuf_size",
+# which ueventd logs as parse errors. The firmware search path is hardcoded
+# in init/firmware_handler.cpp and already covers /vendor/firmware, which is
+# where this tree ships the touch firmware.
+#
+# The Trustonic TEE nodes and the OPPO reserve partition are the two things
+# that are actually specific to this device.
+
+# Trustonic TEE. The driver creates these two nodes in the trustonic_tee
+# class with device_create() and an explicit devnode name, so devtmpfs
+# creates them with its default of 0600 root:root. mcDriverDaemon opens them
+# by absolute path, so it has to run as root to get in -- see the mobicore
+# service in trustonic.rc. The rule below additionally gives the group
+# access. Node names from
+# drivers/misc/mediatek/gud/311c/MobiCoreDriver/public/mc_admin.h
+# (MC_ADMIN_DEVNODE) and mc_user.h (MC_USER_DEVNODE).
+/dev/mobicore               0660   root       root
+/dev/mobicore-user          0660   root       root
+
+# OPPO reserve partition. Stock rules from the device's own ueventd.rc.
+
+#Runsheng.Pei@PSW.AD.Storage.ReservePartition.1207580, 2018/10/17, Add for new reserve partition
+
+/dev/block/bootdevice/by-name/opporeserve1               0660   system     system
+/dev/sdf6   0660   system     system
+#Xuefeng.Peng@PSW.AD.Storage.ReservePartition.1207580, 2018/10/17, Add for new reserve partition
+/dev/mmcblk0p4 0660 system system

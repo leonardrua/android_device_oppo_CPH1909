@@ -12,7 +12,12 @@ LOCAL_PATH := $(DEVICE_PATH)
 # older TWRP; this tree does not.
 
 # Recovery ramdisk init scripts (TARGET_RECOVERY_FSTAB supplies twrp.fstab).
-# ueventd.reserve.rc carries the stock opporeserve1 partition rules.
+# ueventd.mt6765.rc carries the device-specific ueventd rules (the Trustonic
+# TEE nodes and the stock opporeserve1 partition rules). It is installed as
+# /vendor/ueventd.rc because ueventd always parses that path; the
+# /ueventd.$ro.hardware.rc path is only read when the bootloader's
+# ro.boot.hardware is exactly "mt6765". Ueventd starts before TWRP mounts
+# the stock /vendor partition, so the ramdisk copy is the one that is used.
 # etc/mke2fs.conf is the stock AOSP mke2fs configuration, read when TWRP
 # formats an ext4 filesystem on the device; without it mke2fs uses its own
 # compiled-in defaults, which do not match the stock image feature set.
@@ -39,7 +44,7 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/init.recovery.mt6765.rc:root/init.recovery.mt6765.rc \
     $(DEVICE_PATH)/recovery/root/init.recovery.usb.rc:root/init.recovery.usb.rc \
     $(DEVICE_PATH)/recovery/root/trustonic.rc:root/trustonic.rc \
-    $(DEVICE_PATH)/recovery/root/ueventd.reserve.rc:root/ueventd.reserve.rc \
+    $(DEVICE_PATH)/recovery/root/ueventd.mt6765.rc:root/vendor/ueventd.rc \
     $(DEVICE_PATH)/recovery/root/etc/mke2fs.conf:root/etc/mke2fs.conf \
     $(DEVICE_PATH)/recovery/root/sbin/hwservicemanager:root/sbin/hwservicemanager \
     $(DEVICE_PATH)/recovery/root/vendor/manifest.xml:root/vendor/manifest.xml \
