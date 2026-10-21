@@ -138,6 +138,12 @@ service oppo-cryptoeng-1-0 /vendor/bin/hw/vendor.oppo.hardware.cryptoeng@1.0-ser
 service kmsetkey_ca /vendor/bin/kmsetkey_ca.trustonic -c
     user root
     group root
+    # libMcClient.so, which this binary links against, is shipped in the
+    # ramdisk's /vendor/lib64 and nowhere else. /vendor/lib64 is not on the
+    # default linker search path -- only /system/lib64 and /sbin are -- so
+    # without this the service fails to load at all. The four vendor HALs
+    # above set the same path for the same reason.
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/sbin:/system/lib64:/system/lib
     disabled
     oneshot
     seclabel u:r:recovery:s0
