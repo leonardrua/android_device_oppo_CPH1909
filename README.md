@@ -309,11 +309,15 @@ without ever running it; the sibling MT6765 tree runs its equivalent
 (`bp_kmsetkey_ca -c`) as a `late_start` oneshot. It is a verification step, not
 part of the decrypt path, and failure is harmless.
 
-The HALs are re-started on `init.svc.hwservicemanager=running`. Starting them in
-the same `on post-fs` block as hwservicemanager is a race: a HIDL service that
-starts before hwservicemanager is listening loses its registration and exits. All
-the HAL services are `oneshot`, so the second start is a no-op when the first
-already worked.
+The HALs are started on `hwservicemanager.ready=true`, not in the same `on post-fs`
+block as hwservicemanager: a HIDL service that starts before hwservicemanager is
+listening loses its registration and exits. `hwservicemanager.ready` is set by
+hwservicemanager itself once it is up (`system/hwservicemanager/service.cpp`),
+which is a sharper signal than `init.svc.hwservicemanager=running` — that only
+says the process is alive. TWRP's own `vold_decrypt` path waits for the same
+property, and the realme C2 tree groups its HAL starts this way too. The Trustonic
+daemon is started separately, earlier, from `trustonic.rc`, so the TEE is up
+before the HALs that talk to it.
 
 How the attestation service reaches the TEE is still not fully established. The
 impl carries `kmsetkey` and `Error to open kmsetkey device.` but imports no
