@@ -210,6 +210,43 @@ configuration. `os_desc/use` is latched into `cdev->use_os_string` when the
 controller is bound, so it is set before the first bind and re-armed before
 every later one.
 
+### ADB sideload
+
+TWRP does not use `sys.usb.config=sideload`. Its sideload button
+(`GUIAction::adbsideload`) stops the normal `adbd` and forks a second copy of
+the recovery binary with `--adbd`, which turns into a stripped-down `adbd`
+that only speaks the sideload protocol and announces itself with the
+`"sideload"` banner (`adb/daemon/main.cpp`: *"if this binary is started with
+the single argument `--adbd` … it turns into kind of a stripped-down version
+of adbd that only supports the 'sideload' command"*).
+
+That sideload `adbd` writes fresh FunctionFS descriptors, but the gadget is
+not re-bound for it, and the host then never enumerates the device
+(`adb: sideload connection failed: no devices/emulator found`). The reason is
+in the kernel: when the last user of `/dev/usb-ffs/adb/ep0` closes it,
+`ffs_data_reset()` in `f_fs.c` clears `FFS_FL_BOUND`, so the `ffs.adb`
+function is no longer bound to the configuration even though its configfs
+link is still there. Only creating the link again calls the function's bind
+callback (`usb_add_function` → `functionfs_bind`), and `adbd` cannot ask for
+that: it signals "I wrote my descriptors" with `sys.usb.ffs.ready=1`, which
+is already `1` from the `adbd` that was just stopped, so init never re-runs
+the bind handler.
+
+Upstream solves this with a `sys.usb.config=sideload` trigger — AOSP's
+`bootable/recovery/etc/init.rc` and the TWRP Gerrit change *"sm8350-common:
+Fix adb sideload"* both re-create the function link in that handler. TWRP
+3.7 never sets that property, so this tree does the same work in the
+adb-only handlers instead: they unbind the controller, re-create the link,
+bind again, and then clear `sys.usb.ffs.ready`. With the property back at
+`0`, the next `adbd` that writes its descriptors — the sideload one —
+triggers the handler again and gets a properly bound function.
+
+The re-bind is limited to the adb-only configuration on purpose. In
+`mtp,adb`, `f1` is the MTP function, and unbinding the gadget or removing
+that link would tear the FunctionFS endpoints out from under TWRP's MTP
+server, which writes its descriptors only once and would then fail to open
+the bulk endpoints every 800 ms.
+
 ### Kernel
 
 The kernel is a prebuilt `Image.gz-dtb` (9,979,567 bytes, SHA-256

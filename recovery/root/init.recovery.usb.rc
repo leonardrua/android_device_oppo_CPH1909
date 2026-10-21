@@ -86,16 +86,40 @@ on property:sys.usb.config=none && property:sys.usb.configfs=1
 # that binds it -- setting it once at init is enough for the first bind, but
 # re-arming it keeps every later bind consistent with it.
 #
-# These handlers deliberately do NOT "rm f1" / "rm f2" first. Removing a
-# bound function's symlink unbinds the function, and the kernel then destroys
-# the FunctionFS endpoint files with it. TWRP's MTP server writes its
-# descriptors to ep0 only once, in the MtpServer constructor, so it never
-# recreates them: the server would keep failing to open the bulk endpoints
-# and retry every 800 ms for the rest of the session ("cannot open bulk in
-# ep", "Failed to start usb driver!"). The symlink builtin is a no-op on an
-# existing link anyway -- symlink() returns EEXIST and init swallows that --
-# and writing the UDC when it is already bound returns EBUSY without
-# unbinding, so leaving the symlinks alone is safe and idempotent.
+# The adb-only handlers below DO "rm f1" / "rm f2" and re-create the link.
+# That is what re-binds the function, and ADB sideload needs it.
+#
+# When the last user of /dev/usb-ffs/adb/ep0 closes it, the kernel resets
+# the function's data (ffs_data_reset() in f_fs.c), which clears
+# FFS_FL_BOUND: the configfs link is still there, but the function is no
+# longer bound to the configuration, and only creating the link again calls
+# the function's bind callback (usb_add_function -> functionfs_bind).
+#
+# TWRP's ADB sideload relies on exactly that: it stops the normal adbd and
+# runs a separate sideload-only adbd ("recovery --adbd"), which rewrites the
+# descriptors. adbd signals that with sys.usb.ffs.ready=1, but the property
+# is already 1 from the adbd that was just stopped, so init does not re-run
+# this handler and the gadget keeps the stale, unbound ffs.adb function. The
+# host then never enumerates the device, and the sideload fails with "no
+# devices/emulator found".
+#
+# So the handlers unbind the controller, re-create the link, bind again, and
+# then clear sys.usb.ffs.ready. With the property back at 0, the next adbd
+# that writes its descriptors -- the sideload one -- triggers the handler
+# again and gets a properly bound function. The bulk endpoints survive the
+# rm: the kernel only destroys them when the last reference to the function
+# goes away, and the running adbd still holds ep0 open.
+#
+# This is deliberately limited to the adb-only configuration. In the mtp,adb
+# configuration f1 is the MTP function, and unbinding the gadget or
+# removing that link would tear the FunctionFS endpoints out from under
+# TWRP's MTP server: it writes its descriptors to ep0 only once, in the
+# MtpServer constructor, so it never recreates them and just fails to open
+# the bulk endpoints every 800 ms ("cannot open bulk in ep", "Failed to
+# start usb driver!"). The mtp,adb handler therefore leaves the links
+# alone -- the symlink builtin is a no-op on an existing link anyway
+# (symlink() returns EEXIST and init swallows that), and writing the UDC
+# when it is already bound returns EBUSY without unbinding.
 #
 # The "none" handler above still removes them, because that is where the
 # configuration genuinely changes and the function really has to be unbound.
@@ -105,20 +129,28 @@ on property:sys.usb.config=adb && property:sys.usb.configfs=1
     start adbd
 
 on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
     symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f1
     write /config/usb_gadget/g1/os_desc/use 1
     write /config/usb_gadget/g1/UDC "musb-hdrc"
+    setprop sys.usb.ffs.ready 0
     setprop sys.usb.state ${sys.usb.config}
 
 on property:sys.usb.config=sideload && property:sys.usb.configfs=1
     start adbd
 
 on property:sys.usb.ffs.ready=1 && property:sys.usb.config=sideload && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
     symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f1
     write /config/usb_gadget/g1/os_desc/use 1
     write /config/usb_gadget/g1/UDC "musb-hdrc"
+    setprop sys.usb.ffs.ready 0
     setprop sys.usb.state ${sys.usb.config}
 
 # The MTP function can only be bound once TWRP's MTP server has written the
