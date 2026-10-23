@@ -79,25 +79,18 @@ Set `MANIFEST_BRANCH` and `MAKEFILE_NAME` only to values that match this tree. T
 
 ### Platform and manifest pairing
 
-`PLATFORM_VERSION := 9.0.0` in `BoardConfig.mk` must match the manifest branch. The branch sets `PLATFORM_SDK_VERSION` (28), which determines crypto code paths, MTP library choice, and image tooling. `PLATFORM_VERSION` itself only sets `ro.build.version.release`. CI verifies the two agree for `twrp-8.1`, `twrp-9.0`, and `twrp-10.0`.
+`PLATFORM_VERSION := 9.0.0` in `BoardConfig.mk` must match the manifest branch. The branch sets `PLATFORM_SDK_VERSION` (28), which determines crypto code paths, MTP library choice, and image tooling. `PLATFORM_VERSION` itself only sets `ro.build.version.release`. CI verifies that the platform version matches the selected manifest branch.
 
-The `twrp-9.0` manifest pins the platform at `refs/tags/android-9.0.0_r47` and `bootable/recovery` at the TeamWin `android-9.0` revision — so platform and recovery tree are the same vintage. (The `twrp-8.1` manifest had an Android 8.1 platform against a TeamWin `android-9.0` recovery tree.) `bootable/recovery` is overridden by `twrp-extras.xml` in both manifests, and `remove-minimal.xml` drops `platform/external/libmtp` and `platform/external/mtpd` in both.
+The `twrp-9.0` manifest pins the platform at `refs/tags/android-9.0.0_r47` and `bootable/recovery` at the TeamWin `android-9.0` revision — so platform and recovery tree are the same vintage. `bootable/recovery` is overridden by `twrp-extras.xml`, and `remove-minimal.xml` drops `platform/external/libmtp` and `platform/external/mtpd`.
 
-### Build variants
+### Build variant
 
-This tree is maintained as two branches that differ only in the platform they build against:
-
-| Branch | Manifest | `PLATFORM_SDK_VERSION` | Notes |
-|---|---|---|---|
-| `recovery` (this branch) | `twrp-9.0` | 28 | Platform and recovery tree are the same vintage. |
-| `recovery-twrp-8.1` | `twrp-8.1` | 27 | Android 8.1 platform against a TeamWin `android-9.0` recovery tree. |
-
-Everything else — init scripts, vendored blobs, fstab, kernel — is identical on both. The SDK level affects:
+This tree's `recovery` branch builds against the `twrp-9.0` manifest at `PLATFORM_SDK_VERSION` 28. The SDK level affects:
 
 - **Crypto.** SDK 28 sets `TW_INCLUDE_FBE_METADATA_DECRYPT`, which adds `crypto/ext4crypt`. It is only taken for a file-encrypted `/data`; this device is FDE, so it stays unused.
-- **MTP.** SDK 28 links `libtwrpmtp-ffs`, which drives a FunctionFS gadget function (`ffs.mtp`). SDK 27 links `libtwrpmtp-legacy`, which talks to `/dev/mtp_usb` and needs the MTK `mtp.gs0` gadget function. The legacy library cannot speak FunctionFS-MTP, so the transport must follow the SDK level.
+- **MTP.** SDK 28 links `libtwrpmtp-ffs`, which drives the FunctionFS gadget function (`ffs.mtp`).
 
-Pick the branch, then the matching `MANIFEST_BRANCH`; the build workflow's guard step rejects a mismatch.
+Use `twrp-9.0` for `MANIFEST_BRANCH`; the build workflow's guard step rejects a mismatch.
 
 ### Storage and fstab
 
@@ -122,8 +115,6 @@ The configfs name is `FUNC.INSTANCE`, and configfs's `function_make()` splits it
 Both functions must be described by userspace before the gadget can be bound: a FunctionFS function has no endpoints until userspace has described them. `adbd` sets `sys.usb.ffs.ready` and TWRP's MTP server sets `sys.usb.ffs.mtp.ready`; the bind waits for both.
 
 The MS OS descriptor's "MTP" compatible ID comes from the descriptor set the MTP server writes (`mtp_os_desc_compat`, `CompatibleID "MTP"`, with `FUNCTIONFS_HAS_MS_OS_DESC`), so the branding survives the switch — it no longer comes from a function-level configfs attribute, because only `f_mtp.c` creates one of those.
-
-The `recovery-twrp-8.1` branch keeps the MTK `mtp.gs0` function and `libtwrpmtp-legacy`, the transport the stock ROM's userspace MTP uses; the legacy library cannot speak FunctionFS-MTP, so the branches differ here.
 
 The gadget also advertises the Microsoft OS descriptor so Windows recognizes the MTP interface without a driver. That needs three things in `init.recovery.usb.rc`: the `os_desc` attributes (`b_vendor_code`, `qw_sign`), a symlink from `os_desc/b.1` to `configs/b.1`, and `os_desc/use 1`. The symlink must be created after `configs/b.1` exists, because the kernel only accepts an `os_desc` link whose target is already a registered configuration. `os_desc/use` is latched into `cdev->use_os_string` when the controller is bound, so it is set before the first bind and re-armed before every later one.
 
@@ -154,7 +145,7 @@ Ueventd runs as part of init and parses four files, in this order:
 /ueventd.$ro.hardware.rc
 ```
 
-It then searches the resulting permission list in reverse, so the file parsed last wins (`system/core/init/devices.cpp`: *"Search the perms list in reverse so that ueventd.$hardware can override ueventd.rc"*). Both the SDK 27 and SDK 28 platforms parse all four paths.
+It then searches the resulting permission list in reverse, so the file parsed last wins (`system/core/init/devices.cpp`: *"Search the perms list in reverse so that ueventd.$hardware can override ueventd.rc"*). The platform parses all four paths.
 
 `recovery/root/ueventd.mt6765.rc` is installed as `/vendor/ueventd.rc`, so it overrides the platform's `/ueventd.rc`. The `/ueventd.$ro.hardware.rc` path was not used because it is only read when `ro.boot.hardware` — set by the bootloader, not the device tree — is exactly `mt6765`; `/vendor/ueventd.rc` is always read. Ueventd starts long before TWRP mounts the stock `/vendor` partition, so the ramdisk copy is the one parsed.
 
@@ -227,7 +218,7 @@ To revert, remove the files and their entries in `device.mk`, and drop the three
 2. `prebuilt/kernel` exists and is larger than 5 MB.
 3. `twrp.fstab` contains the required mount points: `/system`, `/vendor`, `/data`, `/boot`, `/recovery`, `/external_sd`, and `/usb_otg`.
 4. The `NEEDED` libraries of every vendored ELF file are either vendored or part of the TWRP platform set.
-5. `PLATFORM_VERSION` in `BoardConfig.mk` matches the manifest branch (`twrp-8.1` → `8.1.0`, `twrp-9.0` → `9.0.0`, `twrp-10.0` → `10.0.0`).
+5. `PLATFORM_VERSION` in `BoardConfig.mk` matches the selected manifest branch.
 
 **`.github/workflows/recovery-build.yml` (Recovery Build, legacy)** is a manual workflow. It runs a guard step right after checkout that fails if `MANIFEST_BRANCH` does not match `PLATFORM_VERSION`. The rest syncs the manifest, clones this tree into `device/oppo/CPH1909`, runs `lunch <MAKEFILE_NAME>-eng` and `make <BUILD_TARGET>image`, and publishes the resulting `.img` and any `vendor*.img` or `.zip` files as a GitHub Release. It uses OpenJDK 8, which the android-9.0 build requires.
 
