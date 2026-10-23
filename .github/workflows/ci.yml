@@ -1,0 +1,198 @@
+name: Device Tree CI
+
+on:
+  push:
+    branches: [ "**" ]
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate Device Tree Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ELF utilities
+        run: sudo apt-get update && sudo apt-get install -y binutils file
+
+      - name: Validate PRODUCT_COPY_FILES & tree integrity
+        run: |
+          python3 - << 'EOF'
+          import os, sys, re, subprocess
+
+          print("=== Step 1: Checking PRODUCT_COPY_FILES exist on disk ===")
+          device_mk = open("device.mk").read()
+          copied = re.findall(r"\$\(DEVICE_PATH\)/([^\s:]+)", device_mk)
+          missing = [f for f in copied if not os.path.exists(f)]
+          if missing:
+              print(f"FAILED: {len(missing)} files listed in device.mk do not exist:")
+              for m in missing:
+                  print("  -", m)
+              sys.exit(1)
+          print(f"SUCCESS: All {len(copied)} files in PRODUCT_COPY_FILES exist.")
+
+          print("\n=== Step 2: Checking prebuilt kernel ===")
+          if not os.path.exists("prebuilt/kernel"):
+              print("FAILED: prebuilt/kernel is missing.")
+              sys.exit(1)
+          ksize = os.path.getsize("prebuilt/kernel")
+          if ksize < 5000000:
+              print(f"FAILED: prebuilt/kernel size too small ({ksize} bytes).")
+              sys.exit(1)
+          print(f"SUCCESS: prebuilt/kernel present ({ksize} bytes).")
+
+          print("\n=== Step 3: Checking twrp.fstab configuration ===")
+          fstab = open("recovery/root/etc/twrp.fstab").read()
+          required_mounts = ["/system", "/vendor", "/data", "/boot", "/recovery", "/external_sd", "/usb_otg"]
+          missing_mounts = [m for m in required_mounts if m not in fstab]
+          if missing_mounts:
+              print(f"FAILED: twrp.fstab missing critical mounts: {missing_mounts}")
+              sys.exit(1)
+          print("SUCCESS: twrp.fstab contains all required mount points.")
+
+          print("\n=== Step 4: Checking ELF binary dependencies ===")
+          local_libs = {f for root, dirs, files in os.walk("recovery/root") for f in files if f.endswith(".so")}
+          # Core Android & TWRP platform libraries provided at build time by minimal-manifest-twrp
+          twrp_platform_libs = {
+              "android.hardware.gatekeeper@1.0.so",
+              "android.hardware.keymaster@3.0.so",
+              "android.hardware.weaver@1.0.so",
+              "android.hidl.token@1.0.so",
+              "android.system.wifi.keystore@1.0.so",
+              "libaosprecovery.so",
+              "libbacktrace.so",
+              "libbase.so",
+              "libbinder.so",
+              "libblkid.so",
+              "libbmlutils.so",
+              "libbootloader_message_twrp.so",
+              "libc++.so",
+              "libc.so",
+              "libcap.so",
+              "libcrecovery.so",
+              "libcryptfsfde.so",
+              "libcrypto.so",
+              "libcrypto_utils.so",
+              "libcutils.so",
+              "libdl.so",
+              "libe4crypt.so",
+              "libexfat_twrp.so",
+              "libext2_blkid.so",
+              "libext2_com_err.so",
+              "libext2_e2p.so",
+              "libext2_misc.so",
+              "libext2_profile.so",
+              "libext2_quota.so",
+              "libext2_uuid.so",
+              "libext2fs.so",
+              "libext4_utils.so",
+              "libflashutils.so",
+              "libft2.so",
+              "libfusesideload.so",
+              "libgatekeeper.so",
+              "libgpt_twrp.so",
+              "libhardware.so",
+              "libhardware_legacy.so",
+              "libhidl-gen-utils.so",
+              "libhidlbase.so",
+              "libhidltransport.so",
+              "libhwbinder.so",
+              "libkeymaster_messages.so",
+              "libkeymaster_portable.so",
+              "libkeymaster_staging.so",
+              "libkeystore_binder.so",
+              "libkeyutils.so",
+              "liblog.so",
+              "liblogcat.so",
+              "liblzma.so",
+              "libm.so",
+              "libminadbd.so",
+              "libminuitwrp.so",
+              "libminzip.so",
+              "libmmcutils.so",
+              "libmtdutils.so",
+              "libncurses.so",
+              "libnetd_client.so",
+              "libnl.so",
+              "libopenaes.so",
+              "libpackagelistparser.so",
+              "libpcre2.so",
+              "libpcrecpp.so",
+              "libpng.so",
+              "libprotobuf-cpp-lite.so",
+              "libselinux.so",
+              "libsoftkeymaster.so",
+              "libsoftkeymasterdevice.so",
+              "libsparse.so",
+              "libssh.so",
+              "libssl.so",
+              "libstdc++.so",
+              "libsysutils.so",
+              "libtar.so",
+              "libtinyxml2.so",
+              "libtwadbbu.so",
+              "libtwrpdigest.so",
+              "libtwrpmtp-legacy.so",
+              "libunwind.so",
+              "libusbhost.so",
+              "libutil-linux.so",
+              "libutils.so",
+              "libvintf.so",
+              "libvndksupport.so",
+              "libwifikeystorehal.so",
+              "libz.so",
+              "libziparchive.so",
+          }
+          all_known = local_libs | twrp_platform_libs
+
+          elfs = []
+          for root, dirs, files in os.walk("recovery/root"):
+              for f in files:
+                  p = os.path.join(root, f)
+                  try:
+                      out = subprocess.check_output(["file", p]).decode()
+                      if "ELF" in out:
+                          elfs.append(p)
+                  except:
+                      pass
+
+          unresolved = {}
+          for elf in elfs:
+              out = subprocess.check_output(["readelf", "-d", elf], stderr=subprocess.DEVNULL).decode()
+              deps = re.findall(r"\(NEEDED\)\s+Shared library:\s+\[(.*?)\]", out)
+              for d in deps:
+                  if d not in all_known:
+                      unresolved.setdefault(elf, []).append(d)
+
+          if unresolved:
+              print(f"FAILED: Unresolved library dependencies detected: {unresolved}")
+              sys.exit(1)
+          print(f"SUCCESS: All {len(elfs)} ELF binaries/libraries have dependencies accounted for.")
+
+          print("\n=== Step 5: Checking platform pin ===")
+          board = open("BoardConfig.mk").read()
+          platform = re.search(r"^PLATFORM_VERSION := (\S+)", board, re.M).group(1)
+          workflow = open(".github/workflows/recovery-build.yml").read()
+          branch = re.search(r"MANIFEST_BRANCH:[\s\S]*?default:\s*'([^']+)'", workflow).group(1)
+          expected = {"twrp-8.1": "8.1.0", "twrp-9.0": "9.0.0", "twrp-10.0": "10.0.0"}
+          if branch not in expected:
+              print(f"FAILED: unknown manifest branch '{branch}'")
+              sys.exit(1)
+          if expected[branch] != platform:
+              print(f"FAILED: manifest branch '{branch}' expects PLATFORM_VERSION {expected[branch]}, BoardConfig.mk says {platform}")
+              sys.exit(1)
+          print(f"SUCCESS: manifest branch '{branch}' matches PLATFORM_VERSION {platform}.")
+
+          print("\n=== All validation checks passed successfully! ===")
+          EOF
