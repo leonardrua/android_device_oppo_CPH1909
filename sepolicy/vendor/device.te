@@ -1,0 +1,292 @@
+# Type declarations and permissive domains for OPPO CPH1920 bring-up.
+#
+# The stock ColorOS policy declares roughly 200 MediaTek/OPPO types that have
+# no Android 10 equivalent. Porting all of it before the device has ever
+# booted would be guesswork, so this file declares the types the labelling in
+# file_contexts refers to and marks the vendor domains permissive.
+#
+# Bring-up order that this supports:
+#   1. Build and boot with these domains permissive.
+#   2. Collect real denials from the device (`dmesg | grep avc`).
+#   3. Convert the denials into allow rules, then drop the permissive lines
+#      one domain at a time.
+#
+# Shipping a release with these permissive lines still present would be a
+# security regression -- they exist only so that a missing rule logs instead
+# of preventing boot.
+
+###
+### MediaTek HAL domains
+###
+type mtk_hal_dfps, domain;
+type mtk_hal_dfps_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_dfps)
+hal_server_domain(mtk_hal_dfps, hal_graphics_composer)
+
+type mtk_hal_keyattestation, domain;
+type mtk_hal_keyattestation_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_keyattestation)
+
+type mtk_hal_mms, domain;
+type mtk_hal_mms_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_mms)
+
+type mtk_hal_mtkcodecservice, domain;
+type mtk_hal_mtkcodecservice_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_mtkcodecservice)
+
+type mtk_hal_pq, domain;
+type mtk_hal_pq_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_pq)
+
+type mtk_hal_soter, domain;
+type mtk_hal_soter_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_soter)
+
+###
+### Trustonic Kinibi TEE
+###
+type mcd, domain;
+type mcd_exec, exec_type, vendor_file_type, file_type;
+# mcd_data_file labels /vendor/app/mcRegistry, which holds 30 read-only Kinibi
+# trustlet/driver blobs shipped on the vendor partition. It therefore needs
+# vendor_file_type ("All types in /vendor", public/attributes:44); sepolicy_tests
+# rejects the build with "The following types on /vendor/ must be associated with
+# the vendor_file_type attribute: mcd_data_file" without it.
+#
+# data_file_type was wrong here and has been dropped. attributes:34 defines it as
+# "All types used for /data files", and AOSP never puts both attributes on one
+# type. The name is a misnomer inherited from the stock policy -- nothing under
+# /vendor/app is writable.
+#
+# The registry directories the daemon actually writes are separate paths that
+# vendor/etc/init/trustonic.rc creates at runtime: /data/misc/mcRegistry and
+# /vendor/persist/mcRegistry (the latter falls under mtk_persist_file). Neither
+# is labelled here; if mcDriverDaemon is denied access to /data/misc/mcRegistry
+# after first boot, that needs its own core_data_file_type type.
+type mcd_data_file, file_type, vendor_file_type;
+init_daemon_domain(mcd)
+
+type mobicore_device, dev_type;
+
+###
+### Telephony / modem
+###
+type mtk_muxd, domain;
+type mtk_muxd_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_muxd)
+
+type mtk_muxreport, domain;
+type mtk_muxreport_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_muxreport)
+
+type mtk_ccci, domain;
+type mtk_ccci_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_ccci)
+
+type mtk_md_ctrl, domain;
+type mtk_md_ctrl_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_md_ctrl)
+
+type mtk_volte, domain;
+type mtk_volte_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_volte)
+
+type mtk_ttyc_device, dev_type;
+type mtk_ccci_device, dev_type;
+
+###
+### NVRAM / persistent factory data
+###
+type mtk_nvram_daemon, domain;
+type mtk_nvram_daemon_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_nvram_daemon)
+
+type mtk_sysenv, domain;
+type mtk_sysenv_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_sysenv)
+
+type mtk_nvdata_file, file_type, vendor_file_type;
+type mtk_nvcfg_file, file_type, vendor_file_type;
+type mtk_protect_f_file, file_type, vendor_file_type;
+type mtk_protect_s_file, file_type, vendor_file_type;
+type mtk_persist_file, file_type, vendor_file_type;
+type oppo_reserve_file, file_type, vendor_file_type;
+
+type nvdata_block_device, dev_type;
+type nvcfg_block_device, dev_type;
+type nvram_block_device, dev_type;
+type proinfo_block_device, dev_type;
+type protect1_block_device, dev_type;
+type protect2_block_device, dev_type;
+type persist_block_device, dev_type;
+type seccfg_block_device, dev_type;
+type expdb_block_device, dev_type;
+type logo_block_device, dev_type;
+type oppo_reserve_block_device, dev_type;
+
+###
+### GNSS
+###
+type mtk_mnld, domain;
+type mtk_mnld_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_mnld)
+
+type mtk_agpsd, domain;
+type mtk_agpsd_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_agpsd)
+
+type mtk_lbs, domain;
+type mtk_lbs_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_lbs)
+
+###
+### WiFi / connectivity
+###
+type mtk_wmt_loader, domain;
+type mtk_wmt_loader_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_wmt_loader)
+
+type mtk_wod, domain;
+type mtk_wod_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_wod)
+
+type mtk_ipsec_mon, domain;
+type mtk_ipsec_mon_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_ipsec_mon)
+
+type mtk_netdagent, domain;
+type mtk_netdagent_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_netdagent)
+
+type mtk_stpwmt_device, dev_type;
+type mtk_wmtWifi_device, dev_type;
+
+###
+### Thermal / power
+###
+type mtk_thermal, domain;
+type mtk_thermal_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_thermal)
+
+type mtk_fuelgauged, domain;
+type mtk_fuelgauged_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_fuelgauged)
+
+###
+### Misc MediaTek device nodes
+###
+type mtk_smi_device, dev_type;
+type mtk_sched_device, dev_type;
+type mtk_accdet_device, dev_type;
+# mtk_uio_device removed: /dev/uio[0-9]* is already labelled uio_device by
+# plat_file_contexts (AOSP public/device.te:49), and declaring a second type for
+# the same path made checkfc reject file_contexts.bin with "Multiple different
+# specifications". These are ordinary uio character devices.
+type mtk_adsp_device, dev_type;
+type mtk_pq_device, dev_type;
+
+# Android 10 dropped both of these from system/sepolicy/public/device.te, so a
+# device that still has the nodes has to declare them itself:
+#
+#   gps_device    -- /dev/gps and /dev/stpgps. Present in AOSP up to 8.1; the
+#                    GNSS HAL is expected to own the node now, but the MTK stack
+#                    (mnld, mtk_agpsd) opens the character device directly.
+#   sw_sync_device -- /dev/sw_sync. Removed once explicit sync fences replaced
+#                    the legacy sw_sync ioctl interface, which the MT6765
+#                    display driver still exposes.
+#
+# Both are labelled in file_contexts; without the declaration checkfc rejects
+# the whole vendor_file_contexts.
+type gps_device, dev_type;
+type sw_sync_device, dev_type;
+
+###
+### rutilsdaemon -- the seclabel MediaTek's rc files name for shell helpers
+###
+# init.mt6765.rc:123-127 defines
+#     service swap_enable_init /system/bin/sh /system/etc/swap_enable.sh
+#     seclabel u:r:rutilsdaemon:s0
+# and `on fs` starts it unconditionally (init.mt6765.rc:141-142). With the domain
+# undeclared, setexeccon fails and the forked child dies before exec
+# (system/core/init/service.cpp:325-327) -- init itself survives, but zram is
+# never configured and the device runs with no swap.
+#
+# No init_daemon_domain() here and no *_exec type: the service execs
+# /system/bin/sh, which plat_file_contexts already labels shell_exec, and a
+# second domain_auto_transition on shell_exec would collide with the shell
+# domain AOSP already defines for it. The transition comes from the seclabel in
+# the rc file instead, which is exactly what seclabel is for.
+#
+# Permissive like the rest of the bring-up domains -- the script writes to
+# /sys/block/zram0/* and /proc/sys/vm/swappiness and calls mkswap/swapon, and the
+# real rule set for that should come from observed denials, not from guessing.
+type rutilsdaemon, domain;
+permissive rutilsdaemon;
+
+###
+### Permissive during bring-up -- REMOVE before any release build
+###
+permissive mtk_hal_dfps;
+permissive mtk_hal_keyattestation;
+permissive mtk_hal_mms;
+permissive mtk_hal_mtkcodecservice;
+permissive mtk_hal_pq;
+permissive mtk_hal_soter;
+permissive mcd;
+permissive mtk_muxd;
+permissive mtk_muxreport;
+permissive mtk_ccci;
+permissive mtk_md_ctrl;
+permissive mtk_volte;
+permissive mtk_nvram_daemon;
+permissive mtk_sysenv;
+permissive mtk_mnld;
+permissive mtk_agpsd;
+permissive mtk_lbs;
+permissive mtk_wmt_loader;
+permissive mtk_wod;
+permissive mtk_ipsec_mon;
+permissive mtk_netdagent;
+permissive mtk_thermal;
+permissive mtk_fuelgauged;
+
+###
+### OPPO / Silead biometrics and factory services
+###
+# None of these interfaces exist upstream, so each service gets its own domain,
+# marked permissive for the same reason as the rest of this file: get the device
+# booting first, then convert the denials it logs into rules and drop the
+# permissive lines one domain at a time.
+#
+# The face and fingerprint services keep using hal_face_default_exec /
+# hal_fingerprint_default_exec from AOSP (they implement those standard
+# interfaces), so no new type is declared for them here.
+type mtk_hal_silead, domain;
+type mtk_hal_silead_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_silead)
+permissive mtk_hal_silead;
+
+# cryptoeng backs the OPPO key/attestation extras, ktv is the OPPO TV-out
+# companion service. Both are dormant on a normal boot but their rc files are
+# imported, so their domains have to exist.
+type mtk_hal_cryptoeng, domain;
+type mtk_hal_cryptoeng_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_cryptoeng)
+permissive mtk_hal_cryptoeng;
+
+type mtk_hal_ktv, domain;
+type mtk_hal_ktv_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_ktv)
+permissive mtk_hal_ktv;
+
+# Factory / engineering-mode services.
+type mtk_hal_factory, domain;
+type mtk_hal_factory_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_factory)
+permissive mtk_hal_factory;
+
+type mtk_factory_bin, domain;
+type mtk_factory_bin_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_factory_bin)
+permissive mtk_factory_bin;

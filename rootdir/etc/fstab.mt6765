@@ -1,90 +1,71 @@
-# 1 "vendor/mediatek/proprietary/hardware/fstab/mt6765/fstab.in"
-# 1 "<built-in>"
-# 1 "<command-line>"
-# 1 "/usr/include/stdc-predef.h" 1 3 4
-# 1 "<command-line>" 2
-# 1 "vendor/mediatek/proprietary/hardware/fstab/mt6765/fstab.in"
-# 125 "vendor/mediatek/proprietary/hardware/fstab/mt6765/fstab.in"
-/dev/block/platform/bootdevice/by-name/system /system ext4 ro wait,recoveryonly
+# Android fstab for OPPO A5s (CPH1909, MT6765) - LineageOS 17.1
+#
+# Derived from the stock MediaTek fstab.in output for mt6765. That file is the
+# generated recovery variant, so every line originally carried `recoveryonly`;
+# the flags were dropped where they would prevent a normal boot from mounting
+# anything.
+#
+# Android 10 devices are always system-as-root: first-stage init runs from the
+# boot ramdisk, finds this file as /fstab.<ro.boot.hardware>, and mounts every
+# entry tagged `first_stage_mount` before switching root to /system. Only then
+# can init exec /system/bin/init for the second stage. /system and /vendor
+# therefore need `first_stage_mount` here, and this file must also be installed
+# into the ramdisk (see device.mk).
+#
+# There is deliberately no /odm entry. The scatter defines a 256 MiB odm
+# partition, but the factory image on this device leaves it entirely zeroed (no
+# ext4 superblock), so a first-stage mount would fail and abort the boot. The
+# stock 8.1 fstab marked it recoveryonly for the same reason. Nothing on the
+# device uses /odm.
+#
+# /data uses FDE (full-disk encryption) with the key blob on the dedicated
+# `metadata` partition, backed by the Trustonic Kinibi TEE. It is NOT FBE, so
+# the forceencrypt= flag must stay exactly as the stock ROM had it.
+#
+# <src>                                                  <mnt_point>          <type>  <mnt_flags and options>                                              <fs_mgr_flags>
 
-/dev/block/platform/bootdevice/by-name/vendor /vendor ext4 ro wait,recoveryonly
+/dev/block/platform/bootdevice/by-name/system             /system              ext4    ro,barrier=1                                                         wait,first_stage_mount
+/dev/block/platform/bootdevice/by-name/vendor             /vendor              ext4    ro,barrier=1                                                         wait,first_stage_mount
 
+/dev/block/platform/bootdevice/by-name/cache              /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                   wait,check
 
-/dev/block/platform/bootdevice/by-name/odm /odm ext4 ro wait,recoveryonly
+/dev/block/platform/bootdevice/by-name/userdata           /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic          wait,check,quota,formattable,resize,forceencrypt=/dev/block/platform/bootdevice/by-name/metadata
 
+# MediaTek / OPPO factory data partitions
+/dev/block/platform/bootdevice/by-name/protect1           /vendor/protect_f    ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable
+/dev/block/platform/bootdevice/by-name/protect2           /vendor/protect_s    ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable
+/dev/block/platform/bootdevice/by-name/nvdata             /vendor/nvdata       ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                        wait,check,formattable
+/dev/block/platform/bootdevice/by-name/nvcfg              /vendor/nvcfg        ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable
+/dev/block/platform/bootdevice/by-name/persist            /vendor/persist      ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable
+/dev/block/platform/bootdevice/by-name/opporeserve2       /opporeserve         ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable
 
+# Removable storage
+/devices/platform/externdevice*                           auto                 auto    defaults                                                             voldmanaged=sdcard1:auto
+/devices/platform/mt_usb*                                 auto                 vfat    defaults                                                             voldmanaged=usbotg:auto
 
-
-/dev/block/platform/bootdevice/by-name/cache /cache ext4 noatime,nosuid,nodev,noauto_da_alloc,async_discard wait,check
-
-/dev/block/platform/bootdevice/by-name/userdata /data ext4 noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic wait,check,quota,formattable,resize,forceencrypt=/dev/block/platform/bootdevice/by-name/metadata,
-
-
-
-
-
-
-/dev/block/platform/bootdevice/by-name/protect1 /vendor/protect_f ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/platform/bootdevice/by-name/protect2 /vendor/protect_s ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/platform/bootdevice/by-name/nvdata /vendor/nvdata ext4 noatime,nosuid,nodev,noauto_da_alloc,async_discard wait,check,formattable
-/dev/block/platform/bootdevice/by-name/nvcfg /vendor/nvcfg ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-/dev/block/platform/bootdevice/by-name/persist /vendor/persist ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-
-
-/dev/block/platform/bootdevice/by-name/opporeserve2 /opporeserve ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-
-
-
-
-/devices/platform/externdevice* auto auto defaults voldmanaged=sdcard1:auto
-
-/devices/platform/mt_usb* auto vfat defaults voldmanaged=usbotg:auto
-
-/dev/block/platform/bootdevice/by-name/frp /persistent emmc defaults defaults
-
-/dev/block/platform/bootdevice/by-name/nvram /nvram emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/proinfo /proinfo emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/lk /bootloader emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/lk2 /bootloader2 emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/para /misc emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/boot /boot emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/recovery /recovery emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/logo /logo emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/expdb /expdb emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/seccfg /seccfg emmc defaults defaults
-
-/dev/block/platform/bootdevice/by-name/tee1 /tee1 emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/tee2 /tee2 emmc defaults defaults
-
-
-/dev/block/platform/bootdevice/by-name/scp1 /scp1 emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/scp2 /scp2 emmc defaults defaults
-
-
-/dev/block/platform/bootdevice/by-name/sspm_1 /sspm_1 emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/sspm_2 /sspm_2 emmc defaults defaults
-
-
-
-
-/dev/block/platform/bootdevice/by-name/md1img /md1img emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/md1dsp /md1dsp emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/md1arm7 /md1arm7 emmc defaults defaults
-/dev/block/platform/bootdevice/by-name/md3img /md3img emmc defaults defaults
-
-
-
-
-
-
-/dev/block/platform/bootdevice/by-name/spmfw /spmfw emmc defaults defaults
-
-/dev/block/platform/bootdevice/by-name/boot_para /boot_para emmc defaults defaults
-
-/dev/block/platform/bootdevice/by-name/odmdtbo /odmdtbo emmc defaults defaults
+# Raw partitions (fs_mgr skips these when mounting; kept so recovery and
+# tooling such as `mount_all` know where everything lives)
+/dev/block/platform/bootdevice/by-name/frp                /persistent          emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/nvram              /nvram               emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/proinfo            /proinfo             emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/lk                 /bootloader          emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/lk2                /bootloader2         emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/para               /misc                emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/boot               /boot                emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/recovery           /recovery            emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/logo               /logo                emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/expdb              /expdb               emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/seccfg             /seccfg              emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/tee1               /tee1                emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/tee2               /tee2                emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/scp1               /scp1                emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/scp2               /scp2                emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/sspm_1             /sspm_1              emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/sspm_2             /sspm_2              emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/md1img             /md1img              emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/md1dsp             /md1dsp              emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/md1arm7            /md1arm7             emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/md3img             /md3img              emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/spmfw              /spmfw               emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/boot_para          /boot_para           emmc    defaults                                                             defaults
+/dev/block/platform/bootdevice/by-name/odmdtbo            /odmdtbo             emmc    defaults                                                             defaults

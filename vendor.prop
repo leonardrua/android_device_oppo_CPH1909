@@ -1,0 +1,123 @@
+#
+# Vendor properties for OPPO A5s (CPH1909, MT6765).
+#
+# Derived from the stock ColorOS 5.2 /vendor/build.prop, keeping the properties
+# that the prebuilt MediaTek / OPPO vendor blobs and their rc files actually read
+# and dropping the ones that only mattered to the ColorOS framework
+# (ro.com.google.gmsversion, ro.setupwizard.*, pm.dexopt.*, the per-tag
+# persist.log.tag.* block, and the ro.mtk_* feature switches no blobs consult).
+#
+
+# Audio
+ro.audio.usb.period_us=16000
+
+# Camera
+camera.disable_zsl_mode=1
+camera.mdp.cz.enable=1
+camera.mdp.dre.enable=0
+
+# Display / graphics
+#
+# ro.hardware.egl=mtk is what makes the Android 10 EGL loader look for
+# libEGL_mtk.so / libGLESv2_mtk.so (frameworks/native Loader.cpp appends
+# ro.hardware.egl, then ro.board.platform, to "libEGL_"). The PowerVR blobs on
+# this device are the *_mtk set, so leaving this unset makes the loader fall
+# through to the non-existent libEGL_mt6765 and the UI never starts.
+ro.hardware.egl=mtk
+debug.sf.disable_backpressure=1
+debug.sf.latch_unsignaled=1
+ro.opengles.version=196610
+ro.sf.hwrotation=0
+
+# DRM
+drm.service.enabled=true
+ro.mtk_widevine_drm_l3_support=1
+
+# Media
+media.settings.xml=/vendor/etc/media_profiles.xml
+
+# Radio / telephony (dual SIM, MTK IMS)
+persist.radio.default.sim=0
+persist.radio.fd.counter=150
+persist.radio.fd.off.counter=50
+persist.radio.fd.off.r8.counter=50
+persist.radio.fd.r8.counter=150
+persist.radio.lte.chip=0
+persist.radio.mobile.data=0,0
+persist.radio.mtk_dsbp_support=1
+persist.radio.mtk_ps2_rat=L/W/G
+persist.radio.mtk_ps3_rat=G
+persist.radio.multisim.config=dsds
+persist.radio.smart.data.switch=1
+ril.external.md=0
+ril.first.md=1
+ril.flightmode.poweroffMD=0
+ril.radiooff.poweroffMD=0
+ril.read.imsi=1
+ril.specific.sm_cause=0
+ril.telephony.mode=0
+ro.radio.simcount=2
+ro.telephony.default_network=9,9
+ro.telephony.sim.count=2
+ro.mtk_ril_mode=c6m_1rild
+ro.mtk_ims_support=1
+ro.mtk_lte_support=1
+persist.mtk.volte.enable=1
+persist.mtk.ims_support=1
+persist.mtk_mims_support=2
+persist.mtk_ussi_support=1
+persist.mtk_vilte_support=1
+persist.mtk_viwifi_support=1
+persist.mtk_volte_support=1
+persist.mtk_wfc_support=1
+persist.mtk_epdg_support=1
+persist.mtk_ct_volte_support=1
+persist.mtk_dynamic_ims_switch=1
+
+# Wi-Fi / connectivity
+ro.wlan.gen=gen4m
+mediatek.wlan.chip=CONSYS_MT6765
+mediatek.wlan.module.postfix=_consys_mt6765
+persist.mtk.wcn.combo.chipid=-1
+persist.mtk.wcn.coredump.mode=2
+persist.mtk.wcn.dynamic.dump=0
+
+# Platform identification
+#
+# Several MediaTek blobs (rild, the wifi service, the audio HAL) and their rc
+# files branch on these.
+ro.mediatek.platform=MT6765
+ro.mediatek.chip_ver=S01
+ro.mtk_bsp_package=1
+ro.mtk_bt_support=1
+ro.mtk_emmc_support=1
+ro.mtk_f2fs_enable=0
+ro.mtk_gps_support=1
+ro.mtk_is_tablet=0
+ro.mtk_sim_hot_swap=1
+ro.mtk_sim_hot_swap_common_slot=1
+ro.mtk_shared_sdcard=1
+ro.mtk_wlan_support=1
+ro.mtk_aal_support=1
+ro.mtk_pq_support=2
+ro.mtk_fm_50khz_support=1
+ro.mtk_dual_mic_support=0
+ro.mtk_trustonic_tee_support=1
+ro.mtk_tee_gp_support=1
+ro.hardware.kmsetkey=trustonic
+
+# Storage / init
+ro.frp.pst=/dev/block/platform/bootdevice/by-name/frp
+ro.mount.fs=EXT4
+ro.sys.sdcardfs=1
+ro.oem_unlock_supported=1
+
+# USB
+ro.sys.usb.bicr=no
+ro.sys.usb.charging.only=yes
+ro.sys.usb.mtp.whql.enable=0
+ro.sys.usb.storage.type=mtp
+
+# Power-off charging / boot
+sys.ipo.disable=1
+sys.ipo.pwrdncap=2

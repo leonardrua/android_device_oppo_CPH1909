@@ -1,0 +1,32 @@
+#
+# System properties for OPPO A5s (CPH1909, MT6765).
+#
+# Only properties that the framework/AOSP side needs and that the stock
+# ColorOS system build.prop set for this hardware. Everything the vendor blobs
+# read lives in vendor.prop instead.
+#
+
+# Display
+ro.sf.lcd_density=320
+
+# Radio
+#
+# The MTK RIL blobs are loaded by name through the generic rild shim, so the
+# framework needs these two to pick the right library and device node.
+rild.libpath=mtk-ril.so
+rild.libargs=-d /dev/ttyC0
+
+# Wi-Fi
+wifi.interface=wlan0
+wifi.direct.interface=p2p0
+wifi.tethering.interface=ap0
+
+# Hardware keys: this device has no capacitive navigation bar
+qemu.hw.mainkeys=0
+
+# Audio
+ro.audio.silent=0
+
+# MediaTek-specific framework bits
+ro.kernel.zio=38,108,105,16
+ro.zygote.preload.enable=0

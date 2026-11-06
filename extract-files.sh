@@ -76,7 +76,10 @@ fi
 
 MISSING=()
 for path in "${FILES[@]}"; do
-    [[ -f "$DUMP_ROOT/$path" ]] || MISSING+=("$path")
+    # -e/-L rather than -f: the dump contains symlinks (the vendor image uses
+    # them for several libs and for /vendor/etc entries) and a dangling target
+    # inside the dump is still a legitimate manifest entry.
+    [[ -e "$DUMP_ROOT/$path" || -L "$DUMP_ROOT/$path" ]] || MISSING+=("$path")
 done
 
 if [[ ${#MISSING[@]} -gt 0 ]]; then
@@ -92,7 +95,10 @@ mkdir -p "$PROPRIETARY_ROOT"
 for path in "${FILES[@]}"; do
     destination="$PROPRIETARY_ROOT/$path"
     mkdir -p "$(dirname "$destination")"
-    cp -p "$DUMP_ROOT/$path" "$destination"
+    rm -f "$destination"
+    # -a preserves symlinks instead of dereferencing them, and keeps the
+    # executable bit the vendor image set on its daemons.
+    cp -a "$DUMP_ROOT/$path" "$destination"
 done
 
 TEMP_MK="$(mktemp "$VENDOR_ROOT/.CPH1909-vendor.mk.XXXXXX")"
