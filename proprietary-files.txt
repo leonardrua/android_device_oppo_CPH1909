@@ -562,8 +562,8 @@ vendor/firmware/customfilter/catcher_filter_1_ulwctg_n__Default.bin
 vendor/firmware/customfilter/catcher_filter_1_ulwctg_n_meta.bin
 vendor/firmware/em_filter_1_ulwctg_n.bin
 vendor/firmware/emmc/HYNIX-HCG8a4.bin_crc.bin
-vendor/firmware/emmc/HYNIX-hB8aP>.bin_crc.bin
-vendor/firmware/emmc/HYNIX-hC8aP>.bin_crc.bin
+vendor/firmware/emmc/HYNIX-hB8aP_.bin_crc.bin
+vendor/firmware/emmc/HYNIX-hC8aP_.bin_crc.bin
 vendor/firmware/emmc/SAMSUNG-3H6CMB.bin_crc.bin
 vendor/firmware/emmc/SAMSUNG-CKTM4R.bin_crc.bin
 vendor/firmware/emmc/SAMSUNG-DD68MB.bin_crc.bin

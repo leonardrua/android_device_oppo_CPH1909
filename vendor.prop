@@ -11,6 +11,17 @@
 # Audio
 ro.audio.usb.period_us=16000
 
+# Dirac audio enhancement (the stock vendor image ships the Dirac service,
+# libs and /vendor/etc/dirac tuning blobs; these are the values its daemon and
+# the effect framework read at boot).
+ro.dirac.config=192
+ro.dirac.poolsize=2
+ro.dirac.max_active.headset=5
+ro.dirac.max_active.powersound=3
+persist.dirac.acs.controller=afm
+persist.dirac.afm.mode=global
+persist.dirac.acs.startAtBoot=3
+
 # Camera
 camera.disable_zsl_mode=1
 camera.mdp.cz.enable=1
@@ -35,6 +46,15 @@ ro.mtk_widevine_drm_l3_support=1
 
 # Media
 media.settings.xml=/vendor/etc/media_profiles.xml
+# MTK video decoder: hold playback until the first key frame arrives. The
+# stock vendor image set this for the MTK VDEC; the AOSP default streams the
+# first frames too early on this codec.
+mtk.vdec.waitkeyframeforplay=1
+
+# FM radio
+# Enables the MTK FM driver/service; the platform sets ro.mtk_fm_50khz_support
+# in the Platform section below.
+fmradio.driver.enable=1
 
 # Radio / telephony (dual SIM, MTK IMS)
 persist.radio.default.sim=0
@@ -73,6 +93,11 @@ persist.mtk_wfc_support=1
 persist.mtk_epdg_support=1
 persist.mtk_ct_volte_support=1
 persist.mtk_dynamic_ims_switch=1
+# Modem / CCCI: the MTK ccci kernel driver and daemons read the protocol
+# count and the C2K (CDMA2000) channel enable before bringing up MD1.
+ro.num_md_protocol=2
+ro.mtk_protocol1_rat_config=Lf/Lt/W/T/G
+mtk.eccci.c2k=enabled
 
 # Wi-Fi / connectivity
 ro.wlan.gen=gen4m
@@ -81,6 +106,18 @@ mediatek.wlan.module.postfix=_consys_mt6765
 persist.mtk.wcn.combo.chipid=-1
 persist.mtk.wcn.coredump.mode=2
 persist.mtk.wcn.dynamic.dump=0
+# WCN firmware patch negotiation and consys power control, read by the
+# connectivity driver through the wmt_loader/stp service.
+persist.mtk.wcn.patch.version=-1
+persist.mtk.connsys.poweron.ctl=0
+ro.connsys.dedicated.log=1
+# DHCPv6 client support in the MTK Wi-Fi stack.
+ro.mtk_dhcpv6c_wifi=1
+
+# Bluetooth
+# Read by the MTK BT HAL/vendor lib and the AVRCP profile: keep AVRCP on a
+# single active player, matching the stock ROM.
+bt.profiles.avrcp.multiPlayer.enable=0
 
 # Platform identification
 #
@@ -88,6 +125,10 @@ persist.mtk.wcn.dynamic.dump=0
 # files branch on these.
 ro.mediatek.platform=MT6765
 ro.mediatek.chip_ver=S01
+# The stock ROM's alps branch and vendor SDK level. A number of MTK blobs and
+# their rc files compare these before enabling platform-specific paths.
+ro.mediatek.version.branch=alps-mp-o1.mp6.tc16sp
+ro.mediatek.version.sdk=4
 ro.mtk_bsp_package=1
 ro.mtk_bt_support=1
 ro.mtk_emmc_support=1
@@ -112,11 +153,22 @@ ro.mount.fs=EXT4
 ro.sys.sdcardfs=1
 ro.oem_unlock_supported=1
 
+# Dalvik / ART
+#
+# Heap sizing for this device's 3/4 GB RAM. The stock vendor image set these;
+# the generic AOSP defaults are noticeably smaller, which makes large apps hit
+# the growth limit.
+dalvik.vm.heapgrowthlimit=384m
+dalvik.vm.heapsize=512m
+
 # USB
 ro.sys.usb.bicr=no
 ro.sys.usb.charging.only=yes
 ro.sys.usb.mtp.whql.enable=0
 ro.sys.usb.storage.type=mtp
+# Keep the USB ACM (ttyGS) control channel disabled unless a tool asks for it,
+# as the stock vendor default.prop did.
+persist.service.acm.enable=0
 
 # Power-off charging / boot
 sys.ipo.disable=1

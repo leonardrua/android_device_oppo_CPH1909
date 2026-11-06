@@ -200,13 +200,39 @@ AOSP 1.1 service (`@1.1::IMediaCasService` extends `@1.0`).
 ### Properties
 
 * `system.prop` holds the framework-side values from the stock system build
-  (density, radio library names, Wi-Fi interfaces).
+  (density, radio library names, Wi-Fi interfaces, the MediaTek Wi-Fi feature
+  gates `ro.mediatek.wlan.{wsc,p2p}`/`mediatek.wlan.ctia`, and the camera
+  shutter-sound policy).
 * `vendor.prop` holds the subset of the stock vendor build.prop that the
-  prebuilt MediaTek/OPPO blobs and their rc files read. In particular
-  `ro.hardware.egl=mtk` is required: the Android 10 EGL loader appends
-  `ro.hardware.egl` (then `ro.board.platform`) to `libEGL_`, and this device's
-  PowerVR blobs are `libEGL_mtk.so`. Without it the loader looks for the
-  non-existent `libEGL_mt6765` and SurfaceFlinger never starts.
+  prebuilt MediaTek/OPPO blobs and their rc files read. Besides the platform
+  identification block this includes the ART heap sizing
+  (`dalvik.vm.heapgrowthlimit=384m`, `dalvik.vm.heapsize=512m`), the Dirac audio
+  and FM-radio enables, the modem/CCCI and WCN connectivity values, and the AVRCP
+  single-player setting. In particular `ro.hardware.egl=mtk` is required: the
+  Android 10 EGL loader appends `ro.hardware.egl` (then `ro.board.platform`) to
+  `libEGL_`, and this device's PowerVR blobs are `libEGL_mtk.so`. Without it the
+  loader looks for the non-existent `libEGL_mt6765` and SurfaceFlinger never
+  starts.
+
+The ColorOS-only values (`ro.com.google.gmsversion`, `ro.setupwizard.*`,
+`pm.dexopt.*`, the `persist.log.tag.*` block and the `ro.mtk_*` feature switches
+that no prebuilt blob consults) are deliberately dropped.
+
+### Not taken from the stock dump
+
+The stock ROM also carries system-side, device-specific files that this build has
+no use for, so they are intentionally neither extracted nor copied:
+
+* `system/etc/bluetooth/` — AOSP's own Bluetooth stack installs the generic
+  `bt_stack.conf` and `bt_did.conf` into `/system/etc/bluetooth/`, and this build
+  uses that stack. The remaining stock files there (`mtk_bt_stack.conf`,
+  `mtk_bt_fw.conf`, `bt_mtk_iot_list.conf`, `profile_version.conf`) are read only
+  by MediaTek's patched `bluetooth.default.so`, which is not shipped. Device
+  tuning goes through `bluetooth/bdroid_buildcfg.h` instead.
+* `vendor/etc/fs_config_files` sets the two MTK HAL binaries to be owned by the
+  `audioserver`/`bluetooth` accounts. On Android 10 the file ownership comes from
+  the generated `fs_config` and the process credentials come from the `user`
+  directive in each HAL's `.rc`, so the stock override is not needed.
 
 ### Encryption
 

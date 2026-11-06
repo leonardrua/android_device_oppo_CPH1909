@@ -21,8 +21,20 @@ wifi.interface=wlan0
 wifi.direct.interface=p2p0
 wifi.tethering.interface=ap0
 
+# Wi-Fi feature gates read by the MediaTek wpa_supplicant/wifi blobs. The
+# stock system.prop set all three; without them the blobs fall back to their
+# compiled-in defaults, which disable Wi-Fi Simple Config and Wi-Fi Display.
+ro.mediatek.wlan.wsc=1
+ro.mediatek.wlan.p2p=1
+mediatek.wlan.ctia=0
+
 # Hardware keys: this device has no capacitive navigation bar
 qemu.hw.mainkeys=0
+
+# Camera
+# The stock ROM forced the shutter-sound policy off; without it CameraService
+# falls back to the region default.
+ro.camera.sound.forced=0
 
 # Audio
 ro.audio.silent=0
