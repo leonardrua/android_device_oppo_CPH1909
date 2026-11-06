@@ -67,15 +67,15 @@ PRODUCT_PACKAGES += \
     audio.a2dp.default
 
 # Configs
+#
+# Only the /vendor copy is installed. On this non-system-as-root device the
+# kernel DT fstab (mt6765.dts) is authoritative for first-stage mount: init
+# mounts /system from it, pivots the root to /system, then mounts /vendor from
+# the new root, all before this file is ever parsed. The same file then serves
+# the second-stage mount_all from the stock init.mt6765.rc and recovery
+# (TARGET_RECOVERY_FSTAB).
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/fstab.mt6765:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6765
-
-# The fstab must also be in the boot ramdisk: first-stage init reads
-# /fstab.<ro.boot.hardware> before /system exists, and only mounts the entries
-# that carry first_stage_mount. Without this copy /system is never mounted and
-# init cannot exec /system/bin/init for the second stage.
-PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/rootdir/etc/fstab.mt6765:$(TARGET_COPY_OUT_RAMDISK)/fstab.mt6765
 
 # zram helper started by the stock init.mt6765.rc from its `on fs` block.
 # See the header of the script for why this is a rewrite, not the stock copy.

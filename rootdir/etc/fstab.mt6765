@@ -1,22 +1,26 @@
 # Android fstab for OPPO A5s (CPH1909, MT6765) - LineageOS 17.1
 #
-# Derived from the stock MediaTek fstab.in output for mt6765. That file is the
-# generated recovery variant, so every line originally carried `recoveryonly`;
-# the flags were dropped where they would prevent a normal boot from mounting
-# anything.
+# This is the second-stage/recovery fstab, installed as
+# /vendor/etc/fstab.mt6765. The stock init.mt6765.rc runs
+#     mount_all /vendor/etc/fstab.mt6765
+# from its `on fs` block, and TARGET_RECOVERY_FSTAB installs the same file for
+# recovery.
 #
-# Android 10 devices are always system-as-root: first-stage init runs from the
-# boot ramdisk, finds this file as /fstab.<ro.boot.hardware>, and mounts every
-# entry tagged `first_stage_mount` before switching root to /system. Only then
-# can init exec /system/bin/init for the second stage. /system and /vendor
-# therefore need `first_stage_mount` here, and this file must also be installed
-# into the ramdisk (see device.mk).
+# This device is A-only, non-system-as-root and legacy Treble (O-MR1 vendor):
+# the boot image carries a ramdisk, and first-stage init does NOT read this
+# file. The kernel device tree (arch/arm64/boot/dts/mediatek/mt6765.dts)
+# contains a firmware/android/fstab node with /system and /vendor, and
+# first-stage init prefers it (ReadFirstStageFstab -> ReadFstabFromDt). It
+# mounts /system, pivots the root to it (TrySwitchSystemAsRoot -> SwitchRoot),
+# then mounts /vendor from the new root. The stock `wait,recoveryonly` flags
+# below are therefore correct: normal-boot mounting has already happened by
+# the time this file is parsed, and `recoveryonly` keeps those entries out of
+# the second-stage mount_all while still letting recovery mount them.
 #
-# There is deliberately no /odm entry. The scatter defines a 256 MiB odm
-# partition, but the factory image on this device leaves it entirely zeroed (no
-# ext4 superblock), so a first-stage mount would fail and abort the boot. The
-# stock 8.1 fstab marked it recoveryonly for the same reason. Nothing on the
-# device uses /odm.
+# /odm is listed because the scatter defines a 256 MiB odm partition, but the
+# factory image leaves it zeroed (no ext4 superblock). recoveryonly matches
+# stock and means normal boot never tries to mount it; nothing on the device
+# uses /odm.
 #
 # /data uses FDE (full-disk encryption) with the key blob on the dedicated
 # `metadata` partition, backed by the Trustonic Kinibi TEE. It is NOT FBE, so
@@ -24,8 +28,9 @@
 #
 # <src>                                                  <mnt_point>          <type>  <mnt_flags and options>                                              <fs_mgr_flags>
 
-/dev/block/platform/bootdevice/by-name/system             /system              ext4    ro,barrier=1                                                         wait,first_stage_mount
-/dev/block/platform/bootdevice/by-name/vendor             /vendor              ext4    ro,barrier=1                                                         wait,first_stage_mount
+/dev/block/platform/bootdevice/by-name/system             /system              ext4    ro                                                                   wait,recoveryonly
+/dev/block/platform/bootdevice/by-name/vendor             /vendor              ext4    ro                                                                   wait,recoveryonly
+/dev/block/platform/bootdevice/by-name/odm                /odm                 ext4    ro                                                                   wait,recoveryonly
 
 /dev/block/platform/bootdevice/by-name/cache              /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                   wait,check
 

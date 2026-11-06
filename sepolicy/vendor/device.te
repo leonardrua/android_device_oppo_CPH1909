@@ -1,4 +1,4 @@
-# Type declarations and permissive domains for OPPO CPH1920 bring-up.
+# Type declarations and permissive domains for OPPO CPH1909 bring-up.
 #
 # The stock ColorOS policy declares roughly 200 MediaTek/OPPO types that have
 # no Android 10 equivalent. Porting all of it before the device has ever

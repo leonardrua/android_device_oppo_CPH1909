@@ -6,6 +6,18 @@
 
 DEVICE_PATH := device/oppo/CPH1909
 
+# Device profile
+#
+#   - A-only: one system/vendor slot, no slotselect in the fstab, no
+#     AB_OTA_UPDATER and no A/B boot control.
+#   - Non-system-as-root boot: the legacy boot image carries a ramdisk and
+#     BOARD_BUILD_SYSTEM_ROOT_IMAGE is intentionally unset. Android 10 still
+#     builds system.img in the system-as-root layout (root files are merged
+#     into it), but first-stage init mounts that image at /system and pivots
+#     the root to it.
+#   - Legacy Treble: the vendor interface is O-MR1 (API 27, FCM level 2), so
+#     manifest.xml declares target-level="2" and the build uses VNDK-lite.
+#
 # Architecture
 TARGET_ARCH := arm64
 TARGET_ARCH_VARIANT := armv8-a
@@ -52,14 +64,16 @@ BOARD_RAMDISK_OFFSET := 0x14f88000
 BOARD_KERNEL_TAGS_OFFSET := 0x13f88000
 BOARD_KERNEL_PAGESIZE := 2048
 
-# androidboot.hardware=mt6765 is what gives us ro.hardware=mt6765.
-#
-# Without it first-stage init never finds /fstab.mt6765 (GetFstabPath() looks
-# for /fstab.<ro.boot.hardware>) and second-stage init never imports the stock
-# /vendor/etc/init/hw/init.mt6765.rc, because rootdir/init.rc has
+# androidboot.hardware=mt6765 gives us ro.hardware=mt6765. Second-stage init
+# uses it to import the stock /vendor/etc/init/hw/init.mt6765.rc:
 #   import /vendor/etc/init/hw/init.${ro.hardware}.rc
-# Every MediaTek service and both mount_all calls live in that file, so a build
-# without this parameter boots to an empty init and hangs.
+# Every MediaTek service and the mount_all for this device live in that file,
+# and fs_mgr uses the same property to locate /vendor/etc/fstab.mt6765.
+#
+# First-stage mount does not depend on it here: init prefers the kernel DT
+# fstab, which is present in mt6765.dts (see fstab.mt6765 for the full path).
+# Without the property, however, second-stage init has no MediaTek services and
+# the device boots to an empty init and hangs.
 BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.hardware=mt6765
 
 BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
@@ -120,33 +134,42 @@ TARGET_SCREEN_DENSITY := 320
 
 # HIDL / VINTF
 #
-# Only the device manifest is supplied. A DEVICE_MATRIX_FILE (what the vendor
-# image requires of the framework) is optional for a non-Treble device, and the
-# stock 8.1 compatibility_matrix.xml would reject the Android 10 framework.
+# This is a legacy-Treble device: the vendor interface is O-MR1 (FCM level 2),
+# matching PRODUCT_SHIPPING_API_LEVEL=27. manifest.xml declares
+# target-level="2", so the Android 10 framework validates the vendor HALs
+# against the frozen O-MR1 framework compatibility matrix. That matrix will
+# otherwise be selected at runtime from ro.product.first_api_level=27, and
+# assemble_vintf infers the same level at build time when the attribute is
+# missing, so declaring it explicitly is the honest description.
+#
+# The stock 8.1 compatibility_matrix.xml (the old vendor->framework device
+# matrix) is deliberately not shipped: it was written for the 8.1 framework and
+# would reject Android 10. Only the device manifest is supplied.
 DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
 
 # VNDK
 #
-# BOARD_VNDK_VERSION is deliberately left UNSET.
+# BOARD_VNDK_VERSION is deliberately left UNSET. PRODUCT_SHIPPING_API_LEVEL is
+# 27, so PRODUCT_USE_VNDK stays false and the build does not default the
+# variable to "current" (core/config.mk only does that for API 28+). This is
+# the legacy-Treble VNDK-lite configuration, not VNDK enforcement.
 #
-# Setting it to "current" is the only value the build accepts, and that would
-# impose VNDK linkage rules on every vendor module built from source. It would
-# also set ro.vndk.version/ro.vndk.lite from the platform rather than from this
-# 8.1 vendor image.
+# Setting BOARD_VNDK_VERSION would impose VNDK linkage rules on every vendor
+# module built from source and is not needed for the prebuilt O-MR1 blobs.
 #
 # With the variable unset the build sets ro.vndk.lite=true and the linker uses
-# ld.config.vndk_lite.txt (a Treble-ized but non-enforced configuration). Its
-# vendor namespace includes /system/${LIB} itself in addition to the vndk and
-# vndk-sp subdirectories, so the 8.1 blobs resolve libhidltransport,
-# libhwbinder, libgui, libpower, libmedia_helper and friends against the
-# Android 10 system libraries. Those are VNDK forward-compatible with the API 27
-# libraries the blobs were linked against, which is exactly the guarantee the
-# VNDK exists to provide.
+# ld.config.vndk_lite.txt. Its vendor namespace includes /system/${LIB} itself
+# in addition to the vndk and vndk-sp subdirectories, so the 8.1 blobs resolve
+# libhidltransport, libhwbinder, libgui, libpower, libmedia_helper and friends
+# against the Android 10 system libraries. Those are VNDK forward-compatible
+# with the API 27 libraries the blobs were linked against, which is exactly the
+# guarantee the VNDK exists to provide.
 #
 # PRODUCT_EXTRA_VNDK_VERSIONS is not used: the v27 snapshot phony
 # (vndk_snapshot_package) is only defined when BOARD_VNDK_VERSION is set
 # (build/make/target/product/gsi/Android.mk), so declaring the extra version on
-# a non-VNDK build would install nothing.
+# this VNDK-lite build would install nothing. The vndk-lite namespace already
+# exposes the current system libraries to the 8.1 blobs.
 
 # Audio
 USE_XML_AUDIO_POLICY_CONF := 1

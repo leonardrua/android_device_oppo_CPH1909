@@ -1,23 +1,31 @@
-<manifest version="1.0" type="device">
+<manifest version="1.0" type="device" target-level="2">
 <!--
   VINTF device manifest for OPPO A5s (CPH1909, MT6765).
 
-  This is the stock ColorOS 5.2 (Android 8.1) /vendor/manifest.xml, which is the
+  This is the stock ColorOS 5.2 (Android 8.1) /vendor/manifest.xml: the
   authoritative list of what the prebuilt vendor blobs actually register, plus
   the three HALs LineageOS 17.1 builds because Android 10 requires them and an
   8.1 vendor image never had them (health@2.0, usb@1.0, drm@1.2 clearkey).
 
-  target-level is deliberately not declared: this is a non-Treble device with an
-  8.1 vendor partition, so there is no FCM level it could honestly claim, and
-  declaring one would make VINTF check the Android 10 framework matrix against
-  blobs that cannot satisfy it.
+  This is a legacy-Treble device. It launched with Android 8.1 / API 27, which
+  is FCM (target) level 2, O-MR1. Android 10 replaced the old
+  PRODUCT_COMPATIBILITY_MATRIX_LEVEL_OVERRIDE with the `target-level` attribute
+  on this manifest, so level 2 is declared explicitly. Without the attribute,
+  assemble_vintf would infer the same level from
+  PRODUCT_SHIPPING_API_LEVEL=27 and print a warning. With it, the Q framework
+  checks these HALs against the frozen O-MR1 framework compatibility matrix;
+  all ten required HALs of that matrix are present here.
 
-  <sepolicy> is not decorative: with PRODUCT_SHIPPING_API_LEVEL=27 the
-  build enables PRODUCT_ENFORCE_VINTF_MANIFEST and assemble_vintf checks
-  this manifest against the FCM 2 matrix. Leaving the version unset
-  makes it default to 0.0, which fails that check. 27.0 is both the
-  version the stock 8.1 vendor image was built against and one of the
-  platform's PLATFORM_SEPOLICY_COMPAT_VERSIONS.
+  The stock 8.1 compatibility_matrix.xml (the vendor->framework device matrix)
+  is deliberately not shipped: it was written for the 8.1 framework and would
+  reject Android 10.
+
+  <sepolicy> is not decorative: with PRODUCT_SHIPPING_API_LEVEL=27 the build
+  enables PRODUCT_ENFORCE_VINTF_MANIFEST and assemble_vintf checks this
+  manifest against the FCM 2 matrix. Leaving the version unset makes it default
+  to 0.0, which fails that check. 27.0 is both the version the stock 8.1 vendor
+  image was built against and one of the platform's
+  PLATFORM_SEPOLICY_COMPAT_VERSIONS.
 -->
     <hal format="hidl">
         <name>android.hardware.audio</name>

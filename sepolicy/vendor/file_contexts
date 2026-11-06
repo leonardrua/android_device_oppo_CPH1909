@@ -1,4 +1,4 @@
-# SELinux file contexts for OPPO CPH1920 (AX5s, MT6765)
+# SELinux file contexts for OPPO CPH1909 (A5s, MT6765)
 #
 # Minimal bring-up policy. The stock ColorOS policy declares ~200 MediaTek and
 # OPPO specific types (mtk_hal_*, oppo_*) that do not exist in Android 10's

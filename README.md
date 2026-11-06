@@ -3,6 +3,17 @@
 Device tree for the OPPO A5s / CPH1909 (MediaTek MT6765, Helio P35), ported from
 the stock Android 8.1 / API 27 vendor image to LineageOS 17.1 (Android 10).
 
+The device is **A-only**, **non-system-as-root**, and **legacy Treble**:
+
+* A-only — one system/vendor slot; no `slotselect`, `AB_OTA_UPDATER`, or A/B
+  boot control.
+* Non-system-as-root — the boot image still carries a ramdisk and
+  `BOARD_BUILD_SYSTEM_ROOT_IMAGE` is unset. Android 10 nevertheless builds
+  `system.img` in the system-as-root layout; first-stage init mounts it at
+  `/system` and pivots to it.
+* Legacy Treble — the vendor image is O-MR1 (API 27, FCM level 2), so the build
+  uses VNDK-lite and the device manifest declares `target-level="2"`.
+
 The hardware values (partition sizes, kernel base and offsets, MT6765 platform,
 fstab partition layout) are carried over unchanged from the stock device tree.
 Everything that had to change for Android 10 is listed below.
@@ -57,37 +68,44 @@ policy, mkshrc, and the generated `public.libraries.txt` /`fs_config*` files).
 
 ## What changed for Android 10
 
-### System-as-root and first-stage mount
+### Boot, system-as-root and first-stage mount
 
-Android 10 always ends up with the system image as the root filesystem. This
-device's bootloader expects a legacy boot image with a ramdisk, i.e.
-`BOARD_BUILD_SYSTEM_ROOT_IMAGE` stays unset, so the kernel starts
-`/init` from the boot ramdisk. That `/init` is `init_first_stage`, which:
+This is a non-system-as-root device, but Android 10 always builds `system.img`
+in the system-as-root layout: `build_image.py` merges the root directory into the
+system image and mounts the result at `/`. For this device the boot image still
+carries a ramdisk (`BOARD_BUILD_SYSTEM_ROOT_IMAGE` is intentionally unset), so
+the kernel starts `init_first_stage` from the ramdisk and the system image is
+mounted later.
 
-1. finds its fstab at `/fstab.<ro.boot.hardware>` (there is no /vendor yet),
-2. mounts the entries tagged `first_stage_mount`,
-3. switches root to `/system` and execs `/system/bin/init`.
+First-stage init does not read this tree's `fstab.mt6765`.
+`ReadFirstStageFstab()` first calls `ReadFstabFromDt()`, and the kernel DT
+contains a `firmware/android/fstab` node in
+`arch/arm64/boot/dts/mediatek/mt6765.dts`. That node always lists `/system` and
+`/vendor` (`/odm` is inside `#if 0`); with `CONFIG_MTK_DM_VERITY_OFF=y`, which
+`oppo6765_18511_defconfig` sets, their flags are just `wait` — no `verify`, no
+`avb`, and no `first_stage_mount` requirement. `TrySwitchSystemAsRoot()` sees
+the `/system` entry, mounts it, and calls `SwitchRoot("/system")`; the remaining
+entries (the DT `/vendor` node) are mounted immediately afterwards from the new
+root. From that point on the system image is the root filesystem and
+second-stage `/system/bin/init` runs.
 
-Therefore:
+The fstab in `rootdir/etc/fstab.mt6765` is therefore not the first-stage fstab.
+It is installed only at `/vendor/etc/fstab.mt6765`, where the stock
+`init.mt6765.rc` runs `mount_all` from its `on fs` block, and it is also the
+recovery fstab (`TARGET_RECOVERY_FSTAB`). Its `/system`, `/vendor`, and `/odm`
+lines keep the stock `wait,recoveryonly` flags: `recoveryonly` keeps them out of
+the normal second-stage `mount_all` (they are already mounted or intentionally
+unused) while still letting recovery mount them. There is no `first_stage_mount`
+flag and no ramdisk copy of the file.
 
-* `BOARD_KERNEL_CMDLINE` carries `androidboot.hardware=mt6765`, which is what
-  makes `ro.boot.hardware` / `ro.hardware` equal `mt6765`;
-* `rootdir/etc/fstab.mt6765` tags `/system` and `/vendor` with
-  `first_stage_mount`, and
-* `device.mk` installs the same fstab both at `/vendor/etc/fstab.mt6765` and at
-  `/fstab.mt6765` in the boot ramdisk.
+There is no `/odm` mount in normal boot. The scatter defines a 256 MiB `odm`
+partition, but the factory image leaves it zeroed (no ext4 superblock);
+`recoveryonly` matches stock and means the boot never tries to mount it. Nothing
+on the device uses it.
 
-The kernel's own device tree also contains a `firmware/android/fstab` node
-(`arch/arm64/boot/dts/mediatek/mt6765.dts`). With
-`CONFIG_MTK_DM_VERITY_OFF=y` — which is set in `oppo6765_18511_defconfig` — its
-entries are plain `wait` (no `verify`, no `avb`), so first-stage init can mount
-them directly. `ReadFirstStageFstab()` prefers the DT fstab when it exists, so
-the ramdisk copy is the fallback for configs where it does not.
-
-There is deliberately **no `/odm` entry**. The scatter defines a 256 MiB `odm`
-partition, but the factory image leaves it entirely zeroed (no ext4 superblock),
-so mounting it in first stage would fail and abort the boot. Nothing on the
-device uses it; the stock 8.1 fstab marked it `recoveryonly` for the same reason.
+The A-only layout is reflected by the absence of `slotselect` flags, the
+separate `recovery` partition, and `BOARD_AVB_ENABLE := false` (the device has no
+`vbmeta` partition and the bootloader is locked to OPPO's keys).
 
 ### MediaTek init scripts
 
@@ -116,28 +134,32 @@ exist in this kernel (userspace lmkd replaced the in-kernel lowmemorykiller),
 and every write is guarded so a missing node cannot leave zram half-configured.
 
 The stock `init.mt6765.rc` also runs `mount_all /vendor/etc/fstab.mt6765` in its
-`on fs` block. Entries that were already mounted by first-stage init are skipped
-by `fs_mgr_mount_all()`, so the remaining partitions (data, cache, protect_f,
-protect_s, nvdata, nvcfg, persist, opporeserve) are mounted there as before.
+`on fs` block. `fs_mgr_mount_all()` skips `recoveryonly` entries, so
+system/vendor/odm stay out of the second stage, and mounts the remaining
+partitions (data, cache, protect_f, protect_s, nvdata, nvcfg, persist,
+opporeserve) as before.
 
 ### Vendor partition and VNDK
 
 `TARGET_COPY_OUT_VENDOR := vendor` (required by build/make whenever
 `BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE` is set) keeps the separate vendor image.
 
-`BOARD_VNDK_VERSION` is deliberately left unset. The build system only accepts
-"current" for it, and that would impose VNDK linkage rules on every vendor
-module built from source. With it unset the build sets `ro.vndk.lite=true`, so
-the linker uses `ld.config.vndk_lite.txt`: that configuration allows vendor
-binaries to resolve libraries from `/system/lib[64]` directly, not only from the
-vndk/vndk-sp subdirectories. The 8.1 blobs therefore link against the Android 10
-system libraries, which are VNDK forward-compatible with the API 27 versions the
-blobs were built against.
+`BOARD_VNDK_VERSION` is deliberately left unset. Because
+`PRODUCT_SHIPPING_API_LEVEL` is 27, `PRODUCT_USE_VNDK` stays false
+(`core/config.mk` only defaults `BOARD_VNDK_VERSION` to `"current"` for API
+28+), so this is the legacy-Treble VNDK-lite configuration rather than VNDK
+enforcement. With the variable unset the build sets `ro.vndk.lite=true`, so the
+linker uses `ld.config.vndk_lite.txt`: vendor binaries can resolve libraries
+from `/system/lib[64]` directly, not only from the vndk/vndk-sp
+subdirectories. The 8.1 blobs therefore link against the Android 10 system
+libraries, which are VNDK forward-compatible with the API 27 versions the blobs
+were built against.
 
-`PRODUCT_EXTRA_VNDK_VERSIONS` is intentionally not used. The `vndk_snapshot_package`
-phony that installs an older snapshot is only defined when
-`BOARD_VNDK_VERSION` is set (`build/make/target/product/gsi/Android.mk`), so the
-variable would silently install nothing on this non-VNDK build.
+`PRODUCT_EXTRA_VNDK_VERSIONS` is intentionally not used. The
+`vndk_snapshot_package` phony that installs an older snapshot is only defined
+when `BOARD_VNDK_VERSION` is set
+(`build/make/target/product/gsi/Android.mk`), so the variable would silently
+install nothing on this VNDK-lite build.
 
 ### SELinux
 
@@ -152,10 +174,20 @@ in the policy file. Convert the denials they log into rules and remove the
 
 ### VINTF
 
-`manifest.xml` is the stock CPH1909 device manifest with `target-level` removed
-(an 8.1 vendor image cannot honestly claim an FCM level), plus the HALs
-LineageOS builds because Android 10 requires them: `health@2.0`, `usb@1.0` and
-the `drm@1.2` clearkey instance.
+`manifest.xml` is the stock CPH1909 device manifest plus the HALs LineageOS
+builds because Android 10 requires them: `health@2.0`, `usb@1.0` and the
+`drm@1.2` clearkey instance. It declares `target-level="2"`.
+
+This is the key legacy-Treble setting. Android 10 replaced the old
+`PRODUCT_COMPATIBILITY_MATRIX_LEVEL_OVERRIDE` with the `target-level` attribute
+on the device manifest. API 27 corresponds to FCM level 2 (O-MR1), so the Q
+framework validates the vendor HALs against the frozen O-MR1 compatibility
+matrix. `assemble_vintf` would infer level 2 from
+`PRODUCT_SHIPPING_API_LEVEL=27` even without the attribute, but only after
+printing a warning. All ten HALs that FCM 2 marks as required are present in
+this manifest. The stock 8.1 `compatibility_matrix.xml` (the vendor's device
+matrix) is **not** shipped: it describes the 8.1 framework and would reject
+Android 10.
 
 `android.hardware.cas` is *not* listed: `base_vendor.mk` always builds
 `android.hardware.cas@1.1-service`, which ships its own VINTF fragment, and a
@@ -200,7 +232,7 @@ The fstab keeps `forceencrypt=` exactly as the stock ROM had it;
   biometric stack will not drive them without a shim.
 * The 8.1 vendor blobs are the highest-risk part of the port. If HIDL services
   fail to load, check `ro.hardware` / `ro.hardware.egl` and the linker denials
-  first; the build is non-VNDK, so vendor binaries may resolve libraries from
+  first; the build is VNDK-lite, so vendor binaries may resolve libraries from
   `/system/lib[64]` as described above.
 * Recovery: `TARGET_RECOVERY_FSTAB` points at the same fstab. The TWRP tree for
   this device is a separate branch and is not built from this one.
