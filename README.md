@@ -170,6 +170,29 @@ when `BOARD_VNDK_VERSION` is set
 (`build/make/target/product/gsi/Android.mk`), so the variable would silently
 install nothing on this VNDK-lite build.
 
+### HIDL transport libraries
+
+Android 10 merged `libhidltransport` and `libhwbinder` into `libhidlbase` and
+removed the standalone libraries from `base_system.mk`. Every stock 8.1 vendor
+binary — `camerahalserver`, `mtkfusionrild`, the audio, bluetooth, sensors,
+light, PQ and composer services — carries explicit `DT_NEEDED` entries for both
+libraries. Without them the dynamic linker aborts every vendor HAL with
+`library "libhidltransport.so" not found`, causing a total bootloop.
+
+`device.mk` therefore adds all four packages:
+
+```make
+PRODUCT_PACKAGES += \
+    libhidltransport \
+    libhidltransport.vendor \
+    libhwbinder \
+    libhwbinder.vendor
+```
+
+The `.vendor` variants are needed because the 8.1 blobs live in the vendor
+linker namespace; without them `ld-android.so` resolves the system copy but
+the vendor namespace isolation rejects it.
+
 ### SELinux
 
 `sepolicy/vendor/` labels the MediaTek and OPPO vendor binaries that AOSP does
@@ -178,8 +201,17 @@ not label. The stock 8.1 precompiled policy is excluded from
 failure, not a compatibility question.
 
 Most vendor domains are `permissive` during bring-up, following the convention
-in the policy file. Convert the denials they log into rules and remove the
-`permissive` lines before shipping.
+in the policy file. This includes the standard AOSP HAL domains that the MTK
+vendor blobs are assigned to (`hal_audio_default`, `hal_bluetooth_default`,
+`hal_camera_default`, `hal_graphics_composer_default`, `hal_light_default`,
+`hal_sensors_default`, `rild`): these domains are enforcing by default in AOSP
+and lack rules for MTK-specific device nodes (`/dev/kd_camera_hw`,
+`/dev/mtk_sched`, `/dev/ccci*`, `/dev/mtk_disp_mgr`, etc.), so denials on
+those nodes crash the daemons immediately. Marking them permissive during
+bring-up logs the denials instead of blocking them.
+
+Convert the denials they log into `allow` rules and remove the `permissive`
+lines before shipping.
 
 ### VINTF
 
@@ -198,10 +230,12 @@ this manifest. The stock 8.1 `compatibility_matrix.xml` (the vendor's device
 matrix) is **not** shipped: it describes the 8.1 framework and would reject
 Android 10.
 
-`android.hardware.cas` is *not* listed: `base_vendor.mk` always builds
-`android.hardware.cas@1.1-service`, which ships its own VINTF fragment, and a
-second entry for the same HAL name and major version is rejected by
-`assemble_vintf`.
+`android.hardware.cas` and `android.hardware.drm@1.2` (clearkey) are *not*
+listed in the static manifest: `base_vendor.mk` always builds
+`android.hardware.cas@1.1-service`, and `device.mk` builds
+`android.hardware.drm@1.2-service.clearkey`. Both packages ship their own VINTF
+fragments, and a second entry for the same HAL name and major version is
+rejected by `assemble_vintf` with a duplicate-instance error.
 
 The stock 8.1 `cas@1.0-service` daemon is likewise dropped in favour of the
 AOSP 1.1 service (`@1.1::IMediaCasService` extends `@1.0`).
@@ -376,6 +410,17 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 * `BUILD_BROKEN_DUP_RULES := true` — the blob set and AOSP both install several
   of the same paths (the 8.1 HAL services AOSP 10 replaces); the blob wins Make
   parse order, which is what we want for the MediaTek binaries.
+* `BUILD_BROKEN_PREBUILT_ELF_FILES := true` — Android 10's build system runs
+  ELF checks (`check_elf_file.py`) on prebuilt shared libraries, verifying
+  DT_NEEDED entries resolve within the declared VNDK set. The 8.1 vendor blobs
+  predate these checks and carry entries like `libhidltransport.so` and
+  `libhwbinder.so` that would fail the validator.
+* `BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true` — suppresses the
+  parallel check that flags ELF binaries installed through `PRODUCT_COPY_FILES`
+  rather than through `BUILD_PREBUILT`.
+* `BUILD_BROKEN_USES_BUILD_COPY_HEADERS := true` — vendor makefiles may still
+  use the removed `BUILD_COPY_HEADERS` idiom; this flag downgrades the error to
+  a warning.
 * `BOARD_AVB_ENABLE := false` — the bootloader is locked to OPPO keys and this
   build is not signed by them; the device has no vbmeta partition.
 * `VENDOR_SECURITY_PATCH := 2021-04-05` — the stock system build.prop's
@@ -391,9 +436,11 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 * Fingerprint and face unlock use OPPO/Silead vendor packages rather than the
   AOSP `android.hardware.biometrics.fingerprint@2.1` service, so the framework
   biometric stack will not drive them without a shim.
-* The 8.1 vendor blobs are the highest-risk part of the port. If HIDL services
-  fail to load, check `ro.hardware` / `ro.hardware.egl` and the linker denials
-  first; the build is VNDK-lite, so vendor binaries may resolve libraries from
-  `/system/lib[64]` as described above.
+* The 8.1 vendor blobs are the highest-risk part of the port. The HIDL
+  transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
+  variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL
+  services still fail to load, check `ro.hardware` / `ro.hardware.egl` and the
+  linker namespace denials first; the build is VNDK-lite, so vendor binaries may
+  resolve libraries from `/system/lib[64]` as described above.
 * Recovery: `TARGET_RECOVERY_FSTAB` points at the same fstab. The TWRP tree for
   this device is a separate branch and is not built from this one.
