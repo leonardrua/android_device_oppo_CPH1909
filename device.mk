@@ -103,6 +103,17 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/bin/swap_enable.sh:$(TARGET_COPY_OUT_SYSTEM)/etc/swap_enable.sh
 
+# Media profiles
+#
+# Android 10's MediaProfiles only searches /odm/etc and /vendor/etc for
+# media_profiles_V1_0.xml (plus /system/etc/media_profiles.xml). The stock 8.1
+# vendor image installs its profiles as /vendor/etc/media_profiles.xml, so the
+# framework never finds them. Install the same, unmodified stock file under the
+# name Android 10 looks for; it carries the device's own 1080p/720p camcorder
+# profiles and encoder capabilities.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/configs/media/media_profiles_V1_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_V1_0.xml
+
 # Default properties
 #
 # ro.mtkrc.path is read while parsing /vendor/etc/init/hw/init.mt6765.rc to

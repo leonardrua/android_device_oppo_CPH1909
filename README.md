@@ -305,6 +305,16 @@ buttons (hook, media transport, `VOICE_ASSIST`) and the `mtk-kpd` key map fall
 back to `Generic.kl`. The stock files are copied unchanged into
 `/system/usr/keylayout/` through `PRODUCT_COPY_FILES`.
 
+### Media profiles
+
+Android 10's `MediaProfiles` only searches `/odm/etc` and `/vendor/etc` for
+`media_profiles_V1_0.xml`, plus `/system/etc/media_profiles.xml`. The stock 8.1
+vendor image ships its profiles as `/vendor/etc/media_profiles.xml`, so the
+framework never finds them and camcorder recording has no device profiles. The
+stock file is copied unchanged to `configs/media/media_profiles_V1_0.xml` and
+installed as `/vendor/etc/media_profiles_V1_0.xml`, keeping the device's own
+1080p/720p camcorder profiles and encoder capabilities.
+
 ### Properties
 
 * `system.prop` holds the framework-side values from the stock system build
