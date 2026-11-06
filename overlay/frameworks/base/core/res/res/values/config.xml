@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/**
+ * Copyright (c) 2009, The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+<!-- Device-specific framework resource overrides. The auto-brightness and
+     audio-jack values below are extracted from the stock CPH1909
+     framework-res.apk (Android 8.1). -->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+
+    <!-- Auto-brightness control points.
+         AOSP 10 ships these arrays empty, which makes
+         BrightnessMappingStrategy.create() return null: no
+         AutomaticBrightnessController is created, so auto-brightness is
+         unavailable and manual brightness has no device curve. These are the
+         stock CPH1909 values (six lux thresholds, seven backlight levels). -->
+    <integer-array name="config_autoBrightnessLevels">
+        <item>45</item>
+        <item>1025</item>
+        <item>1480</item>
+        <item>2250</item>
+        <item>3300</item>
+        <item>10000</item>
+    </integer-array>
+
+    <integer-array name="config_autoBrightnessLcdBacklightValues">
+        <item>8</item>
+        <item>22</item>
+        <item>48</item>
+        <item>78</item>
+        <item>128</item>
+        <item>206</item>
+        <item>255</item>
+    </integer-array>
+
+    <!-- Expose the automatic-brightness setting; AOSP defaults this to false. -->
+    <bool name="config_automatic_brightness_available">true</bool>
+
+    <!-- Stock light-sensor debounce and sampling values. AOSP uses 4000/8000
+         ms and 250 ms respectively, which makes the stock curve respond
+         noticeably slower. -->
+    <integer name="config_autoBrightnessBrighteningLightDebounce">1000</integer>
+    <integer name="config_autoBrightnessDarkeningLightDebounce">4000</integer>
+    <integer name="config_autoBrightnessLightSensorRate">500</integer>
+
+    <!-- Stock dim/doze backlight levels. -->
+    <integer name="config_screenBrightnessDim">2</integer>
+    <integer name="config_screenBrightnessDoze">2</integer>
+
+    <!-- Wired headset detection.
+         The MTK ACCDET driver (CONFIG_MTK_PMIC_CHIP_MT6357) reports
+         SW_HEADPHONE_INSERT / SW_MICROPHONE_INSERT through the Linux input
+         subsystem, not through the legacy /sys/class/switch/h2w uevent path.
+         AOSP defaults this to false, so the framework never saw headset
+         insertion; the stock ROM sets it true. -->
+    <bool name="config_useDevInputEventForAudioJack">true</bool>
+
+</resources>

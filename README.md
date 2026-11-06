@@ -222,12 +222,37 @@ makes the loader open the shipped `kmsetkey.trustonic.so` directly.
 
 ### Resource overlay
 
-`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which currently holds a single
-resource overlay: `frameworks/base/core/res/res/xml/power_profile.xml`. AOSP
-ships only deliberately bogus placeholder values there, so BatteryStats cannot
-estimate battery drain without a device profile. The overlay describes the
-Helio P35's two clusters (4x2.3 GHz and 4x1.8 GHz, matching the clock
-frequencies in the kernel DT) and the 4230 mAh battery.
+`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which holds two resource
+overlays for `frameworks/base/core/res`:
+
+* `res/xml/power_profile.xml` — the energy-use model BatteryStats needs. AOSP
+  ships only deliberately bogus placeholder values there, so without it every
+  battery statistic is meaningless. It describes the Helio P35's two clusters
+  (4x2.3 GHz and 4x1.8 GHz, matching the clock frequencies in the kernel DT)
+  and the 4230 mAh battery.
+* `res/values/config.xml` — the brightness and wired-headset fixes described
+  below. These are framework resources, so they cannot come from the vendor
+  blobs; the values are the stock CPH1909 ones extracted from the stock
+  `framework-res.apk`.
+
+**Brightness / auto-brightness.** AOSP 10 ships empty
+`config_autoBrightnessLevels` and `config_autoBrightnessLcdBacklightValues`
+arrays, which makes `BrightnessMappingStrategy.create()` return null. No
+`AutomaticBrightnessController` is then created, so auto-brightness is
+unavailable and manual brightness has no device curve. The overlay supplies the
+stock lux thresholds (`45, 1025, 1480, 2250, 3300, 10000`), the matching
+backlight levels (`8, 22, 48, 78, 128, 206, 255`), the stock debounce/sampling
+values and `config_automatic_brightness_available=true`. The vendor side was
+already complete: `lights.mt6765.so` writes
+`/sys/class/leds/lcd-backlight/brightness`, which the MT6765 LEDs driver
+exposes.
+
+**Wired headset detection.** The MTK ACCDET driver
+(`CONFIG_MTK_PMIC_CHIP_MT6357`) reports `SW_HEADPHONE_INSERT` /
+`SW_MICROPHONE_INSERT` through the Linux input subsystem, not through the
+legacy `/sys/class/switch/h2w` uevent path. AOSP defaults
+`config_useDevInputEventForAudioJack` to false, so the framework never saw
+headset insertion; the stock ROM sets it true, and so does the overlay.
 
 ### Input key layouts
 
