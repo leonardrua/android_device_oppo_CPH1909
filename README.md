@@ -230,14 +230,17 @@ overlays for `frameworks/base/core/res`:
   battery statistic is meaningless. It describes the Helio P35's two clusters
   (4x2.3 GHz and 4x1.8 GHz, matching the clock frequencies in the kernel DT)
   and the 4230 mAh battery.
-* `res/values/config.xml` — the brightness and wired-headset fixes described
-  below. These are framework resources, so they cannot come from the vendor
-  blobs; the values are the stock CPH1909 ones extracted from the stock
-  `framework-res.apk`.
+* `res/values/config.xml` — the device-specific framework configuration
+  described below. These are framework resources, so they cannot come from the
+  vendor blobs. Every value is the stock CPH1909 one, read from the stock
+  `framework-res.apk`; only settings that differ from the AOSP 10 defaults, or
+  that describe a capability the vendor blobs provide, are listed.
 
-**Brightness / auto-brightness.** AOSP 10 ships empty
-`config_autoBrightnessLevels` and `config_autoBrightnessLcdBacklightValues`
-arrays, which makes `BrightnessMappingStrategy.create()` return null. No
+The `config.xml` overlay is grouped as follows:
+
+**Display and brightness.** AOSP 10 ships empty `config_autoBrightnessLevels`
+and `config_autoBrightnessLcdBacklightValues` arrays, which makes
+`BrightnessMappingStrategy.create()` return null. No
 `AutomaticBrightnessController` is then created, so auto-brightness is
 unavailable and manual brightness has no device curve. The overlay supplies the
 stock lux thresholds (`45, 1025, 1480, 2250, 3300, 10000`), the matching
@@ -245,14 +248,38 @@ backlight levels (`8, 22, 48, 78, 128, 206, 255`), the stock debounce/sampling
 values and `config_automatic_brightness_available=true`. The vendor side was
 already complete: `lights.mt6765.so` writes
 `/sys/class/leds/lcd-backlight/brightness`, which the MT6765 LEDs driver
-exposes.
+exposes. The stock backlight range (`min 1`, `default 44`, doze/dim/dark `2`)
+and the waterdrop notch cutout (`M -105,0 L -105,55 L 105,55 L 105,0 Z`) are
+overridden as well; `config_mainBuiltInDisplayCutoutRectApproximation` follows
+the cutout string automatically. `config_showNavigationBar=true` because the
+device has no capacitive navigation buttons.
 
-**Wired headset detection.** The MTK ACCDET driver
+**Input, sensors and audio jack.** The MTK ACCDET driver
 (`CONFIG_MTK_PMIC_CHIP_MT6357`) reports `SW_HEADPHONE_INSERT` /
 `SW_MICROPHONE_INSERT` through the Linux input subsystem, not through the
 legacy `/sys/class/switch/h2w` uevent path. AOSP defaults
 `config_useDevInputEventForAudioJack` to false, so the framework never saw
-headset insertion; the stock ROM sets it true, and so does the overlay.
+headset insertion; the stock ROM sets it true. The stock ROM also enables
+`config_suspendWhenScreenOffDueToProximity`, so the proximity sensor turns the
+screen off against the ear during a call.
+
+**Telephony.** `config_num_physical_slots=2` and `config_hotswapCapable=true`
+match the dual-SIM, hot-swap-capable modem (`ro.telephony.sim.count=2`,
+`ro.radio.simcount=2`, `ro.mtk_sim_hot_swap=1`). The stock
+`networkAttributes`/`radioAttributes` tables are used, including the
+MediaTek-specific WAP, XCAP, RCS, BIP, VSIM and preempt connection types.
+
+**Connectivity.** `config_wifi_dual_band_support` and
+`config_wifi_background_scan_support` are set for the MT6765 802.11ac radio,
+and the tethering regexes (`ap\d`, `rndis\d`, `bt-pan`/`bt-dun`) match the
+stock vendor configuration (`wifi.tethering.interface=ap0`).
+
+**Bluetooth.** HFP in-band ringing plus the stock Bluetooth power model
+(`1/2/3` mA idle/rx/tx, `3300` mV) used by BatteryStats.
+
+**UI and power.** `config_enableMultiUserUI` and `config_multiuserMaximumUsers=4`
+are enabled as in the stock ROM, and `config_unplugTurnsOnScreen=true` restores
+the stock behaviour of waking the screen when power is unplugged.
 
 ### Input key layouts
 

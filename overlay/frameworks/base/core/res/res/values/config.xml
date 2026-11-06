@@ -17,17 +17,25 @@
  */
 -->
 
-<!-- Device-specific framework resource overrides. The auto-brightness and
-     audio-jack values below are extracted from the stock CPH1909
-     framework-res.apk (Android 8.1). -->
+<!--
+     Device-specific framework configuration for the OPPO A5s (CPH1909).
+
+     Values are taken from the stock CPH1909 framework-res.apk (Android 8.1)
+     and are limited to resources that still exist in Android 10. Only the
+     settings that differ from the AOSP 10 defaults (or that describe a
+     capability the vendor blobs provide) are overridden here.
+-->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+
+    <!-- ===================================================================
+         Display and brightness
+         =================================================================== -->
 
     <!-- Auto-brightness control points.
          AOSP 10 ships these arrays empty, which makes
          BrightnessMappingStrategy.create() return null: no
          AutomaticBrightnessController is created, so auto-brightness is
-         unavailable and manual brightness has no device curve. These are the
-         stock CPH1909 values (six lux thresholds, seven backlight levels). -->
+         unavailable and manual brightness has no device curve. -->
     <integer-array name="config_autoBrightnessLevels">
         <item>45</item>
         <item>1025</item>
@@ -47,26 +55,121 @@
         <item>255</item>
     </integer-array>
 
-    <!-- Expose the automatic-brightness setting; AOSP defaults this to false. -->
     <bool name="config_automatic_brightness_available">true</bool>
 
-    <!-- Stock light-sensor debounce and sampling values. AOSP uses 4000/8000
-         ms and 250 ms respectively, which makes the stock curve respond
-         noticeably slower. -->
     <integer name="config_autoBrightnessBrighteningLightDebounce">1000</integer>
     <integer name="config_autoBrightnessDarkeningLightDebounce">4000</integer>
     <integer name="config_autoBrightnessLightSensorRate">500</integer>
 
-    <!-- Stock dim/doze backlight levels. -->
+    <!-- Backlight range and dim/doze points from the stock ROM. The stock
+         default setting (44/255) is deliberately dimmer than AOSP's 102. -->
+    <integer name="config_screenBrightnessSettingMinimum">1</integer>
+    <integer name="config_screenBrightnessSettingDefault">44</integer>
+    <integer name="config_screenBrightnessDark">2</integer>
     <integer name="config_screenBrightnessDim">2</integer>
     <integer name="config_screenBrightnessDoze">2</integer>
 
-    <!-- Wired headset detection.
-         The MTK ACCDET driver (CONFIG_MTK_PMIC_CHIP_MT6357) reports
-         SW_HEADPHONE_INSERT / SW_MICROPHONE_INSERT through the Linux input
-         subsystem, not through the legacy /sys/class/switch/h2w uevent path.
-         AOSP defaults this to false, so the framework never saw headset
-         insertion; the stock ROM sets it true. -->
+    <!-- Waterdrop notch: 210 x 55 px, centred on the 720 x 1520 panel. -->
+    <string name="config_mainBuiltInDisplayCutout">M -105,0 L -105,55 L 105,55 L 105,0 Z</string>
+
+    <!-- The A5s has no capacitive navigation bar; use the on-screen one. -->
+    <bool name="config_showNavigationBar">true</bool>
+
+    <!-- ===================================================================
+         Input, sensors and audio jack
+         =================================================================== -->
+
+    <!-- The stock ROM suspends while the proximity sensor covers the screen
+         during a call, so the sensor HAL handles it as a wake-up source. -->
+    <bool name="config_suspendWhenScreenOffDueToProximity">true</bool>
+
+    <!-- The MTK ACCDET driver reports SW_HEADPHONE_INSERT /
+         SW_MICROPHONE_INSERT through the Linux input subsystem, not through
+         the legacy /sys/class/switch/h2w uevent path. -->
     <bool name="config_useDevInputEventForAudioJack">true</bool>
+
+    <!-- ===================================================================
+         Telephony
+         =================================================================== -->
+
+    <!-- Dual nano-SIM (ro.telephony.sim.count=2 in the stock vendor props). -->
+    <integer name="config_num_physical_slots">2</integer>
+
+    <!-- SIM hot swap is supported by the MTK modem and enabled by the stock
+         vendor props (ro.mtk_sim_hot_swap=1). -->
+    <bool name="config_hotswapCapable">true</bool>
+
+    <!-- ===================================================================
+         Connectivity
+         =================================================================== -->
+
+    <!-- The MT6765 Wi-Fi supports 802.11ac / 5 GHz and background scanning. -->
+    <bool name="config_wifi_dual_band_support">true</bool>
+    <bool name="config_wifi_background_scan_support">true</bool>
+
+    <!-- Tethering interfaces, matching the stock vendor configuration
+         (wifi.tethering.interface=ap0). -->
+    <string-array name="config_tether_wifi_regexs">
+        <item>ap\d</item>
+    </string-array>
+    <string-array name="config_tether_usb_regexs">
+        <item>rndis\d</item>
+    </string-array>
+    <string-array name="config_tether_bluetooth_regexs">
+        <item>bt-pan</item>
+        <item>bt-dun</item>
+    </string-array>
+
+    <!-- ===================================================================
+         Bluetooth
+         =================================================================== -->
+
+    <!-- The MTK Bluetooth controller supports HFP in-band ringing; the
+         remaining values are the stock power model used by BatteryStats. -->
+    <bool name="config_bluetooth_hfp_inband_ringing_support">true</bool>
+    <integer name="config_bluetooth_idle_cur_ma">1</integer>
+    <integer name="config_bluetooth_rx_cur_ma">2</integer>
+    <integer name="config_bluetooth_tx_cur_ma">3</integer>
+    <integer name="config_bluetooth_operating_voltage_mv">3300</integer>
+
+    <!-- ===================================================================
+         UI and power
+         =================================================================== -->
+
+    <bool name="config_enableMultiUserUI">true</bool>
+    <integer name="config_multiuserMaximumUsers">4</integer>
+    <bool name="config_unplugTurnsOnScreen">true</bool>
+
+    <!-- ===================================================================
+         Telephony network attributes
+         =================================================================== -->
+
+    <!-- Connection attributes from the stock ROM, including the MTK-specific
+         WAP, XCAP, RCS, BIP, VSIM and preempt connection types. -->
+    <string-array name="networkAttributes">
+        <item>wifi,1,1,1,-1,true</item>
+        <item>mobile,0,0,0,-1,true</item>
+        <item>mobile_mms,2,0,2,60000,true</item>
+        <item>mobile_supl,3,0,2,60000,true</item>
+        <item>mobile_dun,4,0,2,60000,true</item>
+        <item>mobile_hipri,5,0,3,60000,true</item>
+        <item>mobile_fota,10,0,2,60000,true</item>
+        <item>mobile_ims,11,0,-1,-1,true</item>
+        <item>mobile_cbs,12,0,2,60000,true</item>
+        <item>mobile_ia,14,0,2,-1,true</item>
+        <item>mobile_emergency,15,0,2,-1,true</item>
+        <item>mobile_wap,21,0,3,60000,true</item>
+        <item>mobile_xcap,25,0,3,60000,true</item>
+        <item>mobile_rcs,26,0,3,60000,true</item>
+        <item>mobile_bip,27,0,3,60000,true</item>
+        <item>mobile_vsim,28,0,-1,60000,true</item>
+        <item>mobile_preempt,29,0,9,60000,true</item>
+        <item>bluetooth,7,7,2,-1,true</item>
+    </string-array>
+
+    <string-array name="radioAttributes">
+        <item>1,1</item>
+        <item>0,1</item>
+    </string-array>
 
 </resources>
