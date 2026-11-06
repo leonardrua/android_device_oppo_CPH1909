@@ -16,6 +16,16 @@ TARGET_SCREEN_WIDTH := 720
 # API level: the device launched on 8.1 (API 27) with 8.1-era vendor blobs
 PRODUCT_SHIPPING_API_LEVEL := 27
 
+# Framework resource overlay
+#
+# power_profile.xml supplies the energy-use model BatteryStats needs to estimate
+# battery drain (per-cluster CPU speeds and power for the 4x2.3 GHz + 4x1.8 GHz
+# Helio P35, plus the 4230 mAh battery). AOSP ships only deliberately bogus
+# placeholder values, so every battery statistic the framework reports is
+# meaningless without a device profile.
+DEVICE_PACKAGE_OVERLAYS += \
+    $(DEVICE_PATH)/overlay
+
 # Permissions
 #
 # android.hardware.microphone.xml is deliberately absent: AOSP 10 ships no
@@ -42,6 +52,17 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.wifi.direct.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.wifi.direct.xml \
     frameworks/native/data/etc/android.software.midi.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.midi.xml \
     frameworks/native/data/etc/handheld_core_hardware.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/handheld_core_hardware.xml
+
+# Hardware key layouts
+#
+# AOSP 10 ships neither the MediaTek accessory-detect headset-button map
+# (ACCDET.kl) nor its keypad map (mtk-kpd.kl). Without them the wired headset
+# buttons (hook, media transport, VOICE_ASSIST) and the mtk-kpd key map fall
+# back to Generic.kl, so the stock files are copied into the system keylayout
+# directory unchanged.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/configs/keylayout/ACCDET.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/ACCDET.kl \
+    $(DEVICE_PATH)/configs/keylayout/mtk-kpd.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/mtk-kpd.kl
 
 # HALs that Android 10 needs and an 8.1 vendor image never shipped.
 #

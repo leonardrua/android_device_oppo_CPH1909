@@ -76,6 +76,11 @@ BOARD_KERNEL_PAGESIZE := 2048
 # the device boots to an empty init and hangs.
 BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.hardware=mt6765
 
+# If init fails fatally, reboot into recovery instead of hanging at the boot
+# logo. This makes a broken bring-up (a HAL that never starts, for instance)
+# recoverable and is the target the stock boot image uses.
+BOARD_KERNEL_CMDLINE += androidboot.init_fatal_reboot_target=recovery
+
 BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
@@ -130,6 +135,14 @@ BOARD_ROOT_EXTRA_FOLDERS := opporeserve
 # signed by them, so neither dm-verity nor AVB can be satisfied. This is a
 # non-A/B device with no vbmeta partition.
 BOARD_AVB_ENABLE := false
+
+# Vendor security patch level
+#
+# The stock CPH1909 system build.prop reports
+# ro.build.version.security_patch=2021-04-05 and the 8.1 vendor blobs it supplies
+# are frozen at that level. Declaring it makes ro.vendor.build.security_patch
+# report the truth instead of the AOSP default.
+VENDOR_SECURITY_PATCH := 2021-04-05
 
 # Display
 TARGET_SCREEN_DENSITY := 320

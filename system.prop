@@ -42,3 +42,12 @@ ro.audio.silent=0
 # MediaTek-specific framework bits
 ro.kernel.zio=38,108,105,16
 ro.zygote.preload.enable=0
+
+# Performance
+#
+# MediaTek's framework performance hints: the simple and fast start-window
+# optimizations and the response-time boost. The stock system build.prop set all
+# three; without them the framework skips the MTK perf hints entirely.
+ro.mtk_perf_simple_start_win=1
+ro.mtk_perf_fast_start_win=1
+ro.mtk_perf_response_time=1

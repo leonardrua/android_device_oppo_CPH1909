@@ -197,12 +197,53 @@ second entry for the same HAL name and major version is rejected by
 The stock 8.1 `cas@1.0-service` daemon is likewise dropped in favour of the
 AOSP 1.1 service (`@1.1::IMediaCasService` extends `@1.0`).
 
+### Keymaster and gatekeeper HAL modules
+
+Android locates a HAL implementation with `hw_get_module_by_class()`, which
+tries `"<class>.<ro.hardware>.so"` before falling back to `"<class>.default.so"`.
+With `ro.hardware=mt6765` that means `keystore.mt6765.so` and
+`gatekeeper.mt6765.so`. The vendor image carries no symlinks and ships the
+MediaTek TEE modules under their own names, so the loader could not find either
+one and both services came up in a degraded mode — keymaster printed "Could not
+find any keystore module, using software-only implementation." and gatekeeper
+failed to open at all.
+
+`Android.mk` installs the names the loader expects as symlinks next to the
+blobs:
+
+| module name             | target                 |
+| ----------------------- | ---------------------- |
+| `keystore.mt6765.so`    | `libMcTeeKeymaster.so` |
+| `gatekeeper.mt6765.so`  | `libMcGatekeeper.so`   |
+| `gatekeeper.default.so` | `libSoftGatekeeper.so` |
+
+`kmsetkey` needs no alias: `ro.hardware.kmsetkey=trustonic` in `vendor.prop`
+makes the loader open the shipped `kmsetkey.trustonic.so` directly.
+
+### Resource overlay
+
+`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which currently holds a single
+resource overlay: `frameworks/base/core/res/res/xml/power_profile.xml`. AOSP
+ships only deliberately bogus placeholder values there, so BatteryStats cannot
+estimate battery drain without a device profile. The overlay describes the
+Helio P35's two clusters (4x2.3 GHz and 4x1.8 GHz, matching the clock
+frequencies in the kernel DT) and the 4230 mAh battery.
+
+### Input key layouts
+
+AOSP 10 ships neither the MediaTek accessory-detect headset-button map
+(`ACCDET.kl`) nor its keypad map (`mtk-kpd.kl`). Without them the wired headset
+buttons (hook, media transport, `VOICE_ASSIST`) and the `mtk-kpd` key map fall
+back to `Generic.kl`. The stock files are copied unchanged into
+`/system/usr/keylayout/` through `PRODUCT_COPY_FILES`.
+
 ### Properties
 
 * `system.prop` holds the framework-side values from the stock system build
   (density, radio library names, Wi-Fi interfaces, the MediaTek Wi-Fi feature
-  gates `ro.mediatek.wlan.{wsc,p2p}`/`mediatek.wlan.ctia`, and the camera
-  shutter-sound policy).
+  gates `ro.mediatek.wlan.{wsc,p2p}`/`mediatek.wlan.ctia`, the camera
+  shutter-sound policy, and the `ro.mtk_perf_*` start-window/response-time
+  performance hints).
 * `vendor.prop` holds the subset of the stock vendor build.prop that the
   prebuilt MediaTek/OPPO blobs and their rc files read. Besides the platform
   identification block this includes the ART heap sizing
@@ -250,6 +291,11 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
   parse order, which is what we want for the MediaTek binaries.
 * `BOARD_AVB_ENABLE := false` — the bootloader is locked to OPPO keys and this
   build is not signed by them; the device has no vbmeta partition.
+* `VENDOR_SECURITY_PATCH := 2021-04-05` — the stock system build.prop's
+  `ro.build.version.security_patch`, so `ro.vendor.build.security_patch` reports
+  the real level of the frozen 8.1 vendor blobs.
+* `androidboot.init_fatal_reboot_target=recovery` — a fatal init failure
+  reboots into recovery instead of hanging at the boot logo.
 * `BUILD_BROKEN_DUP_RULES` and the duplicate-path decision are described in
   `BoardConfig.mk` next to the assignment.
 
