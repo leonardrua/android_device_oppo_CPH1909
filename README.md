@@ -222,19 +222,22 @@ makes the loader open the shipped `kmsetkey.trustonic.so` directly.
 
 ### Resource overlay
 
-`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which holds two resource
-overlays for `frameworks/base/core/res`:
+`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which holds three resource
+overlays:
 
-* `res/xml/power_profile.xml` — the energy-use model BatteryStats needs. AOSP
-  ships only deliberately bogus placeholder values there, so without it every
-  battery statistic is meaningless. It describes the Helio P35's two clusters
-  (4x2.3 GHz and 4x1.8 GHz, matching the clock frequencies in the kernel DT)
-  and the 4230 mAh battery.
-* `res/values/config.xml` — the device-specific framework configuration
-  described below. These are framework resources, so they cannot come from the
-  vendor blobs. Every value is the stock CPH1909 one, read from the stock
-  `framework-res.apk`; only settings that differ from the AOSP 10 defaults, or
-  that describe a capability the vendor blobs provide, are listed.
+* `frameworks/base/core/res/res/xml/power_profile.xml` — the energy-use model
+  BatteryStats needs. AOSP ships only deliberately bogus placeholder values
+  there, so without it every battery statistic is meaningless. It describes the
+  Helio P35's two clusters (4x2.3 GHz and 4x1.8 GHz, matching the clock
+  frequencies in the kernel DT) and the 4230 mAh battery.
+* `frameworks/base/core/res/res/values/config.xml` — the device-specific
+  framework configuration described below. These are framework resources, so
+  they cannot come from the vendor blobs. Every value is the stock CPH1909 one,
+  read from the stock `framework-res.apk`; only settings that differ from the
+  AOSP 10 defaults, or that describe a capability the vendor blobs provide, are
+  listed.
+* `frameworks/base/packages/SystemUI/res/values/dimens.xml` — the SystemUI
+  dimensions described at the end of this section.
 
 The `config.xml` overlay is grouped as follows:
 
@@ -280,6 +283,15 @@ stock vendor configuration (`wifi.tethering.interface=ap0`).
 **UI and power.** `config_enableMultiUserUI` and `config_multiuserMaximumUsers=4`
 are enabled as in the stock ROM, and `config_unplugTurnsOnScreen=true` restores
 the stock behaviour of waking the screen when power is unplugged.
+
+**SystemUI dimensions.** The A5s uses a panel with physically rounded corners:
+the MT6765 kernel enables round-corner support (`CONFIG_MTK_ROUND_CORNER_SUPPORT`)
+and every LCM driver shipped for this device declares a corner pattern. In
+LineageOS 17.1 SystemUI applies `rounded_corner_content_padding` as the
+start/end margin of the gesture-navigation layout, so the overlay sets it to
+the panel's corner radius (`34.0px`). That value comes from the sibling OPPO
+A12/A11k (OP4BFB), the same Helio P35 with a 720x1520 panel, and matches the
+32px corner constant used by the MT6765 720p LCM drivers in the kernel source.
 
 ### Input key layouts
 
