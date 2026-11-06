@@ -251,11 +251,15 @@ backlight levels (`8, 22, 48, 78, 128, 206, 255`), the stock debounce/sampling
 values and `config_automatic_brightness_available=true`. The vendor side was
 already complete: `lights.mt6765.so` writes
 `/sys/class/leds/lcd-backlight/brightness`, which the MT6765 LEDs driver
-exposes. The stock backlight range (`min 1`, `default 44`, doze/dim/dark `2`)
-and the waterdrop notch cutout (`M -105,0 L -105,55 L 105,55 L 105,0 Z`) are
-overridden as well; `config_mainBuiltInDisplayCutoutRectApproximation` follows
-the cutout string automatically. `config_showNavigationBar=true` because the
-device has no capacitive navigation buttons.
+exposes. The stock manual range was too dim for Android 10, so the brightness
+bounds come from the sibling MT6765 / 720x1520 CPH1920 (AX5s) instead: minimum
+`4`, default `140` and dim `4` of `255` (dark/doze stay at the stock `2`).
+Because the slider position scales the auto-brightness curve, the brighter
+default lifts auto-brightness as well. The waterdrop notch cutout
+(`M -105,0 L -105,55 L 105,55 L 105,0 Z`) is overridden too;
+`config_mainBuiltInDisplayCutoutRectApproximation` follows the cutout string
+automatically. `config_showNavigationBar=true` because the device has no
+capacitive navigation buttons.
 
 **Input, sensors and audio jack.** The MTK ACCDET driver
 (`CONFIG_MTK_PMIC_CHIP_MT6357`) reports `SW_HEADPHONE_INSERT` /

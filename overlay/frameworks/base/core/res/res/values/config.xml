@@ -61,12 +61,18 @@
     <integer name="config_autoBrightnessDarkeningLightDebounce">4000</integer>
     <integer name="config_autoBrightnessLightSensorRate">500</integer>
 
-    <!-- Backlight range and dim/doze points from the stock ROM. The stock
-         default setting (44/255) is deliberately dimmer than AOSP's 102. -->
-    <integer name="config_screenBrightnessSettingMinimum">1</integer>
-    <integer name="config_screenBrightnessSettingDefault">44</integer>
+    <!-- Backlight range. The stock ROM shipped a very dim manual range
+         (minimum 1, default 44 of 255), which an 8.1 ROM could get away with
+         but reads as almost black on LineageOS 17.1. Use the range from the
+         sibling MT6765 / 720x1520 CPH1920 (AX5s): minimum 4, default 140 and
+         dim 4 of 255. This only bounds the manual slider; auto-brightness
+         still follows the stock control points above, and because the slider
+         position scales the auto curve, the brighter default lifts it too.
+         dark/doze keep the stock 2. -->
+    <integer name="config_screenBrightnessSettingMinimum">4</integer>
+    <integer name="config_screenBrightnessSettingDefault">140</integer>
     <integer name="config_screenBrightnessDark">2</integer>
-    <integer name="config_screenBrightnessDim">2</integer>
+    <integer name="config_screenBrightnessDim">4</integer>
     <integer name="config_screenBrightnessDoze">2</integer>
 
     <!-- Waterdrop notch: 210 x 55 px, centred on the 720 x 1520 panel. -->
