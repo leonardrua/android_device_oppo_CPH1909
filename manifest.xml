@@ -62,6 +62,12 @@
         <transport>hwbinder</transport>
         <fqname>@1.0::ISurfaceFlingerConfigs/default</fqname>
     </hal>
+    <!-- clearkey is intentionally not declared here.
+         android.hardware.drm@1.2-service.clearkey (pulled in by device.mk)
+         ships its own vintf_fragment; a second entry for the same HAL name
+         and major version (@1.2) is rejected by assemble_vintf with a
+         duplicate-instance error, just like cas above. The framework matrix
+         is satisfied by the fragment alone. -->
     <hal format="hidl">
         <name>android.hardware.drm</name>
         <transport>hwbinder</transport>
@@ -70,9 +76,6 @@
         <fqname>@1.0::ICryptoFactory/widevine</fqname>
         <fqname>@1.0::IDrmFactory/default</fqname>
         <fqname>@1.0::IDrmFactory/widevine</fqname>
-        <!-- LineageOS-built software (clearkey) plugin, required by Android 10 -->
-        <fqname>@1.2::ICryptoFactory/clearkey</fqname>
-        <fqname>@1.2::IDrmFactory/clearkey</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.gatekeeper</name>

@@ -83,6 +83,20 @@ PRODUCT_PACKAGES += \
     android.hardware.health@2.0-service \
     android.hardware.usb@1.0-service
 
+# HIDL transport compatibility for 8.1 vendor blobs
+#
+# Android 10 merged libhidltransport and libhwbinder into libhidlbase and
+# removed them from base_system.mk. The stock 8.1 vendor binaries
+# (camerahalserver, mtkfusionrild, every vendor.mediatek.hardware.* service,
+# etc.) have explicit DT_NEEDED entries for both libraries. Without these
+# packages the dynamic linker aborts every vendor HAL with
+# "library \"libhidltransport.so\" not found", causing a total boot failure.
+PRODUCT_PACKAGES += \
+    libhidltransport \
+    libhidltransport.vendor \
+    libhwbinder \
+    libhwbinder.vendor
+
 # Bluetooth A2DP audio HAL
 PRODUCT_PACKAGES += \
     audio.a2dp.default

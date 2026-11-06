@@ -227,6 +227,23 @@ permissive rutilsdaemon;
 ###
 ### Permissive during bring-up -- REMOVE before any release build
 ###
+
+# -- Standard AOSP HAL domains used by MTK vendor blobs --
+#
+# The stock 8.1 daemons (camerahalserver, mtkfusionrild, audio/bluetooth/
+# sensors/light/composer services) are assigned these standard domains by AOSP
+# init; they lack rules for MTK device nodes (/dev/kd_camera_hw, /dev/ccci*,
+# /dev/mtk_sched, /dev/mtk_disp_mgr, etc.). Without permissive during bring-up,
+# denials on these nodes crash the daemons immediately, causing a bootloop.
+permissive hal_audio_default;
+permissive hal_bluetooth_default;
+permissive hal_camera_default;
+permissive hal_graphics_composer_default;
+permissive hal_light_default;
+permissive hal_sensors_default;
+permissive rild;
+
+# -- Custom MTK / OPPO vendor domains --
 permissive mtk_hal_dfps;
 permissive mtk_hal_keyattestation;
 permissive mtk_hal_mms;
