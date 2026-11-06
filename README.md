@@ -139,6 +139,15 @@ system/vendor/odm stay out of the second stage, and mounts the remaining
 partitions (data, cache, protect_f, protect_s, nvdata, nvcfg, persist,
 opporeserve) as before.
 
+### Recovery init
+
+Recovery imports `/init.recovery.${ro.hardware}.rc` from its own ramdisk, so
+`rootdir/etc/init.recovery.mt6765.rc` is installed to
+`recovery/root/init.recovery.mt6765.rc`. It creates the `/dev/block/bootdevice`
+alias for the `by-name` fstab paths, makes the backlight writable, opens the
+Trustonic `mobicore` nodes used by keymaster during sideload, and stops the MTK
+hung-task watchdog from firing while recovery idles at the menu.
+
 ### Vendor partition and VNDK
 
 `TARGET_COPY_OUT_VENDOR := vendor` (required by build/make whenever

@@ -98,6 +98,15 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/fstab.mt6765:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6765
 
+# Recovery init
+#
+# Recovery imports /init.recovery.${ro.hardware}.rc from its ramdisk; with
+# ro.hardware=mt6765 this supplies the bootdevice alias the by-name fstab paths
+# rely on, backlight access, the Trustonic TEE nodes keymaster needs during
+# sideload, and the MTK watchdog tweak.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/etc/init.recovery.mt6765.rc:$(TARGET_COPY_OUT_RECOVERY)/root/init.recovery.mt6765.rc
+
 # zram helper started by the stock init.mt6765.rc from its `on fs` block.
 # See the header of the script for why this is a rewrite, not the stock copy.
 PRODUCT_COPY_FILES += \
