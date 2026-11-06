@@ -212,12 +212,12 @@ BOARD_HAS_MTK_RIL := true
 ENABLE_VENDOR_RIL_SERVICE := true
 
 # Recovery
-TARGET_RECOVERY_PIXEL_FORMAT := "RGBX_8888"
+TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6765
 BOARD_SUPPRESS_SECURE_ERASE := true
 
 # SELinux
-BOARD_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
+BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
 # Properties
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
@@ -230,6 +230,9 @@ TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 # order, which is what we want for the MediaTek-specific binaries, so allow the
 # duplicate rules instead of chasing each one.
 BUILD_BROKEN_DUP_RULES := true
+BUILD_BROKEN_PREBUILT_ELF_FILES := true
+BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
+BUILD_BROKEN_USES_BUILD_COPY_HEADERS := true
 
 # Put PRODUCT_DEFAULT_PROPERTY_OVERRIDES (including ro.mtkrc.path) in
 # /vendor/default.prop. init's property_load_boot_defaults() reads that file

@@ -30,7 +30,7 @@ ifeq ($(TARGET_DEVICE),CPH1909)
 KEYSTORE_SYMLINK += $(TARGET_OUT_VENDOR)/lib/hw/keystore.mt6765.so
 KEYSTORE_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/hw/keystore.mt6765.so
 
-$(KEYSTORE_SYMLINK): $(LOCAL_INSTALLED_MODULE)
+$(KEYSTORE_SYMLINK):
 	@mkdir -p $(dir $@)
 	$(hide) ln -sf libMcTeeKeymaster.so $@
 
@@ -39,7 +39,7 @@ ALL_DEFAULT_INSTALLED_MODULES += $(KEYSTORE_SYMLINK)
 GATEKEEPER_SYMLINK += $(TARGET_OUT_VENDOR)/lib/hw/gatekeeper.mt6765.so
 GATEKEEPER_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/hw/gatekeeper.mt6765.so
 
-$(GATEKEEPER_SYMLINK): $(LOCAL_INSTALLED_MODULE)
+$(GATEKEEPER_SYMLINK):
 	@mkdir -p $(dir $@)
 	$(hide) ln -sf libMcGatekeeper.so $@
 
@@ -48,7 +48,7 @@ ALL_DEFAULT_INSTALLED_MODULES += $(GATEKEEPER_SYMLINK)
 GATEKEEPER_DEFAULT_SYMLINK += $(TARGET_OUT_VENDOR)/lib/hw/gatekeeper.default.so
 GATEKEEPER_DEFAULT_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/hw/gatekeeper.default.so
 
-$(GATEKEEPER_DEFAULT_SYMLINK): $(LOCAL_INSTALLED_MODULE)
+$(GATEKEEPER_DEFAULT_SYMLINK):
 	@mkdir -p $(dir $@)
 	$(hide) ln -sf libSoftGatekeeper.so $@
 

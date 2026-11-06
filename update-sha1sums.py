@@ -20,7 +20,7 @@ from hashlib import sha1
 import sys
 
 device='CPH1909'
-vendor='OPPO'
+vendor='oppo'
 
 lines = [ line for line in open('proprietary-files.txt', 'r') ]
 vendorPath = '../../../vendor/' + vendor + '/' + device + '/proprietary'

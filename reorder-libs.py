@@ -59,6 +59,9 @@ for file in FILES:
     ordered_sections = []
     for section in sections:
         section_list = [line.strip() for line in section.splitlines()]
+        if not section_list or all(line.startswith('#') for line in section_list):
+            ordered_sections.append("\n".join(section_list))
+            continue
         section_list.sort(key=cmp_to_key(strcoll_extract_utils))
         ordered_sections.append("\n".join(section_list))
 
