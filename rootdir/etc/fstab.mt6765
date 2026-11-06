@@ -23,8 +23,11 @@
 # uses /odm.
 #
 # /data uses FDE (full-disk encryption) with the key blob on the dedicated
-# `metadata` partition, backed by the Trustonic Kinibi TEE. It is NOT FBE, so
-# the forceencrypt= flag must stay exactly as the stock ROM had it.
+# `metadata` partition, backed by the Trustonic Kinibi TEE. It is NOT FBE.
+# Deliberately `encryptable=` rather than the stock `forceencrypt=`: an already
+# encrypted /data is still decrypted through the metadata key, but an
+# unencrypted /data mounts as-is instead of triggering in-place encryption on
+# first boot.
 #
 # <src>                                                  <mnt_point>          <type>  <mnt_flags and options>                                              <fs_mgr_flags>
 
@@ -34,7 +37,7 @@
 
 /dev/block/platform/bootdevice/by-name/cache              /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                   wait,check
 
-/dev/block/platform/bootdevice/by-name/userdata           /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic          wait,check,quota,formattable,resize,forceencrypt=/dev/block/platform/bootdevice/by-name/metadata
+/dev/block/platform/bootdevice/by-name/userdata           /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic          wait,check,quota,formattable,resize,encryptable=/dev/block/platform/bootdevice/by-name/metadata
 
 # MediaTek / OPPO factory data partitions
 /dev/block/platform/bootdevice/by-name/protect1           /vendor/protect_f    ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable

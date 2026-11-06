@@ -120,9 +120,11 @@ BOARD_USES_METADATA_PARTITION := true
 # not under /vendor).
 BOARD_ROOT_EXTRA_FOLDERS := opporeserve
 
-# Encryption: the device ships FDE (forceencrypt=...) backed by the Trustonic
-# Kinibi TEE, not FBE. Android 10 still supports FDE for legacy devices, so the
-# fstab keeps forceencrypt and nothing here enables FBE.
+# Encryption: the device ships FDE, backed by the Trustonic Kinibi TEE, not FBE.
+# Android 10 still supports FDE for legacy devices. The fstab uses
+# `encryptable=` (not the stock `forceencrypt=`) so an already-encrypted /data is
+# decrypted through the metadata key while an unencrypted /data is mounted as-is
+# instead of being force-encrypted on first boot. Nothing here enables FBE.
 
 # Verified boot: the bootloader is locked to OPPO's keys and this build is not
 # signed by them, so neither dm-verity nor AVB can be satisfied. This is a

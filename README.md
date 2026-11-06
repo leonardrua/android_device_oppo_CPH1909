@@ -210,10 +210,12 @@ AOSP 1.1 service (`@1.1::IMediaCasService` extends `@1.0`).
 
 ### Encryption
 
-The device ships full-disk encryption (`forceencrypt=`) with the key blob on the
-`metadata` partition, backed by the Trustonic TEE — not file-based encryption.
-The fstab keeps `forceencrypt=` exactly as the stock ROM had it;
-`BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
+The device ships full-disk encryption with the key blob on the `metadata`
+partition, backed by the Trustonic TEE — not file-based encryption. The stock ROM
+used `forceencrypt=`; this port deliberately uses `encryptable=` instead, so an
+already-encrypted /data is decrypted through the metadata key while an
+unencrypted /data is mounted as-is rather than triggering in-place encryption on
+first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 
 ### Other build changes
 
