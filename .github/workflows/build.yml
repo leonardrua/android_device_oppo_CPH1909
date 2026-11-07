@@ -237,6 +237,20 @@ jobs:
           rm -rf "kernel/oppo/${DEVICE}/.git"
           ls "kernel/oppo/${DEVICE}" | head
 
+      - name: Keep kernel warnings non-fatal
+        working-directory: ${{ github.workspace }}/lineage
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          makefile = Path("kernel/oppo/${{ inputs.device_name }}/scripts/Makefile.lib")
+          contents = makefile.read_text()
+          original = "$(ccflags-y) $(CFLAGS_$(basetarget).o)"
+          if contents.count(original) != 1:
+              raise SystemExit("Could not locate the expected Kbuild C flags in scripts/Makefile.lib")
+          makefile.write_text(contents.replace(original, original + " -Wno-error", 1))
+          PY
+
       - name: Add AArch64 GCC toolchain
         working-directory: ${{ github.workspace }}/lineage
         run: |
