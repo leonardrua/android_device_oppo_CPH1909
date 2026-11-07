@@ -215,7 +215,7 @@ jobs:
         working-directory: ${{ github.workspace }}/lineage
         run: |
           mkdir -p kernel/oppo
-          git clone --depth=1 -b master \
+          git clone --depth=1 -b lineageos-no-bakasu-susfs \
             "https://x-access-token:${TOKEN}@github.com/leonardrua/A5S-8.1-kernel-source.git" "kernel/oppo/${DEVICE}"
           rm -rf "kernel/oppo/${DEVICE}/.git"
           ls "kernel/oppo/${DEVICE}" | head
