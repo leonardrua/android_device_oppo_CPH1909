@@ -75,13 +75,19 @@ PRODUCT_COPY_FILES += \
 #   health@2.0   8.1 used the in-system healthd; Q wants a vendor HAL service
 #   usb@1.0      8.1 used the legacy USB gadget init scripts only
 #   drm@1.2      clearkey instance; the stock 1.0 service keeps default/widevine
+#   power@1.0    AOSP HIDL service that serves android.hardware.power@1.0 and
+#                forwards to the legacy libhardware power module (power.mt6765).
+#                Lineage 17.1 PowerManagerService calls IPower@1.0 setFeature for
+#                double-tap-to-wake; the shim writes TARGET_TAP_TO_WAKE_NODE.
 #
 # libdrmclearkeyplugin and libclearkeycasplugin are already part of
 # base_vendor.mk, so the DRM/CAS software plugins come from AOSP as well.
 PRODUCT_PACKAGES += \
     android.hardware.drm@1.2-service.clearkey \
     android.hardware.health@2.0-service \
-    android.hardware.usb@1.0-service
+    android.hardware.power@1.0-service \
+    android.hardware.usb@1.0-service \
+    power.mt6765
 
 # Biometrics / fingerprint
 #
