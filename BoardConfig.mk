@@ -56,16 +56,16 @@ TARGET_NO_RADIOIMAGE := true
 # workflow clones leonardrua/A5S-8.1-kernel-source into that path). This is
 # required even though the kernel image itself is prebuilt: LineageOS's
 # generated_kernel_includes Soong module runs `make -C $(TARGET_KERNEL_SOURCE)
-# ... headers_install` for modules that depend on generated_kernel_headers,
-# and TARGET_KERNEL_SOURCE gets automatically cleared by Lineage when
-# TARGET_PREBUILT_KERNEL is set, which would leave the -C arg empty and fail
-# the build. Keeping both settings alongside an actually-present source tree
-# satisfies that call without changing which kernel image is installed.
+# ... headers_install` for modules that depend on generated_kernel_headers.
+# LineageOS 17.1 clears TARGET_KERNEL_SOURCE when TARGET_PREBUILT_KERNEL is set.
+# Use a GNU Make override so the source path survives that ordinary assignment
+# and is exported to Soong, while the prebuilt image remains the packaged kernel.
 TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
 BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
+TARGET_FORCE_PREBUILT_KERNEL := true
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.gz-dtb
-TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
+override TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
 TARGET_KERNEL_CLANG_COMPILE := false
 
