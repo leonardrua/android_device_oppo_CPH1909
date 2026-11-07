@@ -21,7 +21,7 @@ Everything that had to change for Android 10 is listed below.
 ## Building
 
 Clone this repository into `device/oppo/CPH1909` in a LineageOS 17.1 checkout,
-put the kernel source at `kernel/oppo/CPH1909`, then:
+then:
 
 ```sh
 source build/envsetup.sh
@@ -35,18 +35,25 @@ Android 10 and only prints a warning).
 
 ### Kernel
 
-The tree builds the kernel from `kernel/oppo/CPH1909` with
-`oppo6765_18511_defconfig`. That is a 4.9 MediaTek kernel with OPPO's
-`VENDOR_EDIT` patches, so it is built with GCC 4.9:
+This tree uses a **prebuilt kernel** (`TARGET_PREBUILT_KERNEL :=
+$(DEVICE_PATH)/prebuilt/Image.gz-dtb`) extracted from the stock CPH1909
+`boot.img` (`Image.gz-dtb`: gzip-compressed ARM64 Image with the appended DTB,
+as unpacked by `magiskboot`). Using the stock prebuilt avoids rebuilding the
+4.9 MediaTek/OPPO `VENDOR_EDIT` kernel (`oppo6765_18511_defconfig`,
+`CONFIG_OPPO_KTV_DEV=y`, etc.) and preserves stock kernel behavior.
 
-```make
-TARGET_KERNEL_CLANG_COMPILE := false
+The prebuilt is stored at `prebuilt/Image.gz-dtb`. To refresh it from a stock
+boot image:
+
+```sh
+magiskboot unpack /path/to/stock/boot.img
+# magiskboot extracts/decompresses components; the original boot kernel blob
+# is Image.gz-dtb (gzip Image + appended DTB, matching KERNEL_SZ).
+cp kernel_dtb /tmp/_kdtb  # only if rebuilding; simplest is to keep the
+# stock kernel payload as Image.gz-dtb:
+# e.g. copy the verified prebuilt extracted from stock boot.img to
+#   device/oppo/CPH1909/prebuilt/Image.gz-dtb
 ```
-
-`TARGET_KERNEL_CROSS_COMPILE_PREFIX` must not be set: LineageOS's
-`BoardConfigKernel.mk` treats it as an either/or against `KERNEL_TOOLCHAIN`, and
-setting it leaves `KERNEL_TOOLCHAIN` empty so the GCC bin directory never enters
-`PATH`.
 
 ## Extracting the vendor blobs
 
