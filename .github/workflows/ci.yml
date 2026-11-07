@@ -44,12 +44,15 @@ jobs:
 
           print("\n=== Step 2: Checking kernel configuration ===")
           board = open("BoardConfig.mk").read()
-          if os.path.exists("prebuilt/kernel"):
-              ksize = os.path.getsize("prebuilt/kernel")
+          prebuilt_kernel = next((path for path in
+                                  ("prebuilt/Image.gz-dtb", "prebuilt/kernel")
+                                  if os.path.exists(path)), None)
+          if prebuilt_kernel:
+              ksize = os.path.getsize(prebuilt_kernel)
               if ksize < 5000000:
-                  print(f"FAILED: prebuilt/kernel size too small ({ksize} bytes).")
+                  print(f"FAILED: {prebuilt_kernel} size too small ({ksize} bytes).")
                   sys.exit(1)
-              print(f"SUCCESS: prebuilt/kernel present ({ksize} bytes).")
+              print(f"SUCCESS: {prebuilt_kernel} present ({ksize} bytes).")
           else:
               kconfig = re.search(r"^TARGET_KERNEL_CONFIG := (\S+)", board, re.M)
               ksource = re.search(r"^TARGET_KERNEL_SOURCE := (\S+)", board, re.M)
