@@ -284,18 +284,12 @@ type mtk_hal_silead_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_silead)
 permissive mtk_hal_silead;
 
-# cryptoeng backs the OPPO key/attestation extras, ktv is the OPPO TV-out
-# companion service. Both are dormant on a normal boot but their rc files are
-# imported, so their domains have to exist.
+# cryptoeng backs the OPPO key/attestation extras. It is dormant on a normal
+# boot but its rc file is imported, so its domain has to exist.
 type mtk_hal_cryptoeng, domain;
 type mtk_hal_cryptoeng_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_cryptoeng)
 permissive mtk_hal_cryptoeng;
-
-type mtk_hal_ktv, domain;
-type mtk_hal_ktv_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_hal_ktv)
-permissive mtk_hal_ktv;
 
 # Factory / engineering-mode services.
 type mtk_hal_factory, domain;

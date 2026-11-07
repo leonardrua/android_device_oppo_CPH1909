@@ -203,7 +203,6 @@
 /(vendor|system/vendor)/bin/hw/vendor\.silead\.hardware\.fingerprintext@1\.0-service            u:object_r:mtk_hal_silead_exec:s0
 
 /(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.cryptoeng@1\.0-service                      u:object_r:mtk_hal_cryptoeng_exec:s0
-/(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.ktv@1\.0-service                            u:object_r:mtk_hal_ktv_exec:s0
 
 # Factory / engineering services. These only run in Meta and factory modes, but
 # they exist in the vendor image and still need a label.

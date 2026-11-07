@@ -113,7 +113,6 @@ vendor/bin/hw/vendor.oppo.hardware.biometrics.face@1.0-service
 vendor/bin/hw/vendor.oppo.hardware.biometrics.fingerprint@2.1-service
 vendor/bin/hw/vendor.oppo.hardware.biometrics.fingerprintpay@1.0-service
 vendor/bin/hw/vendor.oppo.hardware.cryptoeng@1.0-service
-vendor/bin/hw/vendor.oppo.hardware.ktv@1.0-service
 vendor/bin/hw/vendor.silead.hardware.fingerprintext@1.0-service
 vendor/bin/hw/vendor.trustonic.soter@1.0-service
 vendor/bin/hw/vtservice_hidl
@@ -405,7 +404,6 @@ vendor/etc/init/vendor.oppo.hardware.biometrics.face@1.0-service.rc
 vendor/etc/init/vendor.oppo.hardware.biometrics.fingerprint@2.1-service.rc
 vendor/etc/init/vendor.oppo.hardware.biometrics.fingerprintpay@1.0-service.rc
 vendor/etc/init/vendor.oppo.hardware.cryptoeng@1.0-service.rc
-vendor/etc/init/vendor.oppo.hardware.ktv@1.0-service.rc
 vendor/etc/init/vendor.silead.hardware.fingerprintext@1.0-service.rc
 vendor/etc/init/vendor.trustonic.soter@1.0-service.rc
 vendor/etc/init/vndservicemanager.rc
@@ -657,7 +655,6 @@ vendor/lib/hw/vendor.mediatek.hardware.nvram@1.0-impl.so
 vendor/lib/hw/vendor.mediatek.hardware.power@1.1-impl.so
 vendor/lib/hw/vendor.mediatek.hardware.pq@2.0-impl.so
 vendor/lib/hw/vendor.mediatek.hardware.videotelephony@1.0-impl.so
-vendor/lib/hw/vendor.oppo.hardware.ktv@1.0-impl.so
 vendor/lib/hw/vibrator.default.so
 vendor/lib/lbs_hidl_service-impl.so
 vendor/lib/lib3DSlender.so
@@ -1118,7 +1115,6 @@ vendor/lib64/hw/vendor.mediatek.hardware.nvram@1.0-impl.so
 vendor/lib64/hw/vendor.mediatek.hardware.power@1.1-impl.so
 vendor/lib64/hw/vendor.mediatek.hardware.pq@2.0-impl.so
 vendor/lib64/hw/vendor.mediatek.hardware.videotelephony@1.0-impl.so
-vendor/lib64/hw/vendor.oppo.hardware.ktv@1.0-impl.so
 vendor/lib64/hw/vibrator.default.so
 vendor/lib64/interfaces.factoryAta@1.0_vendor.so
 vendor/lib64/interfaces.factoryInterface@1.0_vendor.so
