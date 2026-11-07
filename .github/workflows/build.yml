@@ -206,6 +206,20 @@ jobs:
             echo "::warning::lineage_${DEVICE}.mk not found in the device tree; lunch may fail"
           fi
 
+      # The kernel image itself is prebuilt, but the LineageOS Soong module
+      # generated_kernel_includes runs `make -C $(TARGET_KERNEL_SOURCE)
+      # headers_install` for modules that depend on generated_kernel_headers.
+      # TARGET_KERNEL_SOURCE (kernel/oppo/CPH1909) must therefore point at a
+      # real, synced kernel source tree, so clone it here.
+      - name: Add kernel source tree
+        working-directory: ${{ github.workspace }}/lineage
+        run: |
+          mkdir -p kernel/oppo
+          git clone --depth=1 -b master \
+            "https://x-access-token:${TOKEN}@github.com/leonardrua/A5S-8.1-kernel-source.git" "kernel/oppo/${DEVICE}"
+          rm -rf "kernel/oppo/${DEVICE}/.git"
+          ls "kernel/oppo/${DEVICE}" | head
+
       # ------------------------------------------------------------- build --
       - name: Build
         working-directory: ${{ github.workspace }}/lineage

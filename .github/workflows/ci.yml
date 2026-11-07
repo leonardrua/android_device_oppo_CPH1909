@@ -44,6 +44,8 @@ jobs:
 
           print("\n=== Step 2: Checking kernel configuration ===")
           board = open("BoardConfig.mk").read()
+          kconfig = re.search(r"^TARGET_KERNEL_CONFIG := (\S+)", board, re.M)
+          ksource = re.search(r"^TARGET_KERNEL_SOURCE := (\S+)", board, re.M)
           prebuilt_kernel = next((path for path in
                                   ("prebuilt/Image.gz-dtb", "prebuilt/kernel")
                                   if os.path.exists(path)), None)
@@ -54,12 +56,16 @@ jobs:
                   sys.exit(1)
               print(f"SUCCESS: {prebuilt_kernel} present ({ksize} bytes).")
           else:
-              kconfig = re.search(r"^TARGET_KERNEL_CONFIG := (\S+)", board, re.M)
-              ksource = re.search(r"^TARGET_KERNEL_SOURCE := (\S+)", board, re.M)
-              if not kconfig or not ksource:
-                  print("FAILED: Neither prebuilt/kernel nor TARGET_KERNEL_CONFIG/SOURCE defined.")
-                  sys.exit(1)
-              print(f"SUCCESS: Source kernel configured ({kconfig.group(1)} in {ksource.group(1)}).")
+              print("FAILED: No prebuilt kernel image found.")
+              sys.exit(1)
+          if kconfig and ksource:
+              print(f"SUCCESS: Kernel source tree configured ({kconfig.group(1)} in {ksource.group(1)}), "
+                    "required for LineageOS generated_kernel_includes even with a prebuilt kernel image.")
+          else:
+              print("FAILED: TARGET_KERNEL_CONFIG/SOURCE must stay set so the kernel source tree "
+                    "(kernel/oppo/CPH1909, synced separately in the build workflow) is present "
+                    "for generated_kernel_includes.")
+              sys.exit(1)
 
           print("\n=== Step 3: Checking fstab configuration ===")
           fstab_paths = ["rootdir/etc/fstab.mt6765", "recovery/root/etc/twrp.fstab"]

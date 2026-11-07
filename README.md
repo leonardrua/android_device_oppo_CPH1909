@@ -42,6 +42,18 @@ as unpacked by `magiskboot`). Using the stock prebuilt avoids rebuilding the
 4.9 MediaTek/OPPO `VENDOR_EDIT` kernel (`oppo6765_18511_defconfig`,
 `CONFIG_OPPO_KTV_DEV=y`, etc.) and preserves stock kernel behavior.
 
+`TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909` (and matching
+`TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig`) are also set even though
+the kernel image is prebuilt: LineageOS's `generated_kernel_includes` Soong
+module runs `make -C $(TARGET_KERNEL_SOURCE) ... headers_install` for modules
+that depend on `generated_kernel_headers`. `TARGET_KERNEL_SOURCE` is
+automatically cleared when `TARGET_PREBUILT_KERNEL` is set, which would leave
+that `make -C` argument empty and fail the build — so a real kernel source tree
+must be checked out at `kernel/oppo/CPH1909`. The CI build workflow clones
+`leonardrua/A5S-8.1-kernel-source` (branch `master`, containing
+`oppo6765_18511_defconfig`) into that path; the source tree is used **only**
+for header installation, not to build the kernel image itself.
+
 The prebuilt is stored at `prebuilt/Image.gz-dtb`. To refresh it from a stock
 boot image:
 

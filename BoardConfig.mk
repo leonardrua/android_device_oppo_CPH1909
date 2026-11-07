@@ -51,10 +51,23 @@ TARGET_NO_RADIOIMAGE := true
 # (/home/asus/a5s-dump/boot.img, magiskboot unpack): gzip-compressed ARM64 Image
 # with the appended DTB (KERNEL_SZ matches). Using the stock prebuilt avoids
 # rebuilding the 4.9 OPPO/VENDOR_EDIT kernel and preserves stock kernel behavior.
+#
+# The kernel source is also checked out into kernel/oppo/CPH1909 (the CI
+# workflow clones leonardrua/A5S-8.1-kernel-source into that path). This is
+# required even though the kernel image itself is prebuilt: LineageOS's
+# generated_kernel_includes Soong module runs `make -C $(TARGET_KERNEL_SOURCE)
+# ... headers_install` for modules that depend on generated_kernel_headers,
+# and TARGET_KERNEL_SOURCE gets automatically cleared by Lineage when
+# TARGET_PREBUILT_KERNEL is set, which would leave the -C arg empty and fail
+# the build. Keeping both settings alongside an actually-present source tree
+# satisfies that call without changing which kernel image is installed.
 TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
 BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.gz-dtb
+TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
+TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
+TARGET_KERNEL_CLANG_COMPILE := false
 
 # Values decoded from rom-dump/boot.img (legacy boot image, header v0).
 BOARD_KERNEL_BASE := 0x40078000
