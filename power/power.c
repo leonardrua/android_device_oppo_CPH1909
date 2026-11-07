@@ -50,24 +50,33 @@ static void sysfs_write(const char *path, const char *s)
     close(fd);
 }
 
-static void power_init(struct power_module *module __unused)
+static void power_init(struct power_module *module)
 {
+    (void)module;
+
     ALOGI("CPH1909 power HAL shim init");
 }
 
-static void power_set_interactive(struct power_module *module __unused, int on)
+static void power_set_interactive(struct power_module *module, int on)
 {
+    (void)module;
+
     ALOGV("power_set_interactive: %d", on);
 }
 
-static void power_hint(struct power_module *module __unused, power_hint_t hint,
-                       void *data __unused)
+static void power_hint(struct power_module *module, power_hint_t hint,
+                       void *data)
 {
+    (void)module;
+    (void)data;
+
     ALOGV("power_hint: %d", hint);
 }
 
-static void set_feature(struct power_module *module __unused, feature_t feature, int state)
+static void set_feature(struct power_module *module, feature_t feature, int state)
 {
+    (void)module;
+
     switch (feature) {
 #ifdef TAP_TO_WAKE_NODE
     case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
