@@ -45,16 +45,22 @@ MTK_HARDWARE := true
 TARGET_NO_BOOTLOADER := true
 TARGET_NO_RADIOIMAGE := true
 
-# Kernel (prebuilt)
+# Kernel
 #
-# Prebuilt Image.gz-dtb extracted from the stock CPH1909 boot image
+# Default: prebuilt Image.gz-dtb extracted from the stock CPH1909 boot image
 # (/home/asus/a5s-dump/boot.img, magiskboot unpack): gzip-compressed ARM64 Image
 # with the appended DTB (KERNEL_SZ matches). Using the stock prebuilt avoids
 # rebuilding the 4.9 OPPO/VENDOR_EDIT kernel and preserves stock kernel behavior.
+#
+# To build from source instead, unset TARGET_PREBUILT_KERNEL and keep the
+# TARGET_KERNEL_SOURCE/CONFIG/CLANG_COMPILE settings below (GCC 4.9 kernel).
 TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
 BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.gz-dtb
+TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
+TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
+TARGET_KERNEL_CLANG_COMPILE := false
 
 # Values decoded from rom-dump/boot.img (legacy boot image, header v0).
 BOARD_KERNEL_BASE := 0x40078000
