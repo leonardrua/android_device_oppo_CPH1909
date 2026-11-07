@@ -219,6 +219,14 @@ BOARD_SUPPRESS_SECURE_ERASE := true
 # SELinux
 BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
+# Double tap to wake
+#
+# Himax summer / NT36525B / Ilitek ipio_mmi (OPPO multi-panel SPI touch, see the
+# authoritative kernel DTS oppo6765_18511.dts: ili_ts@0 on spi3) expose the OPPO
+# touchpanel proc node below. init.cph1909.dt2w.rc restores/toggles it; the
+# setting is surfaced by config_supportDoubleTapWake in the framework overlay.
+TARGET_TAP_TO_WAKE_NODE := /proc/touchpanel/double_tap_enable
+
 # Properties
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
 TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop

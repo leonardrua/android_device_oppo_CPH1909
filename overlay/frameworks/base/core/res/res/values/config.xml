@@ -85,6 +85,12 @@
          Input, sensors and audio jack
          =================================================================== -->
 
+    <!-- Double-tap to wake. The OPPO touchpanel drivers on this multi-panel
+         device (Himax summer / NT36525B / Ilitek ipio_mmi, ili_ts@0 on spi3 in
+         the authoritative 8.1 kernel DTS) expose /proc/touchpanel/double_tap_enable;
+         init.cph1909.dt2w.rc restores and toggles it. -->
+    <bool name="config_supportDoubleTapWake">true</bool>
+
     <!-- The stock ROM suspends while the proximity sensor covers the screen
          during a call, so the sensor HAL handles it as a wake-up source. -->
     <bool name="config_suspendWhenScreenOffDueToProximity">true</bool>
