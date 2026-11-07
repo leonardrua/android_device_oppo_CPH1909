@@ -1,0 +1,295 @@
+name: Build LineageOS 17.1 (Oppo A5s CPH1909) - Namespace
+
+on:
+  workflow_dispatch:
+    inputs:
+      device_repo:
+        description: 'Device tree repo (user/repo)'
+        required: true
+        default: 'leonardrua/android_device_oppo_CPH1909'
+      device_branch:
+        description: 'Device tree branch'
+        required: true
+        default: 'main'
+      vendor_repo:
+        description: 'Vendor repo'
+        required: true
+        default: 'leonardrua/android_vendor_oppo_CPH1909'
+      vendor_branch:
+        description: 'Vendor branch'
+        required: true
+        default: 'main'
+      device_name:
+        description: 'Device codename'
+        required: true
+        default: 'CPH1909'
+      target:
+        description: 'Build target'
+        required: true
+        default: 'bacon'
+        type: choice
+        options:
+          - bootimage
+          - vendorimage
+          - productimage
+          - systemimage
+          - bacon
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'userdebug'
+        type: choice
+        options:
+          - userdebug
+          - eng
+          - user
+      build_timeout_min:
+        description: 'Build timeout in minutes'
+        required: true
+        default: '600'
+      out_on_cache:
+        description: 'Keep ccache and the out directory on the persistent /cache disk'
+        required: true
+        type: boolean
+        default: true
+      clean_out:
+        description: 'Delete the old out directory before building'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: namespace-profile-bombardino
+    timeout-minutes: 720
+    env:
+      TOKEN: ${{ secrets.GH_PAT || github.token }}
+      IN_DEVICE_REPO: ${{ inputs.device_repo }}
+      IN_DEVICE_BRANCH: ${{ inputs.device_branch }}
+      IN_VENDOR_REPO: ${{ inputs.vendor_repo }}
+      IN_VENDOR_BRANCH: ${{ inputs.vendor_branch }}
+      DEVICE: ${{ inputs.device_name }}
+      TARGET: ${{ inputs.target }}
+      BTYPE: ${{ inputs.build_type }}
+      BUILD_TIMEOUT_MIN: ${{ inputs.build_timeout_min }}
+      OUT_ON_CACHE: ${{ inputs.out_on_cache }}
+      CLEAN_OUT: ${{ inputs.clean_out }}
+      CCACHE_SIZE: 10G
+
+    steps:
+      # ------------------------------------------------------------ setup --
+      - name: Runner info
+        run: |
+          head -2 /etc/os-release
+          echo "Cores: $(nproc --all)"
+          free -h
+          df -h / /cache 2>/dev/null || df -h "$GITHUB_WORKSPACE"
+
+      - name: Prepare cache dirs
+        run: |
+          if [ "$OUT_ON_CACHE" = "true" ] && [ -d /cache ]; then
+            sudo mkdir -p /cache/ccache /cache/out
+            sudo chown -R "$(id -u):$(id -g)" /cache/ccache /cache/out
+            if [ "$CLEAN_OUT" = "true" ]; then rm -rf /cache/out/*; fi
+            echo "CCACHE_DIR=/cache/ccache" >> "$GITHUB_ENV"
+            echo "OUT_BASE=/cache/out" >> "$GITHUB_ENV"
+            echo "OUT_DIR=/cache/out" >> "$GITHUB_ENV"
+            echo "Using /cache for ccache and out"
+          else
+            mkdir -p "$GITHUB_WORKSPACE/.ccache"
+            echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache" >> "$GITHUB_ENV"
+            echo "OUT_BASE=$GITHUB_WORKSPACE/lineage/out" >> "$GITHUB_ENV"
+            echo "Using the root disk for ccache and out"
+          fi
+
+      - name: Normalize repo names
+        run: |
+          norm() {
+            local t="$1"
+            t="${t#https://github.com/}"
+            t="${t#http://github.com/}"
+            t="${t%.git}"
+            echo "${t%/}"
+          }
+          echo "DEVICE_REPO=$(norm "$IN_DEVICE_REPO")" >> "$GITHUB_ENV"
+          echo "VENDOR_REPO=$(norm "$IN_VENDOR_REPO")" >> "$GITHUB_ENV"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          PKGS="bc bison build-essential ccache curl flex g++-multilib gcc-multilib git git-lfs gnupg gperf imagemagick lib32ncurses-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses-dev libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3 python-is-python3 unzip"
+          AVAIL=""
+          for p in $PKGS; do
+            if apt-cache policy "$p" 2>/dev/null | grep -q 'Candidate: [^(]'; then
+              AVAIL="$AVAIL $p"
+            else
+              echo "Not available (skipping): $p"
+            fi
+          done
+          sudo apt-get install -y $AVAIL
+
+          # libncurses5 / libtinfo5 are missing from Ubuntu 24.04; fetch them from 22.04
+          if ! dpkg -s libtinfo5 >/dev/null 2>&1; then
+            echo "deb [arch=amd64] http://azure.archive.ubuntu.com/ubuntu jammy main universe" \
+              | sudo tee /etc/apt/sources.list.d/jammy-tmp.list >/dev/null
+            sudo apt-get update \
+              -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/jammy-tmp.list \
+              -o Dir::Etc::sourceparts="-" \
+              -o APT::Get::List-Cleanup=0 || true
+            (cd /tmp && apt-get download libtinfo5 libncurses5) || echo "Could not download libncurses5"
+            sudo dpkg -i /tmp/libtinfo5_*.deb /tmp/libncurses5_*.deb || echo "Could not install libncurses5"
+            sudo rm -f /etc/apt/sources.list.d/jammy-tmp.list
+            sudo apt-get update || true
+          fi
+          dpkg -s libncurses5 libtinfo5 2>/dev/null | grep -E '^(Package|Status)' || true
+
+          mkdir -p ~/bin
+          curl -sL https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          git config --global user.name "builder"
+          git config --global user.email "builder@users.noreply.github.com"
+          git config --global color.ui false
+          git config --global gc.auto 0
+
+      - name: Validate inputs
+        run: |
+          case "$BUILD_TIMEOUT_MIN" in
+            ''|*[!0-9]*) echo "::error::build_timeout_min must be a whole number of minutes"; exit 1 ;;
+          esac
+          git ls-remote --exit-code --heads "https://x-access-token:${TOKEN}@github.com/${DEVICE_REPO}.git" "$IN_DEVICE_BRANCH" >/dev/null \
+            || { echo "::error::Device repo or branch not found: ${DEVICE_REPO} @ ${IN_DEVICE_BRANCH}"; exit 1; }
+          git ls-remote --exit-code --heads "https://x-access-token:${TOKEN}@github.com/${VENDOR_REPO}.git" "$IN_VENDOR_BRANCH" >/dev/null \
+            || { echo "::error::Vendor repo or branch not found: ${VENDOR_REPO} @ ${IN_VENDOR_BRANCH}"; exit 1; }
+          echo "Inputs look good"
+
+      # ----------------------------------------------------------- sources --
+      - name: Sync LineageOS 17.1 source
+        run: |
+          mkdir -p lineage && cd lineage
+          ~/bin/repo init -u https://github.com/LineageOS/android.git -b lineage-17.1 \
+            -g default,-darwin --depth=1 --no-clone-bundle
+
+          ( while true; do
+              echo "[monitor] $(date +%H:%M) disk: $(df -h . | tail -1 | awk '{print $3" used, "$4" free"}') | mem: $(free -m | awk '/Mem:/{print $3"MB used, "$7"MB avail"}')"
+              sleep 180
+            done ) &
+          MON=$!
+
+          ok=0
+          for i in 1 2 3 4; do
+            if ~/bin/repo sync -c -j4 -q --force-sync --no-clone-bundle --no-tags --optimized-fetch; then
+              ok=1
+              break
+            fi
+            echo "Retrying sync ($i)"
+            sleep 15
+          done
+          kill $MON 2>/dev/null || true
+          [ "$ok" = "1" ] || { echo "::error::Source sync failed"; exit 1; }
+          df -h .
+
+      - name: Add device and vendor trees
+        working-directory: ${{ github.workspace }}/lineage
+        run: |
+          mkdir -p device/oppo vendor/oppo
+          git clone --depth=1 -b "$IN_DEVICE_BRANCH" \
+            "https://x-access-token:${TOKEN}@github.com/${DEVICE_REPO}.git" "device/oppo/${DEVICE}"
+          git clone --depth=1 -b "$IN_VENDOR_BRANCH" \
+            "https://x-access-token:${TOKEN}@github.com/${VENDOR_REPO}.git" "vendor/oppo/${DEVICE}"
+          rm -rf "device/oppo/${DEVICE}/.git" "vendor/oppo/${DEVICE}/.git"
+          ls -la "device/oppo/${DEVICE}" | head -60
+          ls "vendor/oppo/${DEVICE}" | head -40
+          if [ ! -f "device/oppo/${DEVICE}/lineage_${DEVICE}.mk" ]; then
+            echo "::warning::lineage_${DEVICE}.mk not found in the device tree; lunch may fail"
+          fi
+
+      # ------------------------------------------------------------- build --
+      - name: Build
+        working-directory: ${{ github.workspace }}/lineage
+        run: |
+          export LC_ALL=C
+          export USE_CCACHE=1
+          export CCACHE_EXEC="$(which ccache)"
+          export ALLOW_MISSING_DEPENDENCIES=true
+          export PATH="$HOME/bin:$PATH"
+          mkdir -p "$CCACHE_DIR"
+          ccache -M "$CCACHE_SIZE"
+
+          CORES=$(nproc --all)
+          MEM_GB=$(free -g | awk '/Mem:/{print $2}')
+          SWAP_MB=$(free -m | awk '/Swap:/{print $2}')
+          if [ "${SWAP_MB:-0}" -lt 2000 ]; then
+            JOBS=$(( (MEM_GB - 3) / 2 ))
+          else
+            JOBS=$(( MEM_GB / 2 ))
+          fi
+          [ "$JOBS" -gt "$CORES" ] && JOBS=$CORES
+          [ "$JOBS" -lt 2 ] && JOBS=2
+          export JOBS
+          echo "cores=$CORES mem=${MEM_GB}GB swap=${SWAP_MB}MB JOBS=$JOBS"
+          echo "OUT_DIR=${OUT_DIR:-default}"
+
+          cat > "${GITHUB_WORKSPACE}/do_build.sh" <<'EOS'
+          set -o pipefail
+          source build/envsetup.sh
+          lunch "lineage_${DEVICE}-${BTYPE}" || exit 1
+          mka "${TARGET}" -j"${JOBS}"
+          EOS
+
+          ( while true; do
+              echo "[monitor] $(date +%H:%M) disk: $(df -h . | tail -1 | awk '{print $4" free"}') | mem: $(free -m | awk '/Mem:/{print $3"MB used, "$7"MB avail"}')"
+              ps -eo pid,pcpu,pmem,comm --sort=-pmem | head -4
+              sleep 180
+            done ) &
+          MON=$!
+
+          set +e
+          timeout "${BUILD_TIMEOUT_MIN}m" bash "${GITHUB_WORKSPACE}/do_build.sh" 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
+          RC=${PIPESTATUS[0]}
+          kill $MON 2>/dev/null || true
+          echo "BUILD_RC=$RC" >> "$GITHUB_ENV"
+          echo "Build finished with code: $RC (124 = timed out; re-run to resume from ccache)"
+          ccache -s | head -15
+          exit 0
+
+      # ----------------------------------------------------------- results --
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          df -h || true
+          free -h || true
+          sudo dmesg | tail -n 40 || true
+
+      - name: Collect output
+        if: always()
+        run: |
+          OUT="${OUT_BASE}/target/product/${DEVICE}"
+          RESULT="${GITHUB_WORKSPACE}/result"
+          mkdir -p "$RESULT"
+          if [ -d "$OUT" ]; then
+            for f in "$OUT"/{boot,recovery,dtbo,vbmeta,system,vendor,product}.img \
+                     "$OUT"/lineage-*.zip "$OUT"/lineage-*.zip.sha256sum; do
+              if [ -f "$f" ]; then cp -v "$f" "$RESULT/"; fi
+            done
+          fi
+          cp -v "${OUT_BASE}/error.log" "$RESULT/" 2>/dev/null || true
+          tail -n 3000 "${GITHUB_WORKSPACE}/build.log" > "$RESULT/build-tail.log" 2>/dev/null || true
+          ls -lh "$RESULT"
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lineage-17.1-${{ inputs.device_name }}-${{ inputs.target }}
+          path: ${{ github.workspace }}/result
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Fail if build failed
+        if: env.BUILD_RC != '0'
+        run: |
+          echo "::error::Build failed or timed out (code $BUILD_RC). See build-tail.log and error.log in the artifact."
+          exit 1
