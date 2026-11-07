@@ -1,0 +1,21 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_library_shared {
+    name: "fingerprint.mt6765",
+    relative_install_path: "hw",
+    proprietary: true,
+    compile_multilib: "both",
+    srcs: ["fingerprint.c"],
+    shared_libs: [
+        "libhardware",
+        "liblog",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}

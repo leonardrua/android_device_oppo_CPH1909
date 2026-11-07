@@ -202,6 +202,17 @@
 /(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.biometrics\.fingerprintpay@1\.0-service  u:object_r:hal_fingerprint_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.silead\.hardware\.fingerprintext@1\.0-service            u:object_r:mtk_hal_silead_exec:s0
 
+# Silead fingerprint sensor nodes (CONFIG_SILEAD_FP + /dev/silead_fp in the
+# authoritative 8.1 kernel). The AOSP fingerprint@2.1 service wraps the stock
+# legacy Silead HAL module via the fingerprint.mt6765 shim.
+/dev/silead_fp                                                                                  u:object_r:silead_fpd_device:s0
+/dev/esfp0                                                                                      u:object_r:egis_fp_device:s0
+# /persist/silead and /data/vendor/silead hold Silead calibration/template data.
+# Labelled fingerprint_vendor_data_file so the AOSP hal_fingerprint attribute
+# grants the expected data access.
+/data/vendor/silead(/.*)?                                                                       u:object_r:fingerprint_vendor_data_file:s0
+/(mnt/vendor/)?persist/silead(/.*)?                                                             u:object_r:fingerprint_vendor_data_file:s0
+
 /(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.cryptoeng@1\.0-service                      u:object_r:mtk_hal_cryptoeng_exec:s0
 
 # Factory / engineering services. These only run in Meta and factory modes, but

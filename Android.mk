@@ -72,4 +72,21 @@ $(GATEKEEPER_DEFAULT_SYMLINK):
 
 ALL_DEFAULT_INSTALLED_MODULES += $(GATEKEEPER_DEFAULT_SYMLINK)
 
+# Fingerprint module aliases.
+#
+# fingerprint.mt6765 is the AOSP-service shim (biometrics/fingerprint/) that
+# forwards to fingerprint.silead.default.so. fingerprint.default.so is a safety
+# net for the same reason as gatekeeper.default.so: hw_get_module_by_class()
+# commits to the first readable candidate and will not retry .default if the
+# variant module fails at runtime, but it is the last probe when no variant
+# alias exists at all.
+FINGERPRINT_DEFAULT_SYMLINK += $(TARGET_OUT_VENDOR)/lib/hw/fingerprint.default.so
+FINGERPRINT_DEFAULT_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/hw/fingerprint.default.so
+
+$(FINGERPRINT_DEFAULT_SYMLINK):
+	@mkdir -p $(dir $@)
+	$(hide) ln -sf fingerprint.mt6765.so $@
+
+ALL_DEFAULT_INSTALLED_MODULES += $(FINGERPRINT_DEFAULT_SYMLINK)
+
 endif

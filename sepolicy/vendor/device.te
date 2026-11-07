@@ -238,6 +238,7 @@ permissive rutilsdaemon;
 permissive hal_audio_default;
 permissive hal_bluetooth_default;
 permissive hal_camera_default;
+permissive hal_fingerprint_default;
 permissive hal_graphics_composer_default;
 permissive hal_light_default;
 permissive hal_sensors_default;
@@ -279,6 +280,9 @@ permissive mtk_fuelgauged;
 # The face and fingerprint services keep using hal_face_default_exec /
 # hal_fingerprint_default_exec from AOSP (they implement those standard
 # interfaces), so no new type is declared for them here.
+type silead_fpd_device, dev_type;
+type egis_fp_device, dev_type;
+
 type mtk_hal_silead, domain;
 type mtk_hal_silead_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_silead)

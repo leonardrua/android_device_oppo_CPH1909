@@ -380,9 +380,13 @@
         <fqname>@1.0::IBiometricsFace/default</fqname>
     </hal>
     <hal format="hidl">
-        <name>vendor.oppo.hardware.biometrics.fingerprint</name>
+        <name>android.hardware.biometrics.fingerprint</name>
         <transport>hwbinder</transport>
-        <fqname>@2.1::IBiometricsFingerprint/default</fqname>
+        <version>2.1</version>
+        <interface>
+            <name>IBiometricsFingerprint</name>
+            <instance>default</instance>
+        </interface>
     </hal>
     <hal format="hidl">
         <name>vendor.oppo.hardware.biometrics.fingerprintpay</name>

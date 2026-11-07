@@ -1,0 +1,12 @@
+# Override the stock ColorOS fingerprint-pay HIDL service (fpay_hal).
+#
+# fingerprintpay@1.0 is an OPPO vendor extension with no AOSP client on Lineage
+# and a dependency on the OPPO/Alipay trustlet stack. Disable it during bring-up
+# to avoid unnecessary contention with the fingerprint sensor/TEE.
+service fpay_hal /vendor/bin/hw/vendor.oppo.hardware.biometrics.fingerprintpay@1.0-service
+    override
+    class late_start
+    user system
+    group system input sdcard_rw sdcard_r
+    disabled
+    oneshot

@@ -1,0 +1,14 @@
+# Override the stock ColorOS fingerprint HIDL service (fps_hal).
+#
+# The stock service registers vendor.oppo.hardware.biometrics.fingerprint@2.1,
+# which the AOSP/Lineage 10 framework does not bind to, and it opens /dev/silead_fp
+# itself -- contending with the AOSP default service we run instead. Disable it so
+# android.hardware.biometrics.fingerprint@2.1-service + fingerprint.mt6765 (the
+# Silead shim) own the sensor exclusively.
+service fps_hal /vendor/bin/hw/vendor.oppo.hardware.biometrics.fingerprint@2.1-service
+    override
+    class late_start
+    user system
+    group system input
+    disabled
+    oneshot
