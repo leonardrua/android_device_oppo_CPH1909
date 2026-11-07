@@ -76,6 +76,9 @@ static void power_hint(struct power_module *module, power_hint_t hint,
 static void set_feature(struct power_module *module, feature_t feature, int state)
 {
     (void)module;
+#ifndef TAP_TO_WAKE_NODE
+    (void)state;
+#endif
 
     switch (feature) {
 #ifdef TAP_TO_WAKE_NODE
