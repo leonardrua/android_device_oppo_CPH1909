@@ -215,9 +215,15 @@ lines before shipping.
 
 ### VINTF
 
-`manifest.xml` is the stock CPH1909 device manifest plus the HALs LineageOS
-builds because Android 10 requires them: `health@2.0`, `usb@1.0` and the
-`drm@1.2` clearkey instance. It declares `target-level="2"`.
+`manifest.xml` carries the CPH1909 stock vendor HAL declarations (Android 8.1
+blobs) plus the HALs LineageOS 17.1 builds: `android.hardware.health@2.0`,
+`android.hardware.usb@1.0`, `android.hardware.power@1.0` (served by the AOSP
+HIDL service that forwards to `power.mt6765`, used for DT2W), and
+`android.hardware.biometrics.fingerprint@2.1` (AOSP interface backed by the
+Silead legacy-HAL shim). The `drm@1.2` clearkey instance is provided by a VINTF
+fragment, not listed statically (see below). It declares `target-level="2"`.
+The file is formatted in the expanded VINTF style (per-hal
+`<version>`/`<interface>`/`<fqname>` blocks).
 
 This is the key legacy-Treble setting. Android 10 replaced the old
 `PRODUCT_COMPATIBILITY_MATRIX_LEVEL_OVERRIDE` with the `target-level` attribute
@@ -276,9 +282,9 @@ overlays:
 * `frameworks/base/core/res/res/values/config.xml` — the device-specific
   framework configuration described below. These are framework resources, so
   they cannot come from the vendor blobs. Every value is the stock CPH1909 one,
-  read from the stock `framework-res.apk`; only settings that differ from the
-  AOSP 10 defaults, or that describe a capability the vendor blobs provide, are
-  listed.
+  read from the stock `framework-res.apk`, except where noted; only settings
+  that differ from the AOSP 10 defaults, or that describe a capability the
+  vendor/kernel provide, are listed.
 * `frameworks/base/packages/SystemUI/res/values/dimens.xml` — the SystemUI
   dimensions described at the end of this section.
 
@@ -312,6 +318,26 @@ legacy `/sys/class/switch/h2w` uevent path. AOSP defaults
 headset insertion; the stock ROM sets it true. The stock ROM also enables
 `config_suspendWhenScreenOffDueToProximity`, so the proximity sensor turns the
 screen off against the ear during a call.
+
+**Double-tap to wake.** `config_supportDoubleTapWake` is enabled. The
+authoritative 8.1 kernel (`oppo6765_18511.dts`, multi-panel SPI touch `ili_ts@0`
+on `spi3`) exposes `/proc/touchpanel/double_tap_enable` on the Himax summer,
+NT36525B and Ilitek ipio_mmi panel drivers (the NT36xxx non-B path uses
+`WAKEUP_GESTURE`/double-click mapped to `KEY_POWER`; its proc enable node is not
+confirmed). `BoardConfig.mk` sets `TARGET_TAP_TO_WAKE_NODE` to that proc node.
+On LineageOS 17.1 the Display toggle writes `Settings.Secure.DOUBLE_TAP_TO_WAKE`,
+and `PowerManagerService` forwards it as
+`IPower::setFeature(POWER_FEATURE_DOUBLE_TAP_TO_WAKE)` to
+`android.hardware.power@1.0`. The default AOSP `android.hardware.power@1.0-service`
+loads the legacy `libhardware` module and forwards `setFeature` to it, so this
+tree builds a small `power.mt6765` shim (`power/`) — in the style of the MT6765
+RMX2185 device trees — that writes `TARGET_TAP_TO_WAKE_NODE`. Both
+`android.hardware.power@1.0-service` and `power.mt6765` are added in
+`device.mk`, and `android.hardware.power@1.0::IPower/default` is declared in
+`manifest.xml`. This shim only handles DT2W (other power hints/interactive are
+stubs); the MTK vendor power interface
+(`vendor.mediatek.hardware.power@1.1-service` / blobs) is separate and
+unchanged. Behavior is panel-variant dependent; build/boot-test on hardware.
 
 **Telephony.** `config_num_physical_slots=2` and `config_hotswapCapable=true`
 match the dual-SIM, hot-swap-capable modem (`ro.telephony.sim.count=2`,
@@ -483,9 +509,25 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 
 ## Known limitations / porting notes
 
-* Fingerprint and face unlock use OPPO/Silead vendor packages rather than the
-  AOSP `android.hardware.biometrics.fingerprint@2.1` service, so the framework
-  biometric stack will not drive them without a shim.
+* Fingerprint is wired to the AOSP biometric stack via
+  `biometrics/fingerprint/` (`fingerprint.mt6765`, `proprietary`, multilib): it
+  exports the `FINGERPRINT_HARDWARE_MODULE_ID` HMI (required because Android 10
+  `libhardware` rejects an `hmi->id`/`class_id` mismatch) and `dlopen`s/forwards
+  the stock legacy Silead HAL (`fingerprint.silead.default.so`, API 2.1,
+  `libsl_fp_impl.so`, `/dev/silead_fp`). `Android.mk` installs a
+  `fingerprint.default.so` → `fingerprint.mt6765.so` alias. `device.mk`
+  builds/installs `android.hardware.biometrics.fingerprint@2.1-service` and
+  first-wins `PRODUCT_COPY_FILES` overrides (before `CPH1909-vendor.mk`) disable
+  the stock ColorOS `fps_hal` / `fpay_hal` init services, which register
+  `vendor.oppo.hardware.biometrics.fingerprint@2.1` (not the AOSP interface) and
+  would contend for `/dev/silead_fp`. Vendor SELinux contexts/bring-up
+  `permissive hal_fingerprint_default` are in `sepolicy/vendor/`. Face unlock is
+  userspace-only on CPH1909 (no face driver in the authoritative kernel; stock
+  vendor face service/`libmegface`/`libstface*` blobs exist, but LineageOS 17.1
+  has no AOSP `android.hardware.biometrics.face@1.0` default service), so only
+  fingerprint is wired to an AOSP interface. Boot-test to confirm shim load,
+  `IBiometricsFingerprint/default` registration, `/dev/silead_fp` access, and
+  that stock `fps_hal`/`fpay_hal` remain disabled.
 * The 8.1 vendor blobs are the highest-risk part of the port. The HIDL
   transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
   variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL
