@@ -215,10 +215,6 @@ PRODUCT_COPY_FILES += \
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
     ro.mtkrc.path=/vendor/etc/init/hw/
 
-# Init scripts
-PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/rootdir/etc/init/init.cph1909.dt2w.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.cph1909.dt2w.rc
-
 # Disable the stock ColorOS biometric HIDL services that the blob vendor makefile
 # also installs. PRODUCT_COPY_FILES keeps the first entry for a destination, so
 # these overrides must stay before the CPH1909-vendor.mk inherit below. They stop

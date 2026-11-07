@@ -223,8 +223,9 @@ BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 #
 # Himax summer / NT36525B / Ilitek ipio_mmi (OPPO multi-panel SPI touch, see the
 # authoritative kernel DTS oppo6765_18511.dts: ili_ts@0 on spi3) expose the OPPO
-# touchpanel proc node below. init.cph1909.dt2w.rc restores/toggles it; the
-# setting is surfaced by config_supportDoubleTapWake in the framework overlay.
+# touchpanel proc node below. android.hardware.power@1.0-service forwards the
+# framework POWER_FEATURE_DOUBLE_TAP_TO_WAKE feature to power.mt6765, which
+# writes this node. The setting is surfaced by config_supportDoubleTapWake.
 TARGET_TAP_TO_WAKE_NODE := /proc/touchpanel/double_tap_enable
 
 # Properties
