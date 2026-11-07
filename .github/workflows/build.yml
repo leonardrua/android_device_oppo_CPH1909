@@ -89,9 +89,20 @@ jobs:
           df -h / /cache 2>/dev/null || df -h "$GITHUB_WORKSPACE"
 
       - name: Set up Python 2 for legacy kernel tools
-        uses: actions/setup-python@v5
-        with:
-          python-version: '2.7'
+        run: |
+          curl -fL --retry 2 \
+            https://github.com/NCLnclNCL/kernel-build/releases/download/python2.7.18/python2.7.18.zip \
+            -o "$RUNNER_TEMP/python2.7.18.zip"
+          unzip -q "$RUNNER_TEMP/python2.7.18.zip" -d "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/python2-shim"
+          cat > "$RUNNER_TEMP/python2-shim/python" <<'EOF'
+          #!/bin/sh
+          export PYTHONHOME="$RUNNER_TEMP/python2"
+          exec "$PYTHONHOME/bin/python" "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/python2-shim/python"
+          echo "$RUNNER_TEMP/python2-shim" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/python2-shim/python" -c 'import sys; print(sys.version)'
 
       - name: Prepare cache dirs
         run: |
