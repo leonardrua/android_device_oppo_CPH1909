@@ -63,7 +63,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: namespace-profile-bombardino
+    runs-on: namespace-profile-leonard
     timeout-minutes: 720
     env:
       TOKEN: ${{ secrets.GH_PAT || github.token }}
