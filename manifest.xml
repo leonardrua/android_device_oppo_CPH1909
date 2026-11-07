@@ -1,77 +1,93 @@
 <manifest version="1.0" type="device" target-level="2">
-<!--
-  VINTF device manifest for OPPO A5s (CPH1909, MT6765).
-
-  This is the stock ColorOS 5.2 (Android 8.1) /vendor/manifest.xml: the
-  authoritative list of what the prebuilt vendor blobs actually register, plus
-  the three HALs LineageOS 17.1 builds because Android 10 requires them and an
-  8.1 vendor image never had them (health@2.0, usb@1.0, drm@1.2 clearkey).
-
-  This is a legacy-Treble device. It launched with Android 8.1 / API 27, which
-  is FCM (target) level 2, O-MR1. Android 10 replaced the old
-  PRODUCT_COMPATIBILITY_MATRIX_LEVEL_OVERRIDE with the `target-level` attribute
-  on this manifest, so level 2 is declared explicitly. Without the attribute,
-  assemble_vintf would infer the same level from
-  PRODUCT_SHIPPING_API_LEVEL=27 and print a warning. With it, the Q framework
-  checks these HALs against the frozen O-MR1 framework compatibility matrix;
-  all ten required HALs of that matrix are present here.
-
-  The stock 8.1 compatibility_matrix.xml (the vendor->framework device matrix)
-  is deliberately not shipped: it was written for the 8.1 framework and would
-  reject Android 10.
-
-  <sepolicy> is not decorative: with PRODUCT_SHIPPING_API_LEVEL=27 the build
-  enables PRODUCT_ENFORCE_VINTF_MANIFEST and assemble_vintf checks this
-  manifest against the FCM 2 matrix. Leaving the version unset makes it default
-  to 0.0, which fails that check. 27.0 is both the version the stock 8.1 vendor
-  image was built against and one of the platform's
-  PLATFORM_SEPOLICY_COMPAT_VERSIONS.
--->
+    <!-- OPPO A5s (CPH1909, MT6765). Legacy Treble, FCM 2 (API 27, Android 8.1
+         vendor blobs) on LineageOS 17.1. sepolicy 27.0 matches the stock 8.1
+         vendor and satisfies FCM 2 / PRODUCT_ENFORCE_VINTF_MANIFEST. -->
+    <!-- cas / drm@1.2 clearkey omitted: provided by vintf fragments
+         (base_vendor.mk / android.hardware.drm@1.2-service.clearkey). -->
     <hal format="hidl">
         <name>android.hardware.audio</name>
         <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IDevicesFactory</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.0::IDevicesFactory/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.audio.effect</name>
         <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IEffectsFactory</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.0::IEffectsFactory/default</fqname>
+    </hal>
+    <hal format="hidl">
+        <name>android.hardware.biometrics.fingerprint</name>
+        <transport>hwbinder</transport>
+        <version>2.1</version>
+        <interface>
+            <name>IBiometricsFingerprint</name>
+            <instance>default</instance>
+        </interface>
+        <fqname>@2.1::IBiometricsFingerprint/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.bluetooth</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IBluetoothHci</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IBluetoothHci/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.broadcastradio</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IBroadcastRadioFactory</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IBroadcastRadioFactory/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.camera.provider</name>
         <transport>hwbinder</transport>
+        <version>2.4</version>
+        <interface>
+            <name>ICameraProvider</name>
+            <instance>internal/0</instance>
+        </interface>
         <fqname>@2.4::ICameraProvider/internal/0</fqname>
     </hal>
-    <!-- cas is intentionally not declared here. android.hardware.cas@1.1-service
-         is pulled in by base_vendor.mk and ships its own vintf_fragment; a
-         second entry for the same HAL name and major version is rejected by
-         assemble_vintf. @1.1::IMediaCasService extends @1.0, so the framework
-         matrix is satisfied by the fragment alone. -->
     <hal format="hidl">
         <name>android.hardware.configstore</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ISurfaceFlingerConfigs</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::ISurfaceFlingerConfigs/default</fqname>
     </hal>
-    <!-- clearkey is intentionally not declared here.
-         android.hardware.drm@1.2-service.clearkey (pulled in by device.mk)
-         ships its own vintf_fragment; a second entry for the same HAL name
-         and major version (@1.2) is rejected by assemble_vintf with a
-         duplicate-instance error, just like cas above. The framework matrix
-         is satisfied by the fragment alone. -->
     <hal format="hidl">
         <name>android.hardware.drm</name>
         <transport>hwbinder</transport>
-        <!-- 8.1 vendor blobs -->
+        <version>1.0</version>
+        <interface>
+            <name>ICryptoFactory</name>
+            <instance>default</instance>
+            <instance>widevine</instance>
+        </interface>
+        <interface>
+            <name>IDrmFactory</name>
+            <instance>default</instance>
+            <instance>widevine</instance>
+        </interface>
         <fqname>@1.0::ICryptoFactory/default</fqname>
         <fqname>@1.0::ICryptoFactory/widevine</fqname>
         <fqname>@1.0::IDrmFactory/default</fqname>
@@ -80,57 +96,134 @@
     <hal format="hidl">
         <name>android.hardware.gatekeeper</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IGatekeeper</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IGatekeeper/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.gnss</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IGnss</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IGnss/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.graphics.allocator</name>
         <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IAllocator</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.0::IAllocator/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.graphics.composer</name>
         <transport>hwbinder</transport>
+        <version>2.1</version>
+        <interface>
+            <name>IComposer</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.1::IComposer/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.graphics.mapper</name>
         <transport arch="32+64">passthrough</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IMapper</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.0::IMapper/default</fqname>
+    </hal>
+    <hal format="hidl">
+        <name>android.hardware.health</name>
+        <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IHealth</name>
+            <instance>default</instance>
+        </interface>
+        <fqname>@2.0::IHealth/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.keymaster</name>
         <transport>hwbinder</transport>
+        <version>3.0</version>
+        <interface>
+            <name>IKeymasterDevice</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@3.0::IKeymasterDevice/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.light</name>
         <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>ILight</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.0::ILight/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.media.omx</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IOmx</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>IOmxStore</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IOmx/default</fqname>
         <fqname>@1.0::IOmxStore/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.memtrack</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IMemtrack</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IMemtrack/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.power</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IPower</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IPower/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.radio</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IRadio</name>
+            <instance>imsrild1</instance>
+            <instance>imsrild2</instance>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
+        <interface>
+            <name>ISap</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
         <fqname>@1.1::IRadio/imsrild1</fqname>
         <fqname>@1.1::IRadio/imsrild2</fqname>
         <fqname>@1.1::IRadio/slot1</fqname>
@@ -141,108 +234,257 @@
     <hal format="hidl">
         <name>android.hardware.radio.deprecated</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IOemHook</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
         <fqname>@1.0::IOemHook/slot1</fqname>
         <fqname>@1.0::IOemHook/slot2</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.renderscript</name>
         <transport arch="32+64">passthrough</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IDevice</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IDevice/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.sensors</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ISensors</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::ISensors/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.soundtrigger</name>
         <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>ISoundTriggerHw</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.0::ISoundTriggerHw/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.thermal</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IThermal</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IThermal/default</fqname>
+    </hal>
+    <hal format="hidl">
+        <name>android.hardware.usb</name>
+        <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IUsb</name>
+            <instance>default</instance>
+        </interface>
+        <fqname>@1.0::IUsb/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.vibrator</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IVibrator</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IVibrator/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.wifi</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IWifi</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IWifi/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.wifi.supplicant</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ISupplicant</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::ISupplicant/default</fqname>
     </hal>
     <hal format="hidl">
         <name>interfaces.factoryAta</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IFactoryAta</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IFactoryAta/default</fqname>
     </hal>
     <hal format="hidl">
         <name>interfaces.factoryInterface</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IFactoryInterface</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IFactoryInterface/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.egistec.hardware.fingerprint</name>
         <transport>hwbinder</transport>
+        <version>4.0</version>
+        <interface>
+            <name>IBiometricsFingerprintRbs</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@4.0::IBiometricsFingerprintRbs/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.camera.advcam</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IAdvCamControl</name>
+            <instance>internal/0</instance>
+        </interface>
         <fqname>@1.0::IAdvCamControl/internal/0</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.camera.callbackclient</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IMtkBufferCallback</name>
+            <instance>internal/0</instance>
+        </interface>
+        <interface>
+            <name>IMtkCallbackClient</name>
+            <instance>internal/0</instance>
+        </interface>
         <fqname>@1.0::IMtkBufferCallback/internal/0</fqname>
         <fqname>@1.0::IMtkCallbackClient/internal/0</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.camera.ccap</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ICCAPControl</name>
+            <instance>internal/0</instance>
+        </interface>
         <fqname>@1.0::ICCAPControl/internal/0</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.camera.lomoeffect</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ILomoEffect</name>
+            <instance>internal/0</instance>
+        </interface>
         <fqname>@1.0::ILomoEffect/internal/0</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.dfps</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IFpsPolicyService</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IFpsPolicyService/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.gnss</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IMtkGnss</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.1::IMtkGnss/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.imsa</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IImsa</name>
+            <instance>imsa</instance>
+        </interface>
         <fqname>@1.0::IImsa/imsa</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.keyinstall</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IKeyinstall</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IKeyinstall/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.keymaster_attestation</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IKeymasterDevice</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.1::IKeymasterDevice/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.lbs</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ILbs</name>
+            <instance>AgpsDebugInterface</instance>
+            <instance>AgpsInterface</instance>
+            <instance>default</instance>
+            <instance>mtk_agps2framework</instance>
+            <instance>mtk_debugService2mnld</instance>
+            <instance>mtk_framework2agps</instance>
+            <instance>mtk_lbs_channel1</instance>
+            <instance>mtk_lbs_channel2</instance>
+            <instance>mtk_lbs_channel3</instance>
+            <instance>mtk_lbs_channel4</instance>
+            <instance>mtk_lbs_channel5</instance>
+            <instance>mtk_lbs_channel6</instance>
+            <instance>mtk_lbs_channel7</instance>
+            <instance>mtk_lbs_channel8</instance>
+            <instance>mtk_lbs_channel9</instance>
+            <instance>mtk_lppe_socket_agps</instance>
+            <instance>mtk_lppe_socket_bt</instance>
+            <instance>mtk_lppe_socket_ipaddr</instance>
+            <instance>mtk_lppe_socket_lbs</instance>
+            <instance>mtk_lppe_socket_network</instance>
+            <instance>mtk_lppe_socket_sensor</instance>
+            <instance>mtk_lppe_socket_wlan</instance>
+            <instance>mtk_meta2mnld</instance>
+            <instance>mtk_mnld2atfactory</instance>
+            <instance>mtk_mnld2attool</instance>
+            <instance>mtk_mnld2debugService</instance>
+            <instance>mtk_mnld2logger</instance>
+            <instance>mtk_mnld2nlputils</instance>
+            <instance>mtk_mnld2ygps</instance>
+            <instance>mtk_ygps2mnld</instance>
+        </interface>
         <fqname>@1.0::ILbs/AgpsDebugInterface</fqname>
         <fqname>@1.0::ILbs/AgpsInterface</fqname>
         <fqname>@1.0::ILbs/default</fqname>
@@ -277,46 +519,99 @@
     <hal format="hidl">
         <name>vendor.mediatek.hardware.mms</name>
         <transport>hwbinder</transport>
+        <version>1.5</version>
+        <interface>
+            <name>IMms</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.5::IMms/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.mtkcodecservice</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IMtkCodecService</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.1::IMtkCodecService/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.mwis</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IMwis</name>
+            <instance>hidl-mwis</instance>
+        </interface>
         <fqname>@1.0::IMwis/hidl-mwis</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.netdagent</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>INetdagent</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::INetdagent/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.nvram</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>INvram</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::INvram/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.power</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IPower</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.1::IPower/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.pq</name>
         <transport>hwbinder</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IPictureQuality</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@2.0::IPictureQuality/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.presence</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IPresence</name>
+            <instance>presence_hal_service</instance>
+        </interface>
         <fqname>@1.0::IPresence/presence_hal_service</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.radio</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IRadio</name>
+            <instance>imsrild1</instance>
+            <instance>imsrild2</instance>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
+        <interface>
+            <name>ISap</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
         <fqname>@1.1::IRadio/imsrild1</fqname>
         <fqname>@1.1::IRadio/imsrild2</fqname>
         <fqname>@1.1::IRadio/slot1</fqname>
@@ -327,12 +622,26 @@
     <hal format="hidl">
         <name>vendor.mediatek.hardware.radio.deprecated</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IOemHook</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
         <fqname>@1.1::IOemHook/slot1</fqname>
         <fqname>@1.1::IOemHook/slot2</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.radio_op</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IRadioOp</name>
+            <instance>OpImsRILd1</instance>
+            <instance>OpImsRILd2</instance>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
         <fqname>@1.1::IRadioOp/OpImsRILd1</fqname>
         <fqname>@1.1::IRadioOp/OpImsRILd2</fqname>
         <fqname>@1.1::IRadioOp/slot1</fqname>
@@ -341,6 +650,19 @@
     <hal format="hidl">
         <name>vendor.mediatek.hardware.radio_tc1</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IRadio</name>
+            <instance>imsrild1</instance>
+            <instance>imsrild2</instance>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
+        <interface>
+            <name>ISap</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
         <fqname>@1.1::IRadio/imsrild1</fqname>
         <fqname>@1.1::IRadio/imsrild2</fqname>
         <fqname>@1.1::IRadio/slot1</fqname>
@@ -351,70 +673,105 @@
     <hal format="hidl">
         <name>vendor.mediatek.hardware.radio_tc1.deprecated</name>
         <transport>hwbinder</transport>
+        <version>1.1</version>
+        <interface>
+            <name>IOemHook</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+        </interface>
         <fqname>@1.1::IOemHook/slot1</fqname>
         <fqname>@1.1::IOemHook/slot2</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.rcs</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IRcs</name>
+            <instance>rcs_hal_service</instance>
+        </interface>
         <fqname>@1.0::IRcs/rcs_hal_service</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.videotelephony</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IVideoTelephony</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IVideoTelephony/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.wfo</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IWifiOffload</name>
+            <instance>wfo_hidl_service</instance>
+        </interface>
         <fqname>@1.0::IWifiOffload/wfo_hidl_service</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.wifi.hostapd</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IHostapd</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IHostapd/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.oppo.hardware.biometrics.face</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IBiometricsFace</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IBiometricsFace/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>android.hardware.biometrics.fingerprint</name>
-        <transport>hwbinder</transport>
-        <fqname>@2.1::IBiometricsFingerprint/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.oppo.hardware.biometrics.fingerprintpay</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IFingerprintPay</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::IFingerprintPay/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.oppo.hardware.cryptoeng</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ICryptoeng</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::ICryptoeng/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.qti.hardware.soter</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ISoter</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::ISoter/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.silead.hardware.fingerprintext</name>
         <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>ISileadFingerprint</name>
+            <instance>default</instance>
+        </interface>
         <fqname>@1.0::ISileadFingerprint/default</fqname>
     </hal>
-    <hal format="hidl">
-        <name>android.hardware.health</name>
-        <transport>hwbinder</transport>
-        <fqname>@2.0::IHealth/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>android.hardware.usb</name>
-        <transport>hwbinder</transport>
-        <fqname>@1.0::IUsb/default</fqname>
-    </hal>
-
     <sepolicy>
         <version>27.0</version>
     </sepolicy>
