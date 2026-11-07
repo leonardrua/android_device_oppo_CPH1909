@@ -232,9 +232,11 @@ framework validates the vendor HALs against the frozen O-MR1 compatibility
 matrix. `assemble_vintf` would infer level 2 from
 `PRODUCT_SHIPPING_API_LEVEL=27` even without the attribute, but only after
 printing a warning. All ten HALs that FCM 2 marks as required are present in
-this manifest. The stock 8.1 `compatibility_matrix.xml` (the vendor's device
-matrix) is **not** shipped: it describes the 8.1 framework and would reject
-Android 10.
+this manifest. The stock 8.1 vendor device matrix is replaced by
+`compatibility_matrix.xml` in this tree (`DEVICE_MATRIX_FILE`), which keeps the
+framework requirements the 8.1 vendor blobs expect
+(`android.frameworks.{schedulerservice,sensorservice}`, `android.hidl.*`,
+`android.system.wifi.keystore`) in Android 10 VINTF format.
 
 `android.hardware.cas` and `android.hardware.drm@1.2` (clearkey) are *not*
 listed in the static manifest: `base_vendor.mk` always builds

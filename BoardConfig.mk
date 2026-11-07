@@ -161,6 +161,7 @@ TARGET_SCREEN_DENSITY := 320
 # matrix) is deliberately not shipped: it was written for the 8.1 framework and
 # would reject Android 10. Only the device manifest is supplied.
 DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
+DEVICE_MATRIX_FILE := $(DEVICE_PATH)/compatibility_matrix.xml
 
 # VNDK
 #
