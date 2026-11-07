@@ -137,6 +137,42 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/configs/media/media_profiles_V1_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_V1_0.xml
 
+# xHE-AAC decoder
+#
+# Instagram and Facebook serve audio as xHE-AAC (mp4a.40.42). Neither the C2
+# AAC software decoder nor the stock 8.1 SoftAAC2 OMX decoder can decode it, so
+# build AOSP's libxaac-backed OMX decoder (SoftXAAC plus external/libxaac) and
+# the platform soft-OMX plugin that hosts it.
+#
+# The 8.1 vendor OMX service is 32-bit and resolves these libraries from
+# /system/lib through the VNDK-lite vendor namespace: that namespace has no
+# separate sphal section, so android_load_sphal_library() falls back to the
+# process' default namespace, which includes /system/lib. The soft codec
+# inherits compile_multilib: "32" from libstagefright_softomx-defaults, and
+# libxaacdec is linked statically into libstagefright_soft_xaacdec.
+PRODUCT_PACKAGES += \
+    libstagefright_softomx \
+    libstagefright_softomx_plugin \
+    libstagefright_soft_xaacdec
+
+# AOSP's SoftOMXPlugin.cpp registers both OMX.google.aac.decoder
+# (libstagefright_soft_aacdec) and OMX.google.xaac.decoder
+# (libstagefright_soft_xaacdec) for the audio_decoder.aac role and leaves the
+# choice to the vendor media_codecs_google_audio.xml. The device copy in
+# configs/media/ names only the xaac node, which then serves the entire
+# audio/mp4a-latm type, including the plain-AAC slot.
+#
+# media_codecs_google_video_le.xml is replaced with an empty <Included>: the
+# platform plugin registers Google's software video component names too, but
+# none of their libraries are built, and MediaTek's hardware OMX video codecs
+# cover every format the stock file lists.
+#
+# PRODUCT_COPY_FILES keeps the first entry for a destination, so these copies
+# must stay before the CPH1909-vendor.mk inherit at the bottom of this file.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/configs/media/media_codecs_google_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_google_audio.xml \
+    $(DEVICE_PATH)/configs/media/media_codecs_google_video_le.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_google_video_le.xml
+
 # Default properties
 #
 # ro.mtkrc.path is read while parsing /vendor/etc/init/hw/init.mt6765.rc to

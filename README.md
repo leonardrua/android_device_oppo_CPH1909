@@ -358,6 +358,56 @@ stock file is copied unchanged to `configs/media/media_profiles_V1_0.xml` and
 installed as `/vendor/etc/media_profiles_V1_0.xml`, keeping the device's own
 1080p/720p camcorder profiles and encoder capabilities.
 
+### xHE-AAC decoder
+
+Instagram and Facebook serve some audio tracks as xHE-AAC (`mp4a.40.42`).
+Neither Android 10's C2 AAC decoder nor AOSP's SoftAAC2 OMX decoder can decode
+that profile, and Meta's HeroPlayer picks a decoder by MIME without falling
+back. The build therefore compiles AOSP's libxaac-backed OMX decoder from
+source and makes it the image's AAC decoder:
+
+```make
+PRODUCT_PACKAGES += \
+    libstagefright_softomx \
+    libstagefright_softomx_plugin \
+    libstagefright_soft_xaacdec
+```
+
+`libstagefright_soft_xaacdec` is `SoftXAAC` from
+`frameworks/av/media/libstagefright/codecs/xaacdec`, with `external/libxaac`
+linked in statically. It inherits `compile_multilib: "32"` from
+`libstagefright_softomx-defaults`, matching the 32-bit 8.1 vendor OMX service.
+The platform plugin is loaded by `OMXMaster::addPlatformPlugin()` through
+`android_load_sphal_library()`. On this VNDK-lite build the vendor linker
+configuration defines no `sphal` namespace, so the call falls back to the
+process' default namespace, which searches `/system/lib`; the plugin and the
+codec are installed there.
+
+AOSP's `SoftOMXPlugin.cpp` registers two components for the `audio_decoder.aac`
+role and leaves the selection to the vendor `media_codecs_google_audio.xml`:
+
+* `OMX.google.aac.decoder` → `libstagefright_soft_aacdec` (SoftAAC2, stops at
+  HE-AAC)
+* `OMX.google.xaac.decoder` → `libstagefright_soft_xaacdec` (libxaac, supports
+  AAC-LC, HE-AAC, HE-AACv2 and xHE-AAC)
+
+The device copy in `configs/media/media_codecs_google_audio.xml` advertises
+only the xaac component, for the whole `audio/mp4a-latm` type. It therefore
+also serves the plain-AAC slot that Facebook Lite selects by MIME, which is the
+behaviour the GSI v7.1 release note describes. Software OMX audio codecs rank
+ahead of C2 software codecs, so the xaac node is chosen for AAC playback.
+
+`configs/media/media_codecs_google_video_le.xml` replaces the stock Google
+software video list with an empty `<Included>`. Installing the platform plugin
+registers Google's software video component names, but their libraries are not
+built in this image and MediaTek's hardware OMX video codecs cover every format
+the stock file listed; the entries would otherwise advertise codecs that fail
+when instantiated.
+
+Both overrides are listed in `device.mk` before the vendor makefile is
+inherited, because `PRODUCT_COPY_FILES` keeps the first source for a
+destination.
+
 ### Properties
 
 * `system.prop` holds the framework-side values from the stock system build
