@@ -101,6 +101,7 @@ jobs:
           exec "$PYTHONHOME/bin/python" "$@"
           EOF
           chmod +x "$RUNNER_TEMP/python2-shim/python"
+          sudo ln -sf "$RUNNER_TEMP/python2-shim/python" /usr/bin/python
           echo "$RUNNER_TEMP/python2-shim" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/python2-shim/python" -c 'import sys; print(sys.version)'
 
@@ -235,6 +236,16 @@ jobs:
             "https://x-access-token:${TOKEN}@github.com/leonardrua/A5S-8.1-kernel-source.git" "kernel/oppo/${DEVICE}"
           rm -rf "kernel/oppo/${DEVICE}/.git"
           ls "kernel/oppo/${DEVICE}" | head
+
+      - name: Add AArch64 GCC toolchain
+        working-directory: ${{ github.workspace }}/lineage
+        run: |
+          TOOLCHAIN_DIR=prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05
+          git clone --depth=1 --branch Linaro_6.3.1 \
+            https://github.com/Nickdv9/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu.git "$TOOLCHAIN_DIR"
+          test -x "$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-gcc"
+          "$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-gcc" --version | head -1
+          rm -rf "$TOOLCHAIN_DIR/.git"
 
       # ------------------------------------------------------------- build --
       - name: Build

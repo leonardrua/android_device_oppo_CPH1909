@@ -57,6 +57,7 @@ BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
 TARGET_KERNEL_CLANG_COMPILE := false
+TARGET_KERNEL_CROSS_COMPILE_PREFIX := $(ANDROID_BUILD_TOP)/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05/bin/aarch64-linux-gnu-
 
 # Values decoded from the stock legacy boot image (header v0).
 BOARD_KERNEL_BASE := 0x40078000
