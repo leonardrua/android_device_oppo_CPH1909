@@ -584,7 +584,11 @@ that audit:
 
 * **Audio**: the Dirac suite (`persist.dirac.*`),
   `ro.mtk_audio_tuning_tool_ver=V2.2` and `ro.audio.usb.period_us=16000`
-  (stock values).
+  (stock values). The Aurisys tuning set (`vendor/etc/aurisys_config.xml` and
+  `vendor/etc/aurisys_param/*`, extracted through `proprietary-files.txt`) is
+  loaded by the MTK audio HAL from that fixed path, so — as on the stock image,
+  and in rosemary / mt6768 trees — no `vendor.audiohal.aurisys.*` property is
+  needed to point at it.
 * **Camera**: `ro.mtk_camera_app_version=3`, `ro.mtk_fd_support=1`,
   `camera.disable_zsl_mode=1` and the MDP capture flags
   `camera.mdp.cz.enable=1` / `camera.mdp.dre.enable=0` — all stock values;
