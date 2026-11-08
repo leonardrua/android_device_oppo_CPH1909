@@ -39,6 +39,9 @@ ro.camera.sound.forced=0
 # Audio
 ro.audio.silent=0
 
+# Dalvik
+ro.config.low_ram=false
+
 # Media
 ro.mtk_omacp_support=1
 
