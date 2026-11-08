@@ -366,7 +366,11 @@ jobs:
               if [ -f "$f" ]; then cp -v "$f" "$RESULT/"; fi
             done
           fi
-          cp -v "${OUT_BASE}/error.log" "$RESULT/" 2>/dev/null || true
+          # Keep error.log only when it exists and is non-empty; zero-byte files
+          # are rejected by GitHub as release assets.
+          if [ -s "${OUT_BASE}/error.log" ]; then
+            cp -v "${OUT_BASE}/error.log" "$RESULT/"
+          fi
           tail -n 3000 "${GITHUB_WORKSPACE}/build.log" > "$RESULT/build-tail.log" 2>/dev/null || true
           ls -lh "$RESULT"
 
