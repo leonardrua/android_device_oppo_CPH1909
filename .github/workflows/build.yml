@@ -298,8 +298,10 @@ jobs:
           # Add zram swap on memory-constrained runners. Metalava/hiddenapi-lists-docs
           # and other Java doc/stub steps can spike memory and get OOM-killed even
           # when ninja parallelism looks reasonable. Fall back to a swapfile when
-          # zram is unavailable.
+          # zram is unavailable. On containerized runners, swapon may be blocked;
+          # in that case we keep parallelism very low.
           if [ "${SWAP_MB:-0}" -lt 8192 ]; then
+            SWAP_ENABLED=false
             if sudo modprobe zram 2>/dev/null && [ -e /sys/block/zram0 ]; then
               sudo swapoff /dev/zram0 2>/dev/null || true
               echo 1 | sudo tee /sys/block/zram0/reset >/dev/null 2>&1 || true
@@ -311,8 +313,12 @@ jobs:
               fi
               echo 12G | sudo tee /sys/block/zram0/disksize >/dev/null
               sudo mkswap /dev/zram0 >/dev/null
-              sudo swapon -p 100 /dev/zram0
-              echo "Enabled 12G zram swap on /dev/zram0"
+              if sudo swapon -p 100 /dev/zram0 2>/dev/null; then
+                echo "Enabled 12G zram swap on /dev/zram0"
+                SWAP_ENABLED=true
+              else
+                echo "zram configured but swapon failed (likely blocked by runner)"
+              fi
             else
               echo "zram unavailable; falling back to swapfile"
               SWAP_FILE="${SWAP_FILE:-/cache/swapfile}"
@@ -323,21 +329,37 @@ jobs:
               if [ ! -f "$SWAP_FILE" ] && sudo fallocate -l 12G "$SWAP_FILE" 2>/dev/null; then
                 sudo chmod 600 "$SWAP_FILE"
                 sudo mkswap "$SWAP_FILE" >/dev/null
-                sudo swapon "$SWAP_FILE"
-                echo "Enabled 12G swapfile at $SWAP_FILE"
+                if sudo swapon "$SWAP_FILE" 2>/dev/null; then
+                  echo "Enabled 12G swapfile at $SWAP_FILE"
+                  SWAP_ENABLED=true
+                else
+                  echo "swapfile created at $SWAP_FILE but swapon failed (likely blocked by runner); removing file"
+                  sudo rm -f "$SWAP_FILE" || true
+                fi
               elif [ -f "$SWAP_FILE" ]; then
                 sudo chmod 600 "$SWAP_FILE" 2>/dev/null || true
-                sudo swapon "$SWAP_FILE" 2>/dev/null || true
-                echo "Reused swapfile at $SWAP_FILE"
+                if sudo swapon "$SWAP_FILE" 2>/dev/null; then
+                  echo "Reused swapfile at $SWAP_FILE"
+                  SWAP_ENABLED=true
+                else
+                  echo "Existing swapfile at $SWAP_FILE could not be activated"
+                fi
               else
                 echo "Could not create swapfile at $SWAP_FILE; continuing without extra swap"
               fi
             fi
             SWAP_MB=$(free -m | awk '/Swap:/{print $2}')
+            if [ "$SWAP_ENABLED" != "true" ] && [ "${SWAP_MB:-0}" -lt 1024 ]; then
+              echo "No swap could be activated; build will use reduced parallelism"
+            fi
           fi
 
           # Leave headroom for large single-process Java/Metalava steps.
+          # Container/Namespace runners often block swapon; with no swap, keep
+          # parallelism very low to avoid kernel OOM kills.
           if [ "${MEM_GB:-0}" -le 8 ]; then
+            JOBS=2
+          elif [ "${SWAP_MB:-0}" -lt 1024 ]; then
             JOBS=2
           elif [ "${SWAP_MB:-0}" -lt 4096 ]; then
             JOBS=$(( MEM_GB / 4 ))
