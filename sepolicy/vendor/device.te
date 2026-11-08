@@ -92,6 +92,12 @@ type mtk_volte, domain;
 type mtk_volte_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_volte)
 
+# vtservice_hidl (vendor/bin/hw/vtservice_hidl, init.vtservice.rc): MTK's
+# VoLTE video-telephony service, class hal.
+type mtk_vtservice, domain;
+type mtk_vtservice_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_vtservice)
+
 type mtk_ttyc_device, dev_type;
 type mtk_ccci_device, dev_type;
 
@@ -161,6 +167,34 @@ init_daemon_domain(mtk_netdagent)
 
 type mtk_stpwmt_device, dev_type;
 type mtk_wmtWifi_device, dev_type;
+
+# AEE (AAED): MediaTek's exception/dump daemon pair started at on post-fs by
+# init.aee.rc. One type covers both the 32- and 64-bit binaries.
+type mtk_aee, domain;
+type mtk_aee_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_aee)
+
+# stp_dump3: STP coredump dumper for the WCN core (init_connectivity.rc),
+# started when persist.mtk.wcn.coredump.mode is 1 or 2.
+type mtk_stp_dump, domain;
+type mtk_stp_dump_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_stp_dump)
+
+# connsyslogger: connectivity logging daemon, class main (consyslogger.rc).
+type mtk_connsyslogger, domain;
+type mtk_connsyslogger_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_connsyslogger)
+
+# wfca: MTK Wi-Fi call forward agent, class core (init.wfca.rc).
+# bip: MTK BIP/SAT-transport daemon, started on mtk.md1.status=ready
+# (init.bip.rc).
+type mtk_wfca, domain;
+type mtk_wfca_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_wfca)
+
+type mtk_bip, domain;
+type mtk_bip_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_bip)
 
 ###
 ### Thermal / power
@@ -268,6 +302,12 @@ permissive mtk_ipsec_mon;
 permissive mtk_netdagent;
 permissive mtk_thermal;
 permissive mtk_fuelgauged;
+permissive mtk_vtservice;
+permissive mtk_aee;
+permissive mtk_stp_dump;
+permissive mtk_connsyslogger;
+permissive mtk_wfca;
+permissive mtk_bip;
 
 ###
 ### OPPO / Silead biometrics and factory services
@@ -280,6 +320,21 @@ permissive mtk_fuelgauged;
 # The face and fingerprint services keep using hal_face_default_exec /
 # hal_fingerprint_default_exec from AOSP (they implement those standard
 # interfaces), so no new type is declared for them here.
+
+# oppoalgo_daemon: OPPO's camera-algo helper (init.mt6765.rc, started on
+# sys.boot_completed=1).
+#
+# NOTE on the oae service in the same rc file: init.mt6765.rc defines
+#     service oae /system/bin/oae_server -s
+#     seclabel u:r:oae_server:s0
+# but oae_server is a ColorOS-only system binary that this vendor image does not
+# ship (it is absent from both the stock dump and proprietary-files.txt), and it
+# sits inside a #ifdef COLOROS_EDIT block. No oae_server domain is declared on
+# purpose: the service cannot exec a binary that does not exist, so declaring the
+# seclabel domain would just hide one failure behind another.
+type oppoalgo_daemon, domain;
+type oppoalgo_daemon_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(oppoalgo_daemon)
 type silead_fpd_device, dev_type;
 type egis_fp_device, dev_type;
 
@@ -294,6 +349,10 @@ type mtk_hal_cryptoeng, domain;
 type mtk_hal_cryptoeng_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_cryptoeng)
 permissive mtk_hal_cryptoeng;
+
+# oppoalgo_daemon is declared here rather than with the mtk_* domains above
+# because init.mt6765.rc starts it directly from an OPPO_EDIT block.
+permissive oppoalgo_daemon;
 
 # Factory / engineering-mode services.
 type mtk_hal_factory, domain;

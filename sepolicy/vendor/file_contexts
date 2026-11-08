@@ -15,29 +15,31 @@
 ### HAL services -- mapped to AOSP types
 ###
 # Only services AOSP's own system/sepolicy/vendor/file_contexts does NOT already
-# label are listed here. checkfc rejects a path regex that appears twice across
-# the m4'd inputs ("Multiple same specifications"), even when both entries give
-# the identical context, so eight upstream-identical lines were removed from this
-# section: drm@1.0-service, gatekeeper@1.0-service,
+# label are listed here. Upstream labels the standard HAL binaries with broader
+# regexes (e.g. android\.hardware\.cas@1\.[01]-service,
+# android\.hardware\.graphics\.composer@[0-9]\.[0-9]-service), so narrower copies
+# of those entries were removed: cas@1.0-service (not shipped here anyway),
+# configstore@1.0-service, graphics.composer@2.1-service, thermal@1.0-service,
+# broadcastradio@1.1-service, drm@1.0-service, gatekeeper@1.0-service,
 # graphics.allocator@2.0-service, keymaster@3.0-service, media.omx@1.0-service,
 # memtrack@1.0-service, vibrator@1.0-service and wifi@1.0-service. Their
 # labelling is unchanged -- it just comes from AOSP now.
 #
-# The -mediatek / -service.widevine suffixed paths below are distinct regexes
+# checkfc only rejects a repeated path regex when the two entries give DIFFERENT
+# contexts ("Multiple different specifications"); identical-context duplicates
+# are tolerated. The lines above were dropped because they were redundant, not
+# because they broke the build.
+#
+# The -mediatek / -service.widevine suffixed paths below are distinct paths
 # that upstream has no entry for, so they stay.
 /(vendor|system/vendor)/bin/hw/android\.hardware\.audio@2\.0-service-mediatek                 u:object_r:hal_audio_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.bluetooth@1\.0-service-mediatek             u:object_r:hal_bluetooth_default_exec:s0
-/(vendor|system/vendor)/bin/hw/android\.hardware\.cas@1\.0-service                            u:object_r:hal_cas_default_exec:s0
-/(vendor|system/vendor)/bin/hw/android\.hardware\.configstore@1\.0-service                    u:object_r:hal_configstore_default_exec:s0
 # Widevine gets hal_drm_default_exec, not a widevine-specific type: Android 10's
 # system/sepolicy/vendor/file_contexts labels both drm@1.0-service and
 # -service-lazy as hal_drm_default_exec and declares no hal_drm_widevine_exec.
 /(vendor|system/vendor)/bin/hw/android\.hardware\.drm@1\.0-service\.widevine                  u:object_r:hal_drm_default_exec:s0
-/(vendor|system/vendor)/bin/hw/android\.hardware\.graphics\.composer@2\.1-service              u:object_r:hal_graphics_composer_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.light@2\.0-service-mediatek                 u:object_r:hal_light_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.sensors@1\.0-service-mediatek               u:object_r:hal_sensors_default_exec:s0
-/(vendor|system/vendor)/bin/hw/android\.hardware\.thermal@1\.0-service                        u:object_r:hal_thermal_default_exec:s0
-/(vendor|system/vendor)/bin/hw/android\.hardware\.broadcastradio@1\.1-service                 u:object_r:hal_broadcastradio_default_exec:s0
 
 ###
 ### Camera
@@ -71,17 +73,29 @@
 # mtkfusionrild is MediaTek's rild. AOSP 10 has no hal_telephony_default_exec --
 # hal_telephony is only an attribute (public/hal_telephony.te); the concrete
 # exec type is rild_exec, which vendor/file_contexts uses for /vendor/bin/hw/rild.
-/(vendor|system/vendor)/bin/mtkfusionrild                                                     u:object_r:rild_exec:s0
+# The binary itself lives in /vendor/bin/hw/ (rild.rc:1, proprietary-files.txt)
+# and is started through ctl.start ril-daemon-mtk by the telephony stack.
+/(vendor|system/vendor)/bin/hw/mtkfusionrild                                                  u:object_r:rild_exec:s0
+# vtservice_hidl (init.vtservice.rc) is MTK's VoLTE video-telephony service;
+# class hal, so it starts on class_start hal.
+/(vendor|system/vendor)/bin/hw/vtservice_hidl                                                 u:object_r:mtk_vtservice_exec:s0
+# MediaTek AEE (AAED, the exception/dump daemon). init.aee.rc starts aee_aedv
+# and aee_aedv64 at on post-fs. Both share one type.
+/(vendor|system/vendor)/bin/aee_aedv                                                         u:object_r:mtk_aee_exec:s0
+/(vendor|system/vendor)/bin/aee_aedv64                                                       u:object_r:mtk_aee_exec:s0
 /(vendor|system/vendor)/bin/gsm0710muxd                                                       u:object_r:mtk_muxd_exec:s0
 /(vendor|system/vendor)/bin/muxreport                                                         u:object_r:mtk_muxreport_exec:s0
 /(vendor|system/vendor)/bin/ccci_mdinit                                                       u:object_r:mtk_ccci_exec:s0
 /(vendor|system/vendor)/bin/ccci_fsd                                                          u:object_r:mtk_ccci_exec:s0
 /(vendor|system/vendor)/bin/ccci_rpcd                                                         u:object_r:mtk_ccci_exec:s0
 /(vendor|system/vendor)/bin/md_ctrl                                                           u:object_r:mtk_md_ctrl_exec:s0
+# The MTK IMS/VoLTE service binaries, all started on mtk.md1.status=ready
+# (init.volte_imcb.rc / init.volte_imsm_93.rc / init.volte_stack.rc /
+# init.volte_ua.rc).
 /(vendor|system/vendor)/bin/volte_imcb                                                        u:object_r:mtk_volte_exec:s0
 /(vendor|system/vendor)/bin/volte_stack                                                       u:object_r:mtk_volte_exec:s0
 /(vendor|system/vendor)/bin/volte_ua                                                          u:object_r:mtk_volte_exec:s0
-/(vendor|system/vendor)/bin/imsm                                                              u:object_r:mtk_volte_exec:s0
+/(vendor|system/vendor)/bin/volte_imsm_93                                                     u:object_r:mtk_volte_exec:s0
 
 ###
 ### NVRAM / factory data
@@ -103,9 +117,22 @@
 ###
 /(vendor|system/vendor)/bin/wmt_loader                                                        u:object_r:mtk_wmt_loader_exec:s0
 /(vendor|system/vendor)/bin/wmt_launcher                                                      u:object_r:mtk_wmt_loader_exec:s0
-/(vendor|system/vendor)/bin/6620_launcher                                                     u:object_r:mtk_wmt_loader_exec:s0
 /(vendor|system/vendor)/bin/hostapd                                                           u:object_r:hal_wifi_hostapd_default_exec:s0
-/(vendor|system/vendor)/bin/wod                                                               u:object_r:mtk_wod_exec:s0
+# epdg_wod is MediaTek's ePDG/Wi-Fi-offload daemon (init.wod.rc), started on
+# mtk.md1.status=ready && persist.mtk_epdg_support=1 (which vendor.prop sets).
+# The stock property contexts name the ctl_*_prop after "wod", hence the type
+# name. 6620_launcher is not shipped by this vendor image and has no entry.
+/(vendor|system/vendor)/bin/epdg_wod                                                          u:object_r:mtk_wod_exec:s0
+# stp_dump3 is the STP/WCN coredump dumper (init_connectivity.rc), started when
+# persist.mtk.wcn.coredump.mode is 1 or 2 (vendor.prop sets 2).
+/(vendor|system/vendor)/bin/stp_dump3                                                         u:object_r:mtk_stp_dump_exec:s0
+# connsyslogger (consyslogger.rc) is class main, so it starts on boot.
+/(vendor|system/vendor)/bin/connsyslogger                                                     u:object_r:mtk_connsyslogger_exec:s0
+# wfca is MediaTek's Wi-Fi call forward agent (init.wfca.rc), class core.
+/(vendor|system/vendor)/bin/wfca                                                              u:object_r:mtk_wfca_exec:s0
+# bip is MTK's BIP/SAT-transport daemon (init.bip.rc), started on
+# mtk.md1.status=ready.
+/(vendor|system/vendor)/bin/bip                                                               u:object_r:mtk_bip_exec:s0
 /(vendor|system/vendor)/bin/ipsec_mon                                                         u:object_r:mtk_ipsec_mon_exec:s0
 /(vendor|system/vendor)/bin/netdagent                                                         u:object_r:mtk_netdagent_exec:s0
 
@@ -113,9 +140,11 @@
 ### Thermal / Power
 ###
 /(vendor|system/vendor)/bin/thermal                                                           u:object_r:mtk_thermal_exec:s0
-/(vendor|system/vendor)/bin/thermald                                                          u:object_r:mtk_thermal_exec:s0
 /(vendor|system/vendor)/bin/thermal_manager                                                   u:object_r:mtk_thermal_exec:s0
 /(vendor|system/vendor)/bin/thermalloadalgod                                                  u:object_r:mtk_thermal_exec:s0
+# oppoalgo_daemon (init.mt6765.rc) is OPPO's camera-algo helper, started on
+# sys.boot_completed=1.
+/(vendor|system/vendor)/bin/oppoalgo_daemon                                                   u:object_r:oppoalgo_daemon_exec:s0
 /(vendor|system/vendor)/bin/fuelgauged                                                        u:object_r:mtk_fuelgauged_exec:s0
 /(vendor|system/vendor)/bin/fuelgauged_nvram                                                  u:object_r:mtk_fuelgauged_exec:s0
 

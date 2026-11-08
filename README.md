@@ -311,6 +311,47 @@ not label. The stock 8.1 precompiled policy is excluded from
 `proprietary-files.txt`; loading an 8.1 policy on Android 10 is a hard boot
 failure, not a compatibility question.
 
+The file_contexts labelling was audited against the stock dump's `vendor/bin`
+and `vendor/etc/init/*.rc` (all 201 services in 94 rc files) and against
+`proprietary-files.txt`:
+
+* Every path regex was checked against the binary it points at. Three were
+  wrong and are fixed: `mtkfusionrild` (the real binary is
+  `/vendor/bin/hw/mtkfusionrild`, per `rild.rc`), `wod` (the real binary is
+  `epdg_wod`, per `init.wod.rc`) and `imsm` (the real binary is
+  `volte_imsm_93`, per `init.volte_imsm_93.rc`).
+* Entries for binaries this vendor image does not ship were dropped:
+  `cas@1.0-service`, `thermald` and `6620_launcher`.
+* Entries that merely re-label paths already covered by upstream
+  `system/sepolicy/vendor/file_contexts` (with broader regexes like
+  `cas@1\.[01]-service`) were dropped as redundant: `configstore@1.0`,
+  `graphics.composer@2.1`, `thermal@1.0` and `broadcastradio@1.1`, on top of
+  the AOSP-standard HAL services (`drm@1.0`, `gatekeeper@1.0`,
+  `graphics.allocator@2.0`, `keymaster@3.0`, `media.omx@1.0`, `memtrack@1.0`,
+  `vibrator@1.0`, `wifi@1.0`) that were already omitted. checkfc only rejects
+  a repeated path regex when the two entries give *different* contexts; the
+  identical-context copies were harmless dead weight, not build breakers.
+* Real services that ship and start but had no label were added: `aee_aedv`
+  and `aee_aedv64` (started at `on post-fs` by `init.aee.rc`), `connsyslogger`
+  (class main), `bip` and `volte_imsm_93` (both on `mtk.md1.status=ready`),
+  `epdg_wod` (on `persist.mtk_epdg_support=1`, which `vendor.prop` sets),
+  `stp_dump3` (on `persist.mtk.wcn.coredump.mode=2`, which `vendor.prop` sets),
+  `wfca` (class core), `oppoalgo_daemon` (on `sys.boot_completed=1`) and
+  `vtservice_hidl` (class hal). Each gets a new `mtk_*` domain in `device.te`,
+  permissive like the rest.
+
+Two notes on services deliberately *not* given a domain:
+
+* `init.mt6765.rc` starts `service oae /system/bin/oae_server -s` with
+  `seclabel u:r:oae_server:s0`, but `oae_server` is a ColorOS-only system
+  binary that neither the stock dump nor `proprietary-files.txt` ships (it
+  sits in a `#ifdef COLOROS_EDIT` block). No `oae_server` type is declared:
+  the exec would fail anyway, and a domain exists only to make a missing
+  binary appear started.
+* The KTV HAL (`vendor.oppo.hardware.ktv@1.0-service`) is in the stock
+  `vendor/etc/init/` but its binary and rc are not in
+  `proprietary-files.txt`, so it never starts and needs no label.
+
 Most vendor domains are `permissive` during bring-up, following the convention
 in the policy file. This includes the standard AOSP HAL domains that the MTK
 vendor blobs are assigned to (`hal_audio_default`, `hal_bluetooth_default`,
@@ -320,6 +361,12 @@ and lack rules for MTK-specific device nodes (`/dev/kd_camera_hw`,
 `/dev/mtk_sched`, `/dev/ccci*`, `/dev/mtk_disp_mgr`, etc.), so denials on
 those nodes crash the daemons immediately. Marking them permissive during
 bring-up logs the denials instead of blocking them.
+
+`device.te` also declares `gps_device` and `sw_sync_device` itself: both were
+dropped from Android 10's `system/sepolicy/public/device.te`, but the MT6765
+kernel still exposes `/dev/gps`, `/dev/stpgps` (opened directly by `mnld` /
+`mtk_agpsd`) and `/dev/sw_sync` (legacy sync fences used by the display
+driver), so the device-local types are required.
 
 Convert the denials they log into `allow` rules and remove the `permissive`
 lines before shipping.
