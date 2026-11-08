@@ -171,6 +171,14 @@ ro.mtk_trustonic_tee_support=1
 ro.mtk_tee_gp_support=1
 ro.hardware.kmsetkey=trustonic
 
+# Thermal
+ro.vendor.mtk_thermal_config=1
+
+# TEE (Trustonic Kinibi)
+ro.vendor.mtk_tee_support=1
+ro.vendor.mtk_trustonic_tee_support=1
+ro.vendor.mtk_sec_usb_check=0
+
 # Storage / init
 ro.frp.pst=/dev/block/platform/bootdevice/by-name/frp
 ro.mount.fs=EXT4
