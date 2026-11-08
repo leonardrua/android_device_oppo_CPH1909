@@ -96,13 +96,19 @@ jobs:
           set -e
           mkdir -p published
           cd published
-          ls -lh
-          echo "Contents:"
-          find . -maxdepth 1 -type f -printf '%f\n' | sort
-          echo "total_count=$(find . -maxdepth 1 -type f | wc -l)" >> "$GITHUB_OUTPUT"
-          mapfile -t FILES < <(find . -maxdepth 1 -type f -printf '%f\n' | sort)
+          echo "Raw contents (after download):"
+          find . -maxdepth 1 -mindepth 1 -printf '%f\n' | sort
+          mapfile -t FILES < <(find . -maxdepth 1 -type f -size +0 -printf '%f\n' | sort)
+          mapfile -t EMPTY_FILES < <(find . -maxdepth 1 -type f -size 0 -printf '%f\n' | sort)
+          if [ "${#EMPTY_FILES[@]}" -gt 0 ]; then
+            echo "Empty files found (skipping):"
+            printf '  - %s\n' "${EMPTY_FILES[@]}"
+            rm -f "${EMPTY_FILES[@]}"
+          fi
+          echo "Non-empty files to publish:"
+          ls -lh -- "${FILES[@]}"
           if [ "${#FILES[@]}" -eq 0 ]; then
-            echo "::error::Artifact '${{ steps.resolve.outputs.artifact_name }}' contains no files"
+            echo "::error::Artifact '${{ steps.resolve.outputs.artifact_name }}' contains no non-empty files"
             exit 1
           fi
           {
@@ -117,7 +123,6 @@ jobs:
           cd published
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
-          cp SHA256SUMS SHA256SUMS.txt
 
       - name: Resolve release inputs
         id: release
