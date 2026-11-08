@@ -98,19 +98,15 @@ jobs:
           cd published
           echo "Raw contents (after download):"
           find . -maxdepth 1 -mindepth 1 -printf '%f\n' | sort
-          mapfile -t FILES < <(find . -maxdepth 1 -type f -size +0 -printf '%f\n' | sort)
-          mapfile -t EMPTY_FILES < <(find . -maxdepth 1 -type f -size 0 -printf '%f\n' | sort)
-          if [ "${#EMPTY_FILES[@]}" -gt 0 ]; then
-            echo "Empty files found (skipping):"
-            printf '  - %s\n' "${EMPTY_FILES[@]}"
-            rm -f "${EMPTY_FILES[@]}"
+          echo "Removing zero-byte files (GitHub rejects empty release assets):"
+          find . -type f -size 0 -printf '  - %f\n' -delete
+          mapfile -t FILES < <(find . -type f -size +0 -printf '%f\n' | sort)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "::error::No non-empty files remain after cleanup"
+            exit 1
           fi
           echo "Non-empty files to publish:"
           ls -lh -- "${FILES[@]}"
-          if [ "${#FILES[@]}" -eq 0 ]; then
-            echo "::error::Artifact '${{ steps.resolve.outputs.artifact_name }}' contains no non-empty files"
-            exit 1
-          fi
           {
             echo "### Files to publish"
             for f in "${FILES[@]}"; do
@@ -139,8 +135,15 @@ jobs:
           fi
           echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          mapfile -t FILES < <(find published -type f -size +0 -printf 'published/%f\n' | sort)
+          {
+            echo "files<<EOF"
+            for f in "${FILES[@]}"; do echo "$f"; done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
           echo "Tag: $TAG"
           echo "Name: $NAME"
+          printf 'Files:\n'; printf '  - %s\n' "${FILES[@]}"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -148,8 +151,7 @@ jobs:
           token: ${{ github.token }}
           tag_name: ${{ steps.release.outputs.tag_name }}
           name: ${{ steps.release.outputs.name }}
-          files: |
-            published/*
+          files: ${{ steps.release.outputs.files }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
           generate_release_notes: false
