@@ -46,26 +46,26 @@ jobs:
           board = open("BoardConfig.mk").read()
           kconfig = re.search(r"^TARGET_KERNEL_CONFIG := (\S+)", board, re.M)
           ksource = re.search(r"^TARGET_KERNEL_SOURCE := (\S+)", board, re.M)
-          prebuilt_kernel = next((path for path in
-                                  ("prebuilt/Image.gz-dtb", "prebuilt/kernel")
-                                  if os.path.exists(path)), None)
-          if prebuilt_kernel:
-              ksize = os.path.getsize(prebuilt_kernel)
-              if ksize < 5000000:
-                  print(f"FAILED: {prebuilt_kernel} size too small ({ksize} bytes).")
-                  sys.exit(1)
-              print(f"SUCCESS: {prebuilt_kernel} present ({ksize} bytes).")
-          else:
-              print("FAILED: No prebuilt kernel image found.")
+          karch = re.search(r"^TARGET_KERNEL_ARCH := (\S+)", board, re.M)
+          kimage = re.search(r"^BOARD_KERNEL_IMAGE_NAME := (\S+)", board, re.M)
+          prebuilt_var = re.search(r"^TARGET_(FORCE_)?PREBUILT_KERNEL\s*:=", board, re.M)
+          if prebuilt_var:
+              print("FAILED: TARGET_PREBUILT_KERNEL is set -- this tree builds the kernel "
+                    "from TARGET_KERNEL_SOURCE and carries no prebuilt image.")
               sys.exit(1)
-          if kconfig and ksource:
-              print(f"SUCCESS: Kernel source tree configured ({kconfig.group(1)} in {ksource.group(1)}), "
-                    "required for LineageOS generated_kernel_includes even with a prebuilt kernel image.")
-          else:
-              print("FAILED: TARGET_KERNEL_CONFIG/SOURCE must stay set so the kernel source tree "
-                    "(kernel/oppo/CPH1909, synced separately in the build workflow) is present "
-                    "for generated_kernel_includes.")
+          leftover = [p for p in ("prebuilt/Image.gz-dtb", "prebuilt/Image", "prebuilt/kernel")
+                      if os.path.exists(p)]
+          if leftover:
+              print(f"FAILED: prebuilt kernel image still present: {leftover}. "
+                    "Remove it; the kernel is built from source.")
               sys.exit(1)
+          if not (kconfig and ksource and karch and kimage):
+              print("FAILED: TARGET_KERNEL_SOURCE, TARGET_KERNEL_CONFIG, TARGET_KERNEL_ARCH and "
+                    "BOARD_KERNEL_IMAGE_NAME must all be set so the kernel is built from the "
+                    "checked-out source tree.")
+              sys.exit(1)
+          print(f"SUCCESS: kernel built from source: {ksource.group(1)} "
+                f"({kconfig.group(1)}, {karch.group(1)}, {kimage.group(1)}).")
 
           print("\n=== Step 3: Checking fstab configuration ===")
           fstab_paths = ["rootdir/etc/fstab.mt6765", "recovery/root/etc/twrp.fstab"]

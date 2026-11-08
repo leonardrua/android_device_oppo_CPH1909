@@ -40,42 +40,28 @@ Automated CI builds are covered under
 
 ### Kernel
 
-This tree uses a **prebuilt kernel** (`TARGET_PREBUILT_KERNEL :=
-$(DEVICE_PATH)/prebuilt/Image.gz-dtb`) extracted from the stock CPH1909
-`boot.img` (`Image.gz-dtb`: gzip-compressed ARM64 Image with the appended DTB,
-as unpacked by `magiskboot`). Using the stock prebuilt avoids rebuilding the
-4.9 MediaTek/OPPO `VENDOR_EDIT` kernel (`oppo6765_18511_defconfig`,
-`CONFIG_OPPO_KTV_DEV=y`, etc.) and preserves stock kernel behavior.
+This tree **builds the kernel from source** — there is no prebuilt kernel image
+in the repository. `TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909` and
+`TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig` (plus
+`TARGET_KERNEL_ARCH := arm64` and `BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb`),
+so the build compiles the 4.9 MediaTek/OPPO `VENDOR_EDIT` kernel
+(`oppo6765_18511_defconfig`, `CONFIG_OPPO_KTV_DEV=y`, etc.) and packs
+`Image.gz-dtb` itself.
 
-`TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909` (and matching
-`TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig`) are also set even though
-the kernel image is prebuilt: LineageOS's `generated_kernel_includes` Soong
-module runs `make -C $(TARGET_KERNEL_SOURCE) ... headers_install` for modules
-that depend on `generated_kernel_headers`. `TARGET_KERNEL_SOURCE` is
-automatically cleared when `TARGET_PREBUILT_KERNEL` is set, which would leave
-that `make -C` argument empty and fail the build — so a real kernel source tree
-must be checked out at `kernel/oppo/CPH1909`.
+`TARGET_PREBUILT_KERNEL` is deliberately never set: the tree carries no kernel
+image, and LineageOS clears `TARGET_KERNEL_SOURCE` when it is — which would
+also break the `generated_kernel_includes` Soong module, since that runs
+`make -C $(TARGET_KERNEL_SOURCE) ... headers_install` for modules that depend
+on `generated_kernel_headers`. Keeping a real kernel source tree at
+`kernel/oppo/CPH1909` is therefore required both for the image and for the
+headers.
 
-The CI build workflow currently clones `leonardrua/A5S-8.1-kernel-source`
-(branch `lineageos-no-bakasu-susfs`, GCC Linaro 6.3.1 + Python 2 toolchain,
-warning fixes included) into that path and **builds the kernel from source**
-rather than using the prebuilt `Image.gz-dtb`. The source tree is used for
-both the kernel image and `headers_install`; if you revert the CI to the
-prebuilt layout, keep a real kernel source tree at `kernel/oppo/CPH1909` so
-`generated_kernel_includes` still has something to run.
-
-The prebuilt is stored at `prebuilt/Image.gz-dtb`. To refresh it from a stock
-boot image:
-
-```sh
-magiskboot unpack /path/to/stock/boot.img
-# magiskboot extracts/decompresses components; the original boot kernel blob
-# is Image.gz-dtb (gzip Image + appended DTB, matching KERNEL_SZ).
-cp kernel_dtb /tmp/_kdtb  # only if rebuilding; simplest is to keep the
-# stock kernel payload as Image.gz-dtb:
-# e.g. copy the verified prebuilt extracted from stock boot.img to
-#   device/oppo/CPH1909/prebuilt/Image.gz-dtb
-```
+The CI build workflow clones `leonardrua/A5S-8.1-kernel-source` (branch
+`lineageos-no-bakasu-susfs`) into that path, with the GCC Linaro 6.3.1 +
+Python 2 toolchain and on-the-fly warning fixes (see
+[`## CI workflows`](#ci-workflows)). On a local build, check out the same
+tree at `kernel/oppo/CPH1909` relative to the LineageOS source root before
+lunching.
 
 ## Extracting the vendor blobs
 
@@ -118,9 +104,9 @@ intermediates. Its main characteristics:
   vendor trees and a source kernel tree
   (`leonardrua/A5S-8.1-kernel-source`, branch
   `lineageos-no-bakasu-susfs`) into
-  `kernel/oppo/CPH1909`. The kernel image itself is built from this source
-  tree rather than prebuilt (a newer approach than the
-  `prebuilt/Image.gz-dtb` layout described above); the tree is additionally
+  `kernel/oppo/CPH1909`. The kernel image is built from this source tree
+  (`TARGET_KERNEL_SOURCE`/`TARGET_KERNEL_CONFIG`, no prebuilt image in the
+  device tree); the tree is additionally
   patched on the fly to keep warnings non-fatal.
 * The AArch64 UAPI header guard step (`Guard AArch64 signal context header
   for ARM builds`) wraps `struct fpsimd_context` in

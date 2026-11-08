@@ -223,11 +223,11 @@ jobs:
             echo "::warning::lineage_${DEVICE}.mk not found in the device tree; lunch may fail"
           fi
 
-      # The kernel image itself is prebuilt, but the LineageOS Soong module
-      # generated_kernel_includes runs `make -C $(TARGET_KERNEL_SOURCE)
-      # headers_install` for modules that depend on generated_kernel_headers.
-      # TARGET_KERNEL_SOURCE (kernel/oppo/CPH1909) must therefore point at a
-      # real, synced kernel source tree, so clone it here.
+      # The kernel is built from the checked-out source tree
+      # (TARGET_KERNEL_SOURCE = kernel/oppo/CPH1909). The same tree is also used
+      # by LineageOS's generated_kernel_includes Soong module, which runs
+      # `make -C $(TARGET_KERNEL_SOURCE) headers_install` for modules that
+      # depend on generated_kernel_headers, so clone it here.
       - name: Add kernel source tree
         working-directory: ${{ github.workspace }}/lineage
         run: |

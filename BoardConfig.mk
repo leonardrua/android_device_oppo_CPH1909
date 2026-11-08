@@ -49,8 +49,11 @@ TARGET_NO_RADIOIMAGE := true
 #
 # The kernel is built from the checked-out source tree at kernel/oppo/CPH1909,
 # not from a stock prebuilt payload. Keep the source and config explicit so the
-# LineageOS generated_kernel_includes step can run `make -C $(TARGET_KERNEL_SOURCE)
-# headers_install` for generated_kernel_headers without relying on a bundled image.
+# build compiles the OPPO/MediaTek 4.9 tree and the
+# generated_kernel_includes step can run `make -C $(TARGET_KERNEL_SOURCE)
+# headers_install` for generated_kernel_headers.
+# TARGET_PREBUILT_KERNEL is deliberately never set here: the device tree carries
+# no kernel image, and LineageOS clears TARGET_KERNEL_SOURCE when it is.
 TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
 BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
