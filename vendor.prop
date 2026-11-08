@@ -9,6 +9,12 @@
 #
 
 # Audio
+persist.vendor.audiohal.aud_dump=0
+ro.vendor.audio.hfp.enable=true
+ro.vendor.audiohal.aurisys_config_file=/vendor/etc/aurisys_config.xml
+ro.vendor.mtk_audio_tuning_tool_ver=V2.2
+ro.vendor.mtk_bessurround_support=1
+vendor.audiohal.aurisys.support=yes
 ro.audio.usb.period_us=16000
 
 # Dirac audio enhancement (the stock vendor image ships the Dirac service,
@@ -21,11 +27,6 @@ ro.dirac.max_active.powersound=3
 persist.dirac.acs.controller=afm
 persist.dirac.afm.mode=global
 persist.dirac.acs.startAtBoot=3
-
-# Bluetooth
-persist.vendor.bluetooth.a2dp_offload.disabled=true
-ro.vendor.bt.stack=fluoride
-persist.vendor.bt.a2dp.source_codec=sbc
 
 # Camera
 ro.vendor.mtk_cam_ba_enable=0
@@ -42,6 +43,11 @@ persist.vendor.camera3.zsl.enable=1
 # ro.hardware.egl, then ro.board.platform, to "libEGL_"). The PowerVR blobs on
 # this device are the *_mtk set, so leaving this unset makes the loader fall
 # through to the non-existent libEGL_mt6765 and the UI never starts.
+ro.vendor.mtk_hwc_support=1
+ro.vendor.mtk_pq_support=2
+ro.vendor.gpu.type=PowerVR
+ro.surface_flinger.has_wide_color_display=false
+ro.surface_flinger.has_HDR_display=false
 ro.hardware.egl=mtk
 debug.sf.disable_backpressure=1
 debug.sf.latch_unsignaled=1
@@ -126,6 +132,9 @@ ro.mtk_dhcpv6c_wifi=1
 # Read by the MTK BT HAL/vendor lib and the AVRCP profile: keep AVRCP on a
 # single active player, matching the stock ROM.
 bt.profiles.avrcp.multiPlayer.enable=0
+persist.vendor.bluetooth.a2dp_offload.disabled=true
+ro.vendor.bt.stack=fluoride
+persist.vendor.bt.a2dp.source_codec=sbc
 
 # Platform identification
 #
