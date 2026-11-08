@@ -279,6 +279,29 @@ jobs:
           "$TOOLCHAIN_DIR/bin/aarch64-linux-gnu-gcc" --version | head -1
           rm -rf "$TOOLCHAIN_DIR/.git"
 
+      - name: Verify Git LFS artifacts
+        working-directory: ${{ github.workspace }}/lineage
+        run: |
+          set -e
+          APK_DIR="external/chromium-webview/prebuilt/arm64"
+          APK="$APK_DIR/webview.apk"
+          if [ ! -d "$APK_DIR/.git" ]; then
+            echo "::error::$APK_DIR is not checked out; external/chromium-webview prebuilt projects are in the pdk group and require repo sync to fetch them"
+            exit 1
+          fi
+          echo "webview.apk size before: $(stat -c '%s' "$APK") bytes"
+          if [ "$(head -c 2 "$APK")" != "PK" ]; then
+            echo "webview.apk does not look like a ZIP/APK (likely an LFS pointer); running git lfs pull"
+            git -C "$APK_DIR" lfs pull
+            echo "webview.apk size after: $(stat -c '%s' "$APK") bytes"
+          else
+            echo "webview.apk already present as a real APK"
+          fi
+          if [ "$(head -c 2 "$APK")" != "PK" ]; then
+            echo "::error::webview.apk is still not a ZIP/APK after git lfs pull"
+            exit 1
+          fi
+
       # ------------------------------------------------------------- build --
       - name: Build
         working-directory: ${{ github.workspace }}/lineage
