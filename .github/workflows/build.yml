@@ -111,6 +111,15 @@ jobs:
             sudo mkdir -p /cache/ccache /cache/out
             sudo chown -R "$(id -u):$(id -g)" /cache/ccache /cache/out
             if [ "$CLEAN_OUT" = "true" ]; then rm -rf /cache/out/*; fi
+            # build/make/core/Makefile recreates /system/vendor -> /vendor and
+            # /vendor/odm -> /odm with plain `ln -sf`. A symlink left on the
+            # persistent out/ by an earlier run gets dereferenced by `ln -sf`,
+            # so it tries to create /vendor/vendor (or /odm/odm) at the runner
+            # root and fails. Drop stale links so the rules create them fresh.
+            for stale in /cache/out/target/product/*/system/vendor \
+                         /cache/out/target/product/*/vendor/odm; do
+              if [ -L "$stale" ]; then rm -f "$stale"; fi
+            done
             echo "CCACHE_DIR=/cache/ccache" >> "$GITHUB_ENV"
             echo "OUT_BASE=/cache/out" >> "$GITHUB_ENV"
             echo "OUT_DIR=/cache/out" >> "$GITHUB_ENV"
