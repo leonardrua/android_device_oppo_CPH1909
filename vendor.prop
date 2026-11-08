@@ -79,6 +79,9 @@ ro.vendor.mtk_video_hevc_support=1
 # in the Platform section below.
 fmradio.driver.enable=1
 
+# GPS / GNSS
+persist.vendor.radio.gps.support=1
+
 # Radio / telephony (dual SIM, MTK IMS)
 persist.radio.default.sim=0
 persist.radio.fd.counter=150
@@ -185,6 +188,8 @@ ro.frp.pst=/dev/block/platform/bootdevice/by-name/frp
 ro.mount.fs=EXT4
 ro.sys.sdcardfs=1
 ro.oem_unlock_supported=1
+ro.vendor.mtk_shared_sdcard=1
+persist.vendor.sys.usb.config=mtp
 
 # Dalvik / ART
 #
@@ -206,3 +211,6 @@ persist.service.acm.enable=0
 # Power-off charging / boot
 sys.ipo.disable=1
 sys.ipo.pwrdncap=2
+
+# Misc
+ro.vendor.mtk_lcm_physical_rotation=0
