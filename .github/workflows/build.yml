@@ -294,16 +294,46 @@ jobs:
           CORES=$(nproc --all)
           MEM_GB=$(free -g | awk '/Mem:/{print $2}')
           SWAP_MB=$(free -m | awk '/Swap:/{print $2}')
-          if [ "${SWAP_MB:-0}" -lt 2000 ]; then
-            JOBS=$(( (MEM_GB - 3) / 2 ))
+
+          # Add zram swap on memory-constrained runners. Metalava/hiddenapi-lists-docs
+          # and other Java doc/stub steps can spike memory and get OOM-killed even
+          # when ninja parallelism looks reasonable.
+          if [ "${SWAP_MB:-0}" -lt 8192 ]; then
+            if sudo modprobe zram 2>/dev/null && [ -e /sys/block/zram0 ]; then
+              sudo swapoff /dev/zram0 2>/dev/null || true
+              echo 1 | sudo tee /sys/block/zram0/reset >/dev/null 2>&1 || true
+              # Prefer a fast compressor when available.
+              if [ -w /sys/block/zram0/comp_algorithm ] && grep -qw lz4 /sys/block/zram0/comp_algorithm 2>/dev/null; then
+                echo lz4 | sudo tee /sys/block/zram0/comp_algorithm >/dev/null || true
+              elif [ -w /sys/block/zram0/comp_algorithm ] && grep -qw zstd /sys/block/zram0/comp_algorithm 2>/dev/null; then
+                echo zstd | sudo tee /sys/block/zram0/comp_algorithm >/dev/null || true
+              fi
+              echo 12G | sudo tee /sys/block/zram0/disksize >/dev/null
+              sudo mkswap /dev/zram0 >/dev/null
+              sudo swapon -p 100 /dev/zram0
+              echo "Enabled 12G zram swap on /dev/zram0"
+            else
+              echo "zram unavailable; continuing without extra swap"
+            fi
+            SWAP_MB=$(free -m | awk '/Swap:/{print $2}')
+          fi
+
+          # Leave headroom for large single-process Java/Metalava steps.
+          if [ "${MEM_GB:-0}" -le 8 ]; then
+            JOBS=2
+          elif [ "${SWAP_MB:-0}" -lt 4096 ]; then
+            JOBS=$(( MEM_GB / 4 ))
           else
-            JOBS=$(( MEM_GB / 2 ))
+            JOBS=$(( MEM_GB / 3 ))
           fi
           [ "$JOBS" -gt "$CORES" ] && JOBS=$CORES
+          [ "$JOBS" -gt 6 ] && JOBS=6
           [ "$JOBS" -lt 2 ] && JOBS=2
           export JOBS
+
           echo "cores=$CORES mem=${MEM_GB}GB swap=${SWAP_MB}MB JOBS=$JOBS"
           echo "OUT_DIR=${OUT_DIR:-default}"
+          free -h
 
           cat > "${GITHUB_WORKSPACE}/do_build.sh" <<'EOS'
           set -o pipefail
@@ -313,8 +343,8 @@ jobs:
           EOS
 
           ( while true; do
-              echo "[monitor] $(date +%H:%M) disk: $(df -h . | tail -1 | awk '{print $4" free"}') | mem: $(free -m | awk '/Mem:/{print $3"MB used, "$7"MB avail"}')"
-              ps -eo pid,pcpu,pmem,comm --sort=-pmem | head -4
+              echo "[monitor] $(date +%H:%M) disk: $(df -h . | tail -1 | awk '{print $4" free"}') | mem: $(free -m | awk '/Mem:/{print $3"MB used, "$7"MB avail"}') | swap: $(free -m | awk '/Swap:/{print $3"MB used"}')"
+              ps -eo pid,pcpu,pmem,rss,comm --sort=-rss | head -5
               sleep 180
             done ) &
           MON=$!
@@ -324,7 +354,7 @@ jobs:
           RC=${PIPESTATUS[0]}
           kill $MON 2>/dev/null || true
           echo "BUILD_RC=$RC" >> "$GITHUB_ENV"
-          echo "Build finished with code: $RC (124 = timed out; re-run to resume from ccache)"
+          echo "Build finished with code: $RC (124 = timed out; 137/143 often indicate a killed process; re-run to resume from ccache)"
           ccache -s | head -15
           exit 0
 
@@ -334,7 +364,10 @@ jobs:
         run: |
           df -h || true
           free -h || true
-          sudo dmesg | tail -n 40 || true
+          echo "=== possible OOM kills ==="
+          sudo dmesg -T | grep -Ei 'killed process|out of memory|oom-kill|invoked oom-killer' | tail -n 40 || true
+          echo "=== recent kernel messages ==="
+          sudo dmesg -T | tail -n 40 || true
 
       - name: Collect output
         if: always()
