@@ -59,11 +59,18 @@ drm.service.enabled=true
 ro.mtk_widevine_drm_l3_support=1
 
 # Media
-media.settings.xml=/vendor/etc/media_profiles.xml
+media.settings.xml=/vendor/etc/media_profiles_V1_0.xml
 # MTK video decoder: hold playback until the first key frame arrives. The
 # stock vendor image set this for the MTK VDEC; the AOSP default streams the
 # first frames too early on this codec.
 mtk.vdec.waitkeyframeforplay=1
+ro.vendor.mtk_omx_core_log_enable=0
+ro.vendor.mtk_sec_video_path_support=1
+ro.vendor.mtk_wmv_playback_support=1
+ro.vendor.mtk_flv_playback_support=1
+ro.vendor.mtk_mp4_playback_support=1
+ro.vendor.mtk_avi_playback_support=1
+ro.vendor.mtk_video_hevc_support=1
 
 # FM radio
 # Enables the MTK FM driver/service; the platform sets ro.mtk_fm_50khz_support
