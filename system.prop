@@ -51,6 +51,9 @@ ro.zygote=zygote64_32
 # Keystore: stock TEE is keymaster 3.0, so no StrongBox / attestation ID
 ro.keystore.disable_strongbox=true
 
+# Charging
+ro.charge.animation.hz=15
+
 # MediaTek-specific framework bits
 ro.kernel.zio=38,108,105,16
 ro.zygote.preload.enable=0
