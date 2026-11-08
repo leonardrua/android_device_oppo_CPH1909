@@ -33,6 +33,11 @@ Lunch choices are declared through `COMMON_LUNCH_CHOICES` in
 `AndroidProducts.mk`; there is no `add_lunch_combo` any more (it is obsolete in
 Android 10 and only prints a warning).
 
+Automated CI builds are covered under
+[`## CI workflows`](#ci-workflows) below; the `build.yml` workflow also has a
+`target` dispatch input so `bootimage` / `vendorimage` / `productimage` /
+`systemimage` can be produced in place of `bacon`.
+
 ### Kernel
 
 This tree uses a **prebuilt kernel** (`TARGET_PREBUILT_KERNEL :=
@@ -49,10 +54,15 @@ module runs `make -C $(TARGET_KERNEL_SOURCE) ... headers_install` for modules
 that depend on `generated_kernel_headers`. `TARGET_KERNEL_SOURCE` is
 automatically cleared when `TARGET_PREBUILT_KERNEL` is set, which would leave
 that `make -C` argument empty and fail the build — so a real kernel source tree
-must be checked out at `kernel/oppo/CPH1909`. The CI build workflow clones
-`leonardrua/A5S-8.1-kernel-source` (branch `master`, containing
-`oppo6765_18511_defconfig`) into that path; the source tree is used **only**
-for header installation, not to build the kernel image itself.
+must be checked out at `kernel/oppo/CPH1909`.
+
+The CI build workflow currently clones `leonardrua/A5S-8.1-kernel-source`
+(branch `lineageos-no-bakasu-susfs`, GCC Linaro 6.3.1 + Python 2 toolchain,
+warning fixes included) into that path and **builds the kernel from source**
+rather than using the prebuilt `Image.gz-dtb`. The source tree is used for
+both the kernel image and `headers_install`; if you revert the CI to the
+prebuilt layout, keep a real kernel source tree at `kernel/oppo/CPH1909` so
+`generated_kernel_includes` still has something to run.
 
 The prebuilt is stored at `prebuilt/Image.gz-dtb`. To refresh it from a stock
 boot image:
@@ -599,51 +609,6 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
   reboots into recovery instead of hanging at the boot logo.
 * `BUILD_BROKEN_DUP_RULES` and the duplicate-path decision are described in
   `BoardConfig.mk` next to the assignment.
-
-## Recent CI work
-
-The GitHub Actions build and publishing workflows for this device are:
-
-* `.github/workflows/build.yml` — `Build LineageOS 17.1 (Oppo A5s CPH1909)
-  - Namespace`: a `workflow_dispatch`-driven build for the `leonardrua`
-  Namespace runner. Key properties:
-  - syncs the LineageOS 17.1 manifest, clones the device/vendor trees and
-    the `leonardrua/A5S-8.1-kernel-source` (`lineageos-no-bakasu-susfs`
-    branch) into `kernel/oppo/CPH1909`, and builds the **source** kernel
-    rather than a prebuilt one (newer than the `prebuilt/Image.gz-dtb`
-    layout described above);
-  - applies the `ac03987` kernel fixes: AArch64 `sigcontext.h`
-    `#ifdef __aarch64__` guard plus `-Wno-error` in
-    `scripts/Makefile.lib` to keep kernel warnings non-fatal;
-  - verifies `external/chromium-webview/prebuilt/arm64/webview.apk` is a
-    real ZIP (not an LFS pointer, ~134 bytes) and runs `git lfs pull` on
-    the prebuilt directory when it isn't, so the build no longer dies at
-    ~99 % with `veridex ... Expected valid zip or dex file` from
-    `//external/chromium-webview:webview`;
-  - drops all in-job swap / OOM / `-j1`-retry workarounds that were added
-    and then removed as the runner gained swap support — the workflow now
-    just prints `free -h` and `nproc --all` and uses `JOBS=$(nproc --all)`;
-  - `Collect output` copies the OTA zip, images, `build-tail.log`, and
-    only non-empty `error.log` into the upload folder; the workflow uploads
-    that folder as the `lineage-17.1-<device>-<target>` artifact.
-
-* `.github/workflows/publish.yml` — `Publish build artifacts (optional)`:
-  an **optional**, manual-only publisher that takes an existing build
-  artifact and turns it into a GitHub draft pre-release. Inputs include
-  `run_id` (defaults to the latest successful build), `target` (defaults to
-  `bacon`), `artifact_name`, `tag_name`, `release_name`, and `draft` /
-  `prerelease` booleans. It downloads the artifact, **hard-deletes any
-  zero-byte files** (GitHub rejects release assets with `size >= 1`; this
-  was needed because the previous empty `error.log` broke the release
-  creation with
-  `Validation Failed: {"resource":"ReleaseAsset","code":"custom",
-  "field":"size","message":"size must be greater than or equal to 1"}`),
-  builds a `SHA256SUMS` for the remaining files, and uploads them with
-  `softprops/action-gh-release` using an explicit non-empty file list.
-  Both `draft` and `prerelease` default to `true` so nothing is published
-  without an explicit trigger.
-
-* `ci.yml` and `recovery-build.yml` were left alone by the recent work.
 
 ## Known limitations / porting notes
 
