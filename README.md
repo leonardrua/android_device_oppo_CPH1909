@@ -549,6 +549,17 @@ destination.
 
 ### Properties
 
+Both property files were audited against the stock dump (`a5s-dump`:
+`system/build.prop`, `vendor/build.prop` and `vendor/default.prop`) and against
+the Android 10 / LineageOS 17.1 sources that read them. Two rules follow from
+that audit:
+
+* The stock 8.1 blobs read the **unprefixed** `ro.mtk_*` names that the stock
+  vendor `build.prop` set. The `ro.vendor.mtk_*` names used by Android-10-era
+  MTK trees only work with Android 10 vendor blobs, so they are not used here.
+* Properties that no stock image for this device ever set and that no Android 10
+  reader consumes are left out rather than borrowed from other MTK trees.
+
 `system.prop` (framework side) currently carries, grouped in-file:
 
 * **Display / camera / audio**: `ro.sf.lcd_density=320`, `ro.camera.sound.forced=0`,
@@ -558,86 +569,95 @@ destination.
   `wifi.tethering.interface=ap0`; the MediaTek Wi-Fi feature gates
   `ro.mediatek.wlan.wsc=1` / `ro.mediatek.wlan.p2p=1` / `mediatek.wlan.ctia=0`
   and `qemu.hw.mainkeys=0`.
-* **Media / Zygote / Keystore** (see also *Media profiles* and the TEE notes
-  below): `ro.mtk_omacp_support=1`, `ro.zygote=zygote64_32`, and
-  `ro.keystore.disable_strongbox=true` (the stock Trustonic TEE is keymaster 3.0
-  with no StrongBox / attestation ID, so the framework keystore is told not to
-  look for one).
-* **Low-RAM configuration**: `ro.config.low_ram=false`.
-* **Full-disk-encryption crypto options** (see *Encryption*):
-  `ro.crypto.dm_default_key.options_format.version=1`,
-  `ro.crypto.volume.filenames_mode=aes-256-cts`, and
-  `ro.crypto.allow_encrypt_override=true`, matching the FDE + metadata +
-  Trustonic TEE setup this port uses.
-* **Charging**: `ro.charge.animation.hz=15` (the charging-animation refresh
-  rate the stock `sys/...`/charger UI expects).
-* **MediaTek framework knobs**: the `ro.mtk_perf_*` start-window / response-time
-  performance hints and `ro.zygote.preload.enable=0`.
+* **Dalvik**: `ro.config.low_ram=false` (read by `core/jni/AndroidRuntime.cpp`
+  and `RoSystemProperties`; this is not a low-RAM device).
+* **Zygote**: nothing — `lineage_CPH1909.mk` inherits `core_64_bit.mk`, which
+  already sets `ro.zygote=zygote64_32` via `PRODUCT_VENDOR_PROPERTIES`.
+* **Crypto**: only `ro.crypto.allow_encrypt_override=true`; see *Encryption*.
+* **MediaTek framework knobs**: `ro.kernel.zio=38,108,105,16`,
+  `ro.zygote.preload.enable=0`, and the `ro.mtk_perf_*` start-window /
+  response-time performance hints.
 
-`vendor.prop` (vendor side) holds the subset of the stock vendor `build.prop`
-that the prebuilt MediaTek / OPPO blobs and their `rc` files actually read.
-Besides the platform-identification block it currently includes, grouped
-in-file:
+`vendor.prop` (vendor side) holds the subset of the stock vendor
+`build.prop` / `default.prop` that the prebuilt MediaTek / OPPO blobs and their
+`rc` files actually read. Grouped in-file:
 
-* **Audio**: the Dirac suite (`persist.dirac.*`), `ro.audio.usb.period_us`,
-  plus `persist.vendor.audiohal.aud_dump=0`, `ro.vendor.audio.hfp.enable=true`,
-  `ro.vendor.audiohal.aurisys_config_file=/vendor/etc/aurisys_config.xml`,
-  `ro.vendor.mtk_audio_tuning_tool_ver=V2.2`,
-  `ro.vendor.mtk_bessurround_support=1`, and
-  `vendor.audiohal.aurisys.support=yes`.
-* **Camera**: `ro.vendor.mtk_cam_ba_enable=0`,
-  `ro.vendor.mtk_camera_app_version=3`, `ro.vendor.mtk_cam_lomo_support=1`,
-  `ro.vendor.mtk_camera_bsp_support=0`, `vendor.mtk.camera.app.fd.location=1`,
-  `persist.vendor.camera3.zsl.enable=1`, and the MDP capture flags
-  `camera.mdp.cz.enable=1` / `camera.mdp.dre.enable=0`.
-* **Display / graphics**: `ro.vendor.mtk_hwc_support=1`,
-  `ro.vendor.mtk_pq_support=2`, `ro.vendor.gpu.type=PowerVR`,
-  `ro.surface_flinger.has_wide_color_display=false`,
-  `ro.surface_flinger.has_HDR_display=false`, `debug.sf.disable_backpressure=1`,
-  `debug.sf.latch_unsignaled=1`, and — critically — `ro.hardware.egl=mtk`.
-  The Android 10 EGL loader appends `ro.hardware.egl` (then
-  `ro.board.platform`) to `libEGL_`; this device's PowerVR blobs are
-  `libEGL_mtk.so`, so without it the loader looks for the non-existent
-  `libEGL_mt6765` and SurfaceFlinger never starts.
-* **DRM / Media / Playback**: `drm.service.enabled=true`,
-  `ro.mtk_widevine_drm_l3_support=1`; `media.settings.xml` now points at
-  `/vendor/etc/media_profiles_V1_0.xml` (matching the stock profile file
-  documented in *Media profiles*); `mtk.vdec.waitkeyframeforplay=1`; and the
-  MTK video-playback capability flags `ro.vendor.mtk_sec_video_path_support=1`,
-  `ro.vendor.mtk_wmv_playback_support=1`, `ro.vendor.mtk_flv_playback_support=1`,
-  `ro.vendor.mtk_mp4_playback_support=1`, `ro.vendor.mtk_avi_playback_support=1`,
-  `ro.vendor.mtk_video_hevc_support=1`, `ro.vendor.mtk_omx_core_log_enable=0`.
+* **Audio**: the Dirac suite (`persist.dirac.*`),
+  `ro.mtk_audio_tuning_tool_ver=V2.2` and `ro.audio.usb.period_us=16000`
+  (stock values).
+* **Camera**: `ro.mtk_camera_app_version=3`, `ro.mtk_fd_support=1`,
+  `camera.disable_zsl_mode=1` and the MDP capture flags
+  `camera.mdp.cz.enable=1` / `camera.mdp.dre.enable=0` — all stock values;
+  ZSL stays disabled as on ColorOS.
+* **Display / graphics**: `ro.surface_flinger.has_wide_color_display=false`
+  and `ro.surface_flinger.has_HDR_display=false` (Android 10
+  `SurfaceFlingerProperties` sysprops), `debug.sf.disable_backpressure=1`
+  (stock; read by `SurfaceFlinger.cpp`), `debug.sf.latch_unsignaled=1` (read by
+  `BufferLayer.cpp`), `ro.opengles.version=196610`, `ro.sf.hwrotation=0`, and —
+  critically — `ro.hardware.egl=mtk`. The Android 10 EGL loader appends
+  `ro.hardware.egl` (then `ro.board.platform`) to `libEGL_`; this device's
+  vendor tree ships `libEGL_mtk.so` / `libGLESv2_mtk.so`, so without it the
+  loader looks for the non-existent `libEGL_mt6765` and SurfaceFlinger never
+  starts.
+* **DRM / Media**: `drm.service.enabled=true`,
+  `ro.mtk_widevine_drm_l3_support=1`; `media.settings.xml` points at
+  `/vendor/etc/media_profiles_V1_0.xml`, the file this device tree installs
+  (see *Media profiles*); `mtk.vdec.waitkeyframeforplay=1`; and the stock
+  playback flags `ro.mtk_wmv_playback_support=1` /
+  `ro.mtk_flv_playback_support=1`.
 * **FM / GPS / radio / telephony**: `fmradio.driver.enable=1` and
-  `ro.mtk_fm_50khz_support=1`; `persist.vendor.radio.gps.support=1` (GPS/GNSS
-  enable); the dual-SIM hot-swap modem block (`persist.radio.default.sim=0`,
-  `persist.radio.fd.counter=150`, ...); and the `persist.mtk.connsys.poweron.ctl`
-  / `persist.mtk.wcn.patch.version` WCN connect bits.
+  `ro.mtk_fm_50khz_support=1`; GPS via `ro.mtk_gps_support=1` and
+  `ro.mtk_agps_app=1`, plus `ro.mtk_omacp_support=1` in the platform block;
+  the dual-SIM hot-swap modem
+  block (`persist.radio.default.sim=0`, `persist.radio.fd.counter=150`, ...);
+  and the `persist.mtk.connsys.poweron.ctl` / `persist.mtk.wcn.patch.version`
+  WCN connect bits.
 * **Bluetooth**: `bt.profiles.avrcp.multiPlayer.enable=0` (AVRCP single active
-  player, matching stock), `persist.vendor.bluetooth.a2dp_offload.disabled=true`,
-  `ro.vendor.bt.stack=fluoride`,
-  `persist.vendor.bt.a2dp.source_codec=sbc`.
-* **Storage / init / USB / Misc**: `ro.frp.pst=/dev/block/.../frp`,
-  `ro.mount.fs=EXT4`, `ro.sys.sdcardfs=1`, `ro.oem_unlock_supported=1`,
-  `ro.vendor.mtk_shared_sdcard=1`, `persist.vendor.sys.usb.config=mtp`, and
-  `ro.vendor.mtk_lcm_physical_rotation=0`.
-* **Thermal / TEE**: `ro.vendor.mtk_thermal_config=1` and the Trustonic TEE
-  block `ro.vendor.mtk_tee_support=1`,
-  `ro.vendor.mtk_trustonic_tee_support=1`,
-  `ro.vendor.mtk_sec_usb_check=0` (plus `ro.hardware.kmsetkey=trustonic`,
-  which is what `kmsetkey` actually opens, see *Keymaster and gatekeeper HAL
-  modules* above). The legacy `ro.mtk_trustonic_tee_support=1` was removed so
-  there is exactly one TEE feature switch.
-* **Wi-Fi feature gates read by the MTK WCN blobs** (`ro.vendor.mtk_wapi_support=0`,
-  `ro.vendor.mtk_passpoint_r1_support=1`, `ro.mtk_dhcpv6c_wifi=1`): these mirror
-  what the stock vendor build's wpa_supplicant / wifi blobs expect; without
-  them the MTK connectivity drivers fall back to compiled-in defaults that
-  disable or mis-configure the relevant Wi-Fi features on this chipset.
+  player, matching stock) and
+  `persist.bluetooth.a2dp_offload.disabled=true`. The AOSP Bluetooth stack
+  (`system/bt`, the Bluetooth app) reads the prefix-less name; the
+  `persist.vendor.bluetooth.*` form is not read by anything.
+* **Storage / init / USB**: `ro.frp.pst=/dev/block/.../frp`, `ro.mount.fs=EXT4`,
+  `ro.sys.sdcardfs=1`, `ro.oem_unlock_supported=1`,
+  `persist.sys.usb.config=mtp` (the stock `default.prop` name read by
+  `UsbDeviceManager`).
+* **Platform identification / TEE**: the `ro.mtk_*` platform block, including
+  `ro.mtk_tee_gp_support=1`, `ro.mtk_trustonic_tee_support=1` and
+  `ro.hardware.kmsetkey=trustonic` (what `kmsetkey` actually opens, see
+  *Keymaster and gatekeeper HAL modules* above).
+* **Wi-Fi**: `ro.mtk_wapi_support=1` (the stock value; the Android-10 trees use
+  `ro.vendor.mtk_wapi_support=0`, which these blobs do not read),
+  `ro.mtk_dhcpv6c_wifi=1`, and the WCN/consys connection values.
 * **Dalvik / ART**: `dalvik.vm.heapgrowthlimit=384m`,
-  `dalvik.vm.heapsize=512m` (the 2 GB-RAM stock sizing).
+  `dalvik.vm.heapsize=512m` (the stock 3/4 GB sizing).
 
 The ColorOS-only values (`ro.com.google.gmsversion`, `ro.setupwizard.*`,
 `pm.dexopt.*`, the `persist.log.tag.*` block and the `ro.mtk_*` feature switches
 that no prebuilt blob consults) are deliberately dropped.
+
+#### Properties deliberately not carried over
+
+These were added at various points but have no reader (or no stock backing) on
+this device, so they were removed:
+
+* `ro.keystore.disable_strongbox` — not read by AOSP, LineageOS or the MTK
+  blobs. StrongBox availability is probed from the keymaster HAL; the Trustonic
+  TEE here is keymaster 3.0, so no StrongBox is advertised anyway.
+* `ro.crypto.dm_default_key.options_format.version` — does not exist in the
+  Android 10 `vold` (checked against `android-10.0.0_r47`); it was added in a
+  later release and is inert here.
+* `ro.charge.animation.hz` — ColorOS charger-app property with no LineageOS
+  reader and no entry in the stock `build.prop`.
+* `persist.vendor.radio.gps.support`, `ro.vendor.mtk_passpoint_r1_support`,
+  `ro.vendor.mtk_thermal_config`, `ro.vendor.mtk_tee_support`,
+  `ro.vendor.mtk_sec_usb_check`, `ro.vendor.mtk_lcm_physical_rotation`,
+  `ro.vendor.mtk_hwc_support`, `ro.vendor.gpu.type`, the `ro.vendor.mtk_cam_*`
+  set, `persist.vendor.camera3.zsl.enable`, `ro.vendor.mtk_omx_core_log_enable`,
+  the mp4/avi/hevc playback flags, `ro.vendor.bt.stack`,
+  `persist.vendor.bt.a2dp.source_codec` and the extra
+  `persist.vendor.*.usb.config` / `audiohal` entries — none of these exist in
+  this device's stock dump (or they use the Android-10 `ro.vendor.` namespace
+  that its 8.1 blobs do not read), so they would have been inert.
 
 ### Not taken from the stock dump
 
@@ -664,22 +684,23 @@ already-encrypted /data is decrypted through the metadata key while an
 unencrypted /data is mounted as-is rather than triggering in-place encryption on
 first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 
-The matching `system.prop` crypto options are set accordingly:
+The fstab entry is classic FDE (`encryptable=<metadata partition>`), not
+dm-default-key metadata encryption and not file-based encryption, so of the
+`ro.crypto.*` switches only one is both real and relevant on Android 10:
 
 ```properties
-ro.crypto.dm_default_key.options_format.version=1
-ro.crypto.volume.filenames_mode=aes-256-cts
 ro.crypto.allow_encrypt_override=true
 ```
 
-The first tells init to use the v1 dm-default-key options format (the one
-`vold`/`metadata` on this kernel understands), the second picks
-`aes-256-cts` for the FBE filenames-mode value that `vold` will use if a
-metadata key is ever generated (this port is FDE-only, but the framework still
-parses the property), and the last lets the encryption manager override the
-encryption mode at runtime rather than failing when the two disagree. The TEE
-side of the setup is described in the `ro.vendor.mtk_tee_support` /
-`ro.vendor.mtk_trustonic_tee_support` block under *Properties*.
+`vold`'s `cryptfs.cpp` reads it when `fscrypt_is_native()` and adds
+`allow_encrypt_override` to the dm-crypt table, letting the encryption path
+override the encryption mode instead of failing when the footer and the
+requested mode disagree. `ro.crypto.volume.filenames_mode` is read by
+`FsCrypt.cpp`, but only when creating volume keys for adoptable storage, and
+`ro.crypto.dm_default_key.options_format.version` does not exist in the
+Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
+`ro.mtk_tee_gp_support` / `ro.mtk_trustonic_tee_support` /
+`ro.hardware.kmsetkey=trustonic` block under *Properties*.
 
 ### Other build changes
 

@@ -40,24 +40,29 @@ ro.camera.sound.forced=0
 ro.audio.silent=0
 
 # Dalvik
+#
+# ro.config.low_ram is read by core/jni/AndroidRuntime.cpp and by
+# RoSystemProperties/ActivityManager. The stock device (3/4 GB RAM) is not a
+# low-RAM device.
 ro.config.low_ram=false
 
-# Media
-ro.mtk_omacp_support=1
+# Zygote
+#
+# lineage_CPH1909.mk inherits core_64_bit.mk, which already sets
+# ro.zygote=zygote64_32 through PRODUCT_VENDOR_PROPERTIES. It is deliberately
+# not repeated here: the build-system value is authoritative and a second copy
+# only invites drift.
 
-# Zygote: 64-bit primary with 32-bit secondary
-ro.zygote=zygote64_32
-
-# Keystore: stock TEE is keymaster 3.0, so no StrongBox / attestation ID
-ro.keystore.disable_strongbox=true
-
-# Crypto: FDE with metadata partition, TEE-backed
-ro.crypto.dm_default_key.options_format.version=1
-ro.crypto.volume.filenames_mode=aes-256-cts
+# Crypto
+#
+# The fstab uses classic FDE (`encryptable=<metadata partition>`), not
+# dm-default-key metadata encryption and not FBE. Of the ro.crypto.* switches,
+# only allow_encrypt_override is used by the FDE path (vold cryptfs.cpp).
+# `ro.crypto.dm_default_key.options_format.version` does not exist in the
+# Android 10 vold at all (it was added in a later release), and
+# `ro.crypto.volume.filenames_mode` is only consulted for adoptable-storage
+# volume keys, so neither is set here.
 ro.crypto.allow_encrypt_override=true
-
-# Charging
-ro.charge.animation.hz=15
 
 # MediaTek-specific framework bits
 ro.kernel.zio=38,108,105,16

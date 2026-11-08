@@ -1,20 +1,21 @@
 #
 # Vendor properties for OPPO A5s (CPH1909, MT6765).
 #
-# Derived from the stock ColorOS 5.2 /vendor/build.prop, keeping the properties
-# that the prebuilt MediaTek / OPPO vendor blobs and their rc files actually read
-# and dropping the ones that only mattered to the ColorOS framework
-# (ro.com.google.gmsversion, ro.setupwizard.*, pm.dexopt.*, the per-tag
-# persist.log.tag.* block, and the ro.mtk_* feature switches no blobs consult).
+# Derived from the stock ColorOS 5.2 /vendor/build.prop and the vendor
+# default.prop, keeping the properties that the prebuilt MediaTek / OPPO vendor
+# blobs and their rc files actually read and dropping the ones that only
+# mattered to the ColorOS framework (ro.com.google.gmsversion, ro.setupwizard.*,
+# pm.dexopt.*, the per-tag persist.log.tag.* block, and the ro.mtk_* feature
+# switches no blobs consult).
+#
+# Naming: the stock 8.1 blobs read the unprefixed ro.mtk_* names that the stock
+# vendor build.prop set. Android-10-era MTK trees use ro.vendor.mtk_* because
+# their HAL blobs are Android 10 builds; those names have no effect with these
+# 8.1 blobs, so this file stays on the stock names.
 #
 
 # Audio
-persist.vendor.audiohal.aud_dump=0
-ro.vendor.audio.hfp.enable=true
-ro.vendor.audiohal.aurisys_config_file=/vendor/etc/aurisys_config.xml
-ro.vendor.mtk_audio_tuning_tool_ver=V2.2
-ro.vendor.mtk_bessurround_support=1
-vendor.audiohal.aurisys.support=yes
+ro.mtk_audio_tuning_tool_ver=V2.2
 ro.audio.usb.period_us=16000
 
 # Dirac audio enhancement (the stock vendor image ships the Dirac service,
@@ -29,12 +30,13 @@ persist.dirac.afm.mode=global
 persist.dirac.acs.startAtBoot=3
 
 # Camera
-ro.vendor.mtk_cam_ba_enable=0
-ro.vendor.mtk_camera_app_version=3
-ro.vendor.mtk_cam_lomo_support=1
-ro.vendor.mtk_camera_bsp_support=0
-vendor.mtk.camera.app.fd.location=1
-persist.vendor.camera3.zsl.enable=1
+# Stock values from the vendor build.prop / default.prop. The prebuilt MTK
+# camera HAL reads camera.disable_zsl_mode=1 (ZSL disabled as on ColorOS),
+# ro.mtk_fd_support=1 (MTK face-detection pipeline) and the two MDP capture
+# flags.
+ro.mtk_camera_app_version=3
+ro.mtk_fd_support=1
+camera.disable_zsl_mode=1
 camera.mdp.cz.enable=1
 camera.mdp.dre.enable=0
 
@@ -45,9 +47,11 @@ camera.mdp.dre.enable=0
 # ro.hardware.egl, then ro.board.platform, to "libEGL_"). The PowerVR blobs on
 # this device are the *_mtk set, so leaving this unset makes the loader fall
 # through to the non-existent libEGL_mt6765 and the UI never starts.
-ro.vendor.mtk_hwc_support=1
-ro.vendor.mtk_pq_support=2
-ro.vendor.gpu.type=PowerVR
+#
+# The ro.surface_flinger.* entries are Android 10 sysprops read by
+# SurfaceFlingerProperties (verified in lineage-17.1); debug.sf.disable_backpressure
+# and ro.opengles.version / ro.sf.hwrotation are stock vendor values, and
+# debug.sf.latch_unsignaled is read by BufferLayer.cpp in lineage-17.1.
 ro.surface_flinger.has_wide_color_display=false
 ro.surface_flinger.has_HDR_display=false
 ro.hardware.egl=mtk
@@ -66,13 +70,8 @@ media.settings.xml=/vendor/etc/media_profiles_V1_0.xml
 # stock vendor image set this for the MTK VDEC; the AOSP default streams the
 # first frames too early on this codec.
 mtk.vdec.waitkeyframeforplay=1
-ro.vendor.mtk_omx_core_log_enable=0
-ro.vendor.mtk_sec_video_path_support=1
-ro.vendor.mtk_wmv_playback_support=1
-ro.vendor.mtk_flv_playback_support=1
-ro.vendor.mtk_mp4_playback_support=1
-ro.vendor.mtk_avi_playback_support=1
-ro.vendor.mtk_video_hevc_support=1
+ro.mtk_wmv_playback_support=1
+ro.mtk_flv_playback_support=1
 
 # FM radio
 # Enables the MTK FM driver/service; the platform sets ro.mtk_fm_50khz_support
@@ -80,7 +79,8 @@ ro.vendor.mtk_video_hevc_support=1
 fmradio.driver.enable=1
 
 # GPS / GNSS
-persist.vendor.radio.gps.support=1
+# Enabling is via ro.mtk_gps_support in the Platform section, as on the stock
+# vendor image.
 
 # Radio / telephony (dual SIM, MTK IMS)
 persist.radio.default.sim=0
@@ -136,19 +136,20 @@ persist.mtk.wcn.dynamic.dump=0
 # connectivity driver through the wmt_loader/stp service.
 persist.mtk.wcn.patch.version=-1
 persist.mtk.connsys.poweron.ctl=0
-ro.vendor.mtk_wapi_support=0
-ro.vendor.mtk_passpoint_r1_support=1
+# The stock vendor image enables WAPI; keep the stock value.
+ro.mtk_wapi_support=1
 ro.connsys.dedicated.log=1
 # DHCPv6 client support in the MTK Wi-Fi stack.
 ro.mtk_dhcpv6c_wifi=1
 
 # Bluetooth
 # Read by the MTK BT HAL/vendor lib and the AVRCP profile: keep AVRCP on a
-# single active player, matching the stock ROM.
+# single active player, matching the stock ROM. The AOSP Bluetooth stack
+# (system/bt and the Bluetooth app) reads
+# persist.bluetooth.a2dp_offload.disabled, so the prefix-less name is the one
+# that actually disables the offload path.
 bt.profiles.avrcp.multiPlayer.enable=0
-persist.vendor.bluetooth.a2dp_offload.disabled=true
-ro.vendor.bt.stack=fluoride
-persist.vendor.bt.a2dp.source_codec=sbc
+persist.bluetooth.a2dp_offload.disabled=true
 
 # Platform identification
 #
@@ -165,6 +166,8 @@ ro.mtk_bt_support=1
 ro.mtk_emmc_support=1
 ro.mtk_f2fs_enable=0
 ro.mtk_gps_support=1
+ro.mtk_agps_app=1
+ro.mtk_omacp_support=1
 ro.mtk_is_tablet=0
 ro.mtk_sim_hot_swap=1
 ro.mtk_sim_hot_swap_common_slot=1
@@ -175,23 +178,15 @@ ro.mtk_pq_support=2
 ro.mtk_fm_50khz_support=1
 ro.mtk_dual_mic_support=0
 ro.mtk_tee_gp_support=1
+ro.mtk_trustonic_tee_support=1
 ro.hardware.kmsetkey=trustonic
-
-# Thermal
-ro.vendor.mtk_thermal_config=1
-
-# TEE (Trustonic Kinibi)
-ro.vendor.mtk_tee_support=1
-ro.vendor.mtk_trustonic_tee_support=1
-ro.vendor.mtk_sec_usb_check=0
 
 # Storage / init
 ro.frp.pst=/dev/block/platform/bootdevice/by-name/frp
 ro.mount.fs=EXT4
 ro.sys.sdcardfs=1
 ro.oem_unlock_supported=1
-ro.vendor.mtk_shared_sdcard=1
-persist.vendor.sys.usb.config=mtp
+persist.sys.usb.config=mtp
 
 # Dalvik / ART
 #
@@ -213,6 +208,3 @@ persist.service.acm.enable=0
 # Power-off charging / boot
 sys.ipo.disable=1
 sys.ipo.pwrdncap=2
-
-# Misc
-ro.vendor.mtk_lcm_physical_rotation=0
