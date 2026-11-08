@@ -237,6 +237,24 @@ jobs:
           rm -rf "kernel/oppo/${DEVICE}/.git"
           ls "kernel/oppo/${DEVICE}" | head
 
+      - name: Guard AArch64 signal context header for ARM builds
+        working-directory: ${{ github.workspace }}/lineage
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          header = Path("kernel/oppo/${{ inputs.device_name }}/arch/arm64/include/uapi/asm/sigcontext.h")
+          contents = header.read_text()
+          start_marker = "struct fpsimd_context {"
+          end_marker = "\n};\n\n/* ESR_EL1 context */"
+          if contents.count(start_marker) != 1 or contents.count(end_marker) != 1:
+              raise SystemExit("Could not locate fpsimd_context in the AArch64 UAPI header")
+          start = contents.index(start_marker)
+          end = contents.index(end_marker, start) + len("\n};")
+          guarded = "#ifdef __aarch64__\n" + contents[start:end] + "\n#endif"
+          header.write_text(contents[:start] + guarded + contents[end:])
+          PY
+
       - name: Keep kernel warnings non-fatal
         working-directory: ${{ github.workspace }}/lineage
         run: |
