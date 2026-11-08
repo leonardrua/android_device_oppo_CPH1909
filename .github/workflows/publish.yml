@@ -1,0 +1,159 @@
+name: Publish build artifacts (optional)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Build run ID to publish; leave blank to use the latest successful "Build LineageOS 17.1" run'
+        required: false
+        default: ''
+      target:
+        description: 'Build target that produced the artifact'
+        required: true
+        default: 'bacon'
+        type: choice
+        options:
+          - bacon
+          - bootimage
+          - vendorimage
+          - productimage
+          - systemimage
+      artifact_name:
+        description: 'Artifact name (defaults to lineage-17.1-CPH1909-<target>)'
+        required: false
+        default: ''
+      tag_name:
+        description: 'Git tag to create/push for the release (defaults to publish-<run_id>)'
+        required: false
+        default: ''
+      release_name:
+        description: 'Release title (defaults to "LineageOS 17.1 for CPH1909 (<target>)")'
+        required: false
+        default: ''
+      draft:
+        description: 'Create as a draft release'
+        required: true
+        type: boolean
+        default: true
+      prerelease:
+        description: 'Mark as a pre-release'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Resolve build run
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          RUN_ID='${{ github.event.inputs.run_id }}'
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh run list \
+              --repo '${{ github.repository }}' \
+              --workflow 'Build LineageOS 17.1 (Oppo A5s CPH1909) - Namespace' \
+              --status success \
+              --limit 1 \
+              --json databaseId --jq '.[0].databaseId')
+            echo "Latest successful build run: $RUN_ID"
+          fi
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::No run_id provided and no successful Build LineageOS 17.1 run found"
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+          TARGET='${{ github.event.inputs.target }}'
+          ARTIFACT='${{ github.event.inputs.artifact_name }}'
+          if [ -z "$ARTIFACT" ]; then
+            ARTIFACT="lineage-17.1-CPH1909-${TARGET}"
+          fi
+          echo "artifact_name=$ARTIFACT" >> "$GITHUB_OUTPUT"
+          echo "Artifact: $ARTIFACT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.resolve.outputs.artifact_name }}
+          run-id: ${{ steps.resolve.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: published
+
+      - name: List and summarize published files
+        id: summary
+        run: |
+          set -e
+          mkdir -p published
+          cd published
+          ls -lh
+          echo "Contents:"
+          find . -maxdepth 1 -type f -printf '%f\n' | sort
+          echo "total_count=$(find . -maxdepth 1 -type f | wc -l)" >> "$GITHUB_OUTPUT"
+          mapfile -t FILES < <(find . -maxdepth 1 -type f -printf '%f\n' | sort)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "::error::Artifact '${{ steps.resolve.outputs.artifact_name }}' contains no files"
+            exit 1
+          fi
+          {
+            echo "### Files to publish"
+            for f in "${FILES[@]}"; do
+              echo "- \`$f\` ($(stat -c '%s' "$f") bytes)"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compute checksums
+        run: |
+          cd published
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+          cp SHA256SUMS SHA256SUMS.txt
+
+      - name: Resolve release inputs
+        id: release
+        run: |
+          RUN_ID='${{ steps.resolve.outputs.run_id }}'
+          TARGET='${{ github.event.inputs.target }}'
+          TAG='${{ github.event.inputs.tag_name }}'
+          NAME='${{ github.event.inputs.release_name }}'
+          if [ -z "$TAG" ]; then
+            TAG="publish-${RUN_ID}"
+          fi
+          if [ -z "$NAME" ]; then
+            NAME="LineageOS 17.1 for CPH1909 (${TARGET}) (build ${RUN_ID})"
+          fi
+          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Tag: $TAG"
+          echo "Name: $NAME"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ github.token }}
+          tag_name: ${{ steps.release.outputs.tag_name }}
+          name: ${{ steps.release.outputs.name }}
+          files: |
+            published/*
+          draft: ${{ github.event.inputs.draft }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: false
+          body: |
+            Published from workflow run **${{ github.repository }}/actions/runs/${{ steps.resolve.outputs.run_id }}**.
+
+            Target: `${{ github.event.inputs.target }}`
+            Artifact: `${{ steps.resolve.outputs.artifact_name }}`
+
+            See `SHA256SUMS` for SHA-256 checksums of the published files.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
