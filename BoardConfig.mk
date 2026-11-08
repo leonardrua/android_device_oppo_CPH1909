@@ -58,6 +58,7 @@ TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
 TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
 TARGET_KERNEL_CLANG_COMPILE := false
 TARGET_KERNEL_CROSS_COMPILE_PREFIX := $(abspath .)/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05/bin/aarch64-linux-gnu-
+TARGET_KERNEL_ADDITIONAL_FLAGS += ODM_WT_EDIT=yes
 
 # Values decoded from the stock legacy boot image (header v0).
 BOARD_KERNEL_BASE := 0x40078000
