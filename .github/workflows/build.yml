@@ -339,12 +339,13 @@ jobs:
           fi
 
           # Leave headroom for large single-process Java/Metalava steps.
-          # Container/Namespace runners often block swapon; with no swap, keep
-          # parallelism very low to avoid kernel OOM kills.
+          # Container/Namespace runners often block swapon and may clear /cache
+          # between runs, so use a faster in-job attempt first and retry remaining
+          # work with -j1 if an OOM-like kill is detected.
           if [ "${MEM_GB:-0}" -le 8 ]; then
             JOBS=2
           elif [ "${SWAP_MB:-0}" -lt 1024 ]; then
-            JOBS=2
+            JOBS=3
           elif [ "${SWAP_MB:-0}" -lt 4096 ]; then
             JOBS=$(( MEM_GB / 4 ))
           else
@@ -366,6 +367,11 @@ jobs:
           mka "${TARGET}" -j"${JOBS}"
           EOS
 
+          run_build() {
+            timeout "${BUILD_TIMEOUT_MIN}m" bash "${GITHUB_WORKSPACE}/do_build.sh" 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
+            return ${PIPESTATUS[0]}
+          }
+
           ( while true; do
               echo "[monitor] $(date +%H:%M) disk: $(df -h . | tail -1 | awk '{print $4" free"}') | mem: $(free -m | awk '/Mem:/{print $3"MB used, "$7"MB avail"}') | swap: $(free -m | awk '/Swap:/{print $3"MB used"}')"
               ps -eo pid,pcpu,pmem,rss,comm --sort=-rss | head -5
@@ -374,11 +380,19 @@ jobs:
           MON=$!
 
           set +e
-          timeout "${BUILD_TIMEOUT_MIN}m" bash "${GITHUB_WORKSPACE}/do_build.sh" 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
-          RC=${PIPESTATUS[0]}
+          run_build
+          RC=$?
+          if [ "$RC" -ne 0 ] && grep -Eq '(^|[[:space:]])Killed([[:space:]]|$)|Out of memory|OOM killer|oom-kill' "${GITHUB_WORKSPACE}/build.log" 2>/dev/null; then
+            cp -f "${GITHUB_WORKSPACE}/build.log" "${GITHUB_WORKSPACE}/build-attempt1-oom.log" 2>/dev/null || true
+            echo "OOM-like failure detected (rc=$RC). Retrying remaining targets with JOBS=1 to avoid kernel OOM without slowing the normal path."
+            export JOBS=1
+            echo "Retry: JOBS=$JOBS OUT_DIR=${OUT_DIR:-default}"
+            run_build
+            RC=$?
+          fi
           kill $MON 2>/dev/null || true
           echo "BUILD_RC=$RC" >> "$GITHUB_ENV"
-          echo "Build finished with code: $RC (124 = timed out; 137/143 often indicate a killed process; re-run to resume from ccache)"
+          echo "Build finished with code: $RC (124 = timed out; 137/143 often indicate a killed process)"
           ccache -s | head -15
           exit 0
 
@@ -406,6 +420,7 @@ jobs:
             done
           fi
           cp -v "${OUT_BASE}/error.log" "$RESULT/" 2>/dev/null || true
+          cp -v "${GITHUB_WORKSPACE}/build-attempt1-oom.log" "$RESULT/" 2>/dev/null || true
           tail -n 3000 "${GITHUB_WORKSPACE}/build.log" > "$RESULT/build-tail.log" 2>/dev/null || true
           ls -lh "$RESULT"
 
