@@ -35,6 +35,8 @@ ro.vendor.mtk_cam_lomo_support=1
 ro.vendor.mtk_camera_bsp_support=0
 vendor.mtk.camera.app.fd.location=1
 persist.vendor.camera3.zsl.enable=1
+camera.mdp.cz.enable=1
+camera.mdp.dre.enable=0
 
 # Display / graphics
 #
