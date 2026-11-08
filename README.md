@@ -95,6 +95,13 @@ Entries that exist on the stock 8.1 vendor partition but must not be copied are
 documented at the top of `proprietary-files.txt` (VINTF data, the 8.1 SELinux
 policy, mkshrc, and the generated `public.libraries.txt` /`fs_config*` files).
 
+Lines in `proprietary-files.txt` of the form `path|sha1` pin the SHA-1 of the
+extracted blob so a stale or corrupted extraction fails the build early.
+`update-sha1sums.sh` refreshes those pins against the current blobs in
+`vendor/oppo/CPH1909/proprietary/` (it rewrites every `path|sha1` line with a
+fresh `sha1sum`), so it can be run after a vendor re-extract instead of editing
+the hashes by hand.
+
 ## CI workflows
 
 The repository also contains two GitHub Actions workflows.
@@ -119,7 +126,10 @@ intermediates. Its main characteristics:
   for ARM builds`) wraps `struct fpsimd_context` in
   `arch/arm64/include/uapi/asm/sigcontext.h` with `#ifdef __aarch64__` so
   32-bit targets can compile against it. This corresponds to commit
-  `ac03987` in the kernel repository and `ac03987` in this one.
+  `ac03987` in the kernel repository. The step is also responsible for the
+  "keep kernel warnings non-fatal" tweak: `scripts/Makefile.lib` gets
+  `-Wno-error` appended to the standard C-flags line, so the large MTK
+  kernel (which is full of arch-specific warnings) still builds.
 * Before the build starts it verifies the Git LFS artifact
   `external/chromium-webview/prebuilt/arm64/webview.apk`. If the file is a
   small LFS pointer (typical: 134 bytes, not the ~260 MB real APK) it runs
@@ -539,21 +549,91 @@ destination.
 
 ### Properties
 
-* `system.prop` holds the framework-side values from the stock system build
-  (density, radio library names, Wi-Fi interfaces, the MediaTek Wi-Fi feature
-  gates `ro.mediatek.wlan.{wsc,p2p}`/`mediatek.wlan.ctia`, the camera
-  shutter-sound policy, and the `ro.mtk_perf_*` start-window/response-time
-  performance hints).
-* `vendor.prop` holds the subset of the stock vendor build.prop that the
-  prebuilt MediaTek/OPPO blobs and their rc files read. Besides the platform
-  identification block this includes the ART heap sizing
-  (`dalvik.vm.heapgrowthlimit=384m`, `dalvik.vm.heapsize=512m`), the Dirac audio
-  and FM-radio enables, the modem/CCCI and WCN connectivity values, and the AVRCP
-  single-player setting. In particular `ro.hardware.egl=mtk` is required: the
-  Android 10 EGL loader appends `ro.hardware.egl` (then `ro.board.platform`) to
-  `libEGL_`, and this device's PowerVR blobs are `libEGL_mtk.so`. Without it the
-  loader looks for the non-existent `libEGL_mt6765` and SurfaceFlinger never
-  starts.
+`system.prop` (framework side) currently carries, grouped in-file:
+
+* **Display / camera / audio**: `ro.sf.lcd_density=320`, `ro.camera.sound.forced=0`,
+  `ro.audio.silent=0`.
+* **Radio / Wi-Fi**: `rild.libpath=mtk-ril.so`, `rild.libargs=-d /dev/ttyC0`;
+  `wifi.interface=wlan0`, `wifi.direct.interface=p2p0`,
+  `wifi.tethering.interface=ap0`; the MediaTek Wi-Fi feature gates
+  `ro.mediatek.wlan.wsc=1` / `ro.mediatek.wlan.p2p=1` / `mediatek.wlan.ctia=0`
+  and `qemu.hw.mainkeys=0`.
+* **Media / Zygote / Keystore** (see also *Media profiles* and the TEE notes
+  below): `ro.mtk_omacp_support=1`, `ro.zygote=zygote64_32`, and
+  `ro.keystore.disable_strongbox=true` (the stock Trustonic TEE is keymaster 3.0
+  with no StrongBox / attestation ID, so the framework keystore is told not to
+  look for one).
+* **Low-RAM configuration**: `ro.config.low_ram=false`.
+* **Full-disk-encryption crypto options** (see *Encryption*):
+  `ro.crypto.dm_default_key.options_format.version=1`,
+  `ro.crypto.volume.filenames_mode=aes-256-cts`, and
+  `ro.crypto.allow_encrypt_override=true`, matching the FDE + metadata +
+  Trustonic TEE setup this port uses.
+* **Charging**: `ro.charge.animation.hz=15` (the charging-animation refresh
+  rate the stock `sys/...`/charger UI expects).
+* **MediaTek framework knobs**: the `ro.mtk_perf_*` start-window / response-time
+  performance hints and `ro.zygote.preload.enable=0`.
+
+`vendor.prop` (vendor side) holds the subset of the stock vendor `build.prop`
+that the prebuilt MediaTek / OPPO blobs and their `rc` files actually read.
+Besides the platform-identification block it currently includes, grouped
+in-file:
+
+* **Audio**: the Dirac suite (`persist.dirac.*`), `ro.audio.usb.period_us`,
+  plus `persist.vendor.audiohal.aud_dump=0`, `ro.vendor.audio.hfp.enable=true`,
+  `ro.vendor.audiohal.aurisys_config_file=/vendor/etc/aurisys_config.xml`,
+  `ro.vendor.mtk_audio_tuning_tool_ver=V2.2`,
+  `ro.vendor.mtk_bessurround_support=1`, and
+  `vendor.audiohal.aurisys.support=yes`.
+* **Camera**: `ro.vendor.mtk_cam_ba_enable=0`,
+  `ro.vendor.mtk_camera_app_version=3`, `ro.vendor.mtk_cam_lomo_support=1`,
+  `ro.vendor.mtk_camera_bsp_support=0`, `vendor.mtk.camera.app.fd.location=1`,
+  `persist.vendor.camera3.zsl.enable=1`, and the MDP capture flags
+  `camera.mdp.cz.enable=1` / `camera.mdp.dre.enable=0`.
+* **Display / graphics**: `ro.vendor.mtk_hwc_support=1`,
+  `ro.vendor.mtk_pq_support=2`, `ro.vendor.gpu.type=PowerVR`,
+  `ro.surface_flinger.has_wide_color_display=false`,
+  `ro.surface_flinger.has_HDR_display=false`, `debug.sf.disable_backpressure=1`,
+  `debug.sf.latch_unsignaled=1`, and — critically — `ro.hardware.egl=mtk`.
+  The Android 10 EGL loader appends `ro.hardware.egl` (then
+  `ro.board.platform`) to `libEGL_`; this device's PowerVR blobs are
+  `libEGL_mtk.so`, so without it the loader looks for the non-existent
+  `libEGL_mt6765` and SurfaceFlinger never starts.
+* **DRM / Media / Playback**: `drm.service.enabled=true`,
+  `ro.mtk_widevine_drm_l3_support=1`; `media.settings.xml` now points at
+  `/vendor/etc/media_profiles_V1_0.xml` (matching the stock profile file
+  documented in *Media profiles*); `mtk.vdec.waitkeyframeforplay=1`; and the
+  MTK video-playback capability flags `ro.vendor.mtk_sec_video_path_support=1`,
+  `ro.vendor.mtk_wmv_playback_support=1`, `ro.vendor.mtk_flv_playback_support=1`,
+  `ro.vendor.mtk_mp4_playback_support=1`, `ro.vendor.mtk_avi_playback_support=1`,
+  `ro.vendor.mtk_video_hevc_support=1`, `ro.vendor.mtk_omx_core_log_enable=0`.
+* **FM / GPS / radio / telephony**: `fmradio.driver.enable=1` and
+  `ro.mtk_fm_50khz_support=1`; `persist.vendor.radio.gps.support=1` (GPS/GNSS
+  enable); the dual-SIM hot-swap modem block (`persist.radio.default.sim=0`,
+  `persist.radio.fd.counter=150`, ...); and the `persist.mtk.connsys.poweron.ctl`
+  / `persist.mtk.wcn.patch.version` WCN connect bits.
+* **Bluetooth**: `bt.profiles.avrcp.multiPlayer.enable=0` (AVRCP single active
+  player, matching stock), `persist.vendor.bluetooth.a2dp_offload.disabled=true`,
+  `ro.vendor.bt.stack=fluoride`,
+  `persist.vendor.bt.a2dp.source_codec=sbc`.
+* **Storage / init / USB / Misc**: `ro.frp.pst=/dev/block/.../frp`,
+  `ro.mount.fs=EXT4`, `ro.sys.sdcardfs=1`, `ro.oem_unlock_supported=1`,
+  `ro.vendor.mtk_shared_sdcard=1`, `persist.vendor.sys.usb.config=mtp`, and
+  `ro.vendor.mtk_lcm_physical_rotation=0`.
+* **Thermal / TEE**: `ro.vendor.mtk_thermal_config=1` and the Trustonic TEE
+  block `ro.vendor.mtk_tee_support=1`,
+  `ro.vendor.mtk_trustonic_tee_support=1`,
+  `ro.vendor.mtk_sec_usb_check=0` (plus `ro.hardware.kmsetkey=trustonic`,
+  which is what `kmsetkey` actually opens, see *Keymaster and gatekeeper HAL
+  modules* above). The legacy `ro.mtk_trustonic_tee_support=1` was removed so
+  there is exactly one TEE feature switch.
+* **Wi-Fi feature gates read by the MTK WCN blobs** (`ro.vendor.mtk_wapi_support=0`,
+  `ro.vendor.mtk_passpoint_r1_support=1`, `ro.mtk_dhcpv6c_wifi=1`): these mirror
+  what the stock vendor build's wpa_supplicant / wifi blobs expect; without
+  them the MTK connectivity drivers fall back to compiled-in defaults that
+  disable or mis-configure the relevant Wi-Fi features on this chipset.
+* **Dalvik / ART**: `dalvik.vm.heapgrowthlimit=384m`,
+  `dalvik.vm.heapsize=512m` (the 2 GB-RAM stock sizing).
 
 The ColorOS-only values (`ro.com.google.gmsversion`, `ro.setupwizard.*`,
 `pm.dexopt.*`, the `persist.log.tag.*` block and the `ro.mtk_*` feature switches
@@ -584,6 +664,23 @@ already-encrypted /data is decrypted through the metadata key while an
 unencrypted /data is mounted as-is rather than triggering in-place encryption on
 first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 
+The matching `system.prop` crypto options are set accordingly:
+
+```properties
+ro.crypto.dm_default_key.options_format.version=1
+ro.crypto.volume.filenames_mode=aes-256-cts
+ro.crypto.allow_encrypt_override=true
+```
+
+The first tells init to use the v1 dm-default-key options format (the one
+`vold`/`metadata` on this kernel understands), the second picks
+`aes-256-cts` for the FBE filenames-mode value that `vold` will use if a
+metadata key is ever generated (this port is FDE-only, but the framework still
+parses the property), and the last lets the encryption manager override the
+encryption mode at runtime rather than failing when the two disagree. The TEE
+side of the setup is described in the `ro.vendor.mtk_tee_support` /
+`ro.vendor.mtk_trustonic_tee_support` block under *Properties*.
+
 ### Other build changes
 
 * `BUILD_BROKEN_DUP_RULES := true` — the blob set and AOSP both install several
@@ -609,31 +706,6 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
   reboots into recovery instead of hanging at the boot logo.
 * `BUILD_BROKEN_DUP_RULES` and the duplicate-path decision are described in
   `BoardConfig.mk` next to the assignment.
-
-## Recent non-workflow changes
-
-The following property and tooling updates have been applied to the device tree.
-
-### `system.prop`
-
-* **Media / Zygote** (`c829f2f`): `ro.mtk_omacp_support=1`, `ro.zygote=zygote64_32`, and `ro.keystore.disable_strongbox=true` (the stock Trustonic TEE is keymaster 3.0 with no StrongBox/attestation ID).
-* **Low-RAM configuration** (`c2a9003`): `ro.config.low_ram=false`.
-* **Full-disk encryption crypto options** (`a4644f2`): `ro.crypto.dm_default_key.options_format.version=1`, `ro.crypto.volume.filenames_mode=aes-256-cts`, and `ro.crypto.allow_encrypt_override=true`, matching the FDE + metadata + TEE setup described in the *Encryption* section.
-* **Charging animation** (`bcb9e49`): `ro.charge.animation.hz=15`.
-
-### `vendor.prop`
-
-* **Bluetooth + camera** (`6024174`): the `persist.vendor.bluetooth.*` block was moved up near the top and `ro.vendor.mtk_cam_*` / `vendor.mtk.camera.app.fd.location` / `persist.vendor.camera3.zsl.enable` added; `camera.disable_zsl_mode` / `camera.mdp.cz/dre` were replaced with the `ro.vendor.mtk_cam_*` set.
-* **General `vendor.prop` rework** (`8a4ecb9`): added audio (e.g. `ro.vendor.audio.hfp.enable`, `ro.vendor.mtk_bessurround_support`, `vendor.audiohal.aurisys.support`) and graphics/display bits (`ro.vendor.mtk_hwc_support`, `ro.vendor.mtk_pq_support=2`, `ro.vendor.gpu.type=PowerVR`, `ro.surface_flinger.has_wide_color_display=false`, `ro.surface_flinger.has_HDR_display=false`); the Bluetooth block was relocated.
-* **Media / playback** (`5d4773b`): `media.settings.xml` now points at `/vendor/etc/media_profiles_V1_0.xml` (matching the stock profile file documented in *Media profiles*) and MTK video-playback capability flags were added (`wmv`, `flv`, `mp4`, `avi`, `hevc`, `mtk_sec_video_path_support`, `mtk_omx_core_log_enable=0`).
-* **Thermal + TEE** (`d83d426`): `ro.vendor.mtk_thermal_config=1` and the Trustonic TEE block (`ro.vendor.mtk_tee_support=1`, `ro.vendor.mtk_trustonic_tee_support=1`, `ro.vendor.mtk_sec_usb_check=0`).
-* **Remove Trustonic TEE duplicate** (`d933212`): the legacy `ro.mtk_trustonic_tee_support=1` was removed in favour of the `ro.vendor.mtk_*` TEE block above.
-* **GPS / GNSS** (`d0f5d78`): `persist.vendor.radio.gps.support=1`, plus `ro.vendor.mtk_shared_sdcard=1`, `persist.vendor.sys.usb.config=mtp`, and `ro.vendor.mtk_lcm_physical_rotation=0`.
-* **MTK WAPI / Passpoint** (`1f83bc3`): `ro.vendor.mtk_wapi_support=0` and `ro.vendor.mtk_passpoint_r1_support=1`.
-
-### Build / tooling scripts
-
-* **SHA-1 update script** (`ebc11f1`, `4e561e6`): `update-sha1sums.py` was removed and replaced with `update-sha1sums.sh`. It walks `proprietary-files.txt` and rewrites every `path|sha1sum` line with a fresh `sha1sum` computed against the extracted blobs in `vendor/oppo/CPH1909/proprietary/`, so SHA-1 pins stay valid after a vendor re-extract.
 
 ## Known limitations / porting notes
 
