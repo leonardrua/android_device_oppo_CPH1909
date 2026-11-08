@@ -136,6 +136,8 @@ persist.mtk.wcn.dynamic.dump=0
 # connectivity driver through the wmt_loader/stp service.
 persist.mtk.wcn.patch.version=-1
 persist.mtk.connsys.poweron.ctl=0
+ro.vendor.mtk_wapi_support=0
+ro.vendor.mtk_passpoint_r1_support=1
 ro.connsys.dedicated.log=1
 # DHCPv6 client support in the MTK Wi-Fi stack.
 ro.mtk_dhcpv6c_wifi=1
