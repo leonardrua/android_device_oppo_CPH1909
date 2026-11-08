@@ -39,6 +39,15 @@ ro.camera.sound.forced=0
 # Audio
 ro.audio.silent=0
 
+# Media
+ro.mtk_omacp_support=1
+
+# Zygote: 64-bit primary with 32-bit secondary
+ro.zygote=zygote64_32
+
+# Keystore: stock TEE is keymaster 3.0, so no StrongBox / attestation ID
+ro.keystore.disable_strongbox=true
+
 # MediaTek-specific framework bits
 ro.kernel.zio=38,108,105,16
 ro.zygote.preload.enable=0
