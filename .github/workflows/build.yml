@@ -292,72 +292,9 @@ jobs:
           ccache -M "$CCACHE_SIZE"
 
           CORES=$(nproc --all)
-          MEM_GB=$(free -g | awk '/Mem:/{print $2}')
-          SWAP_MB=$(free -m | awk '/Swap:/{print $2}')
-
-          # Add zram swap on memory-constrained runners. Metalava/hiddenapi-lists-docs
-          # and other Java doc/stub steps can spike memory and get OOM-killed even
-          # when ninja parallelism looks reasonable. Fall back to a swapfile when
-          # zram is unavailable. On containerized runners, swapon may be blocked;
-          # in that case we keep parallelism very low.
-          if [ "${SWAP_MB:-0}" -lt 8192 ]; then
-            SWAP_ENABLED=false
-            if sudo modprobe zram 2>/dev/null && [ -e /sys/block/zram0 ]; then
-              sudo swapoff /dev/zram0 2>/dev/null || true
-              echo 1 | sudo tee /sys/block/zram0/reset >/dev/null 2>&1 || true
-              # Prefer a fast compressor when available.
-              if [ -w /sys/block/zram0/comp_algorithm ] && grep -qw lz4 /sys/block/zram0/comp_algorithm 2>/dev/null; then
-                echo lz4 | sudo tee /sys/block/zram0/comp_algorithm >/dev/null || true
-              elif [ -w /sys/block/zram0/comp_algorithm ] && grep -qw zstd /sys/block/zram0/comp_algorithm 2>/dev/null; then
-                echo zstd | sudo tee /sys/block/zram0/comp_algorithm >/dev/null || true
-              fi
-              echo 12G | sudo tee /sys/block/zram0/disksize >/dev/null
-              sudo mkswap /dev/zram0 >/dev/null
-              if sudo swapon -p 100 /dev/zram0 2>/dev/null; then
-                echo "Enabled 12G zram swap on /dev/zram0"
-                SWAP_ENABLED=true
-              else
-                echo "zram configured but swapon failed (likely blocked by runner)"
-              fi
-            else
-              echo "zram unavailable; swapon is often blocked on this runner, skipping swapfile creation"
-              SWAP_FILE="${SWAP_FILE:-/cache/swapfile}"
-              if [ -f "$SWAP_FILE" ]; then
-                sudo chmod 600 "$SWAP_FILE" 2>/dev/null || true
-                if sudo swapon "$SWAP_FILE" 2>/dev/null; then
-                  echo "Reused swapfile at $SWAP_FILE"
-                  SWAP_ENABLED=true
-                else
-                  echo "Existing swapfile at $SWAP_FILE could not be activated"
-                fi
-              fi
-            fi
-            SWAP_MB=$(free -m | awk '/Swap:/{print $2}')
-            if [ "$SWAP_ENABLED" != "true" ] && [ "${SWAP_MB:-0}" -lt 1024 ]; then
-              echo "No swap could be activated; build will use reduced parallelism"
-            fi
-          fi
-
-          # Leave headroom for large single-process Java/Metalava steps.
-          # Container/Namespace runners often block swapon and may clear /cache
-          # between runs, so use a faster in-job attempt first and retry remaining
-          # work with -j1 if an OOM-like kill is detected.
-          if [ "${MEM_GB:-0}" -le 8 ]; then
-            JOBS=2
-          elif [ "${SWAP_MB:-0}" -lt 1024 ]; then
-            JOBS=3
-          elif [ "${SWAP_MB:-0}" -lt 4096 ]; then
-            JOBS=$(( MEM_GB / 4 ))
-          else
-            JOBS=$(( MEM_GB / 3 ))
-          fi
-          [ "$JOBS" -gt "$CORES" ] && JOBS=$CORES
-          [ "$JOBS" -gt 6 ] && JOBS=6
-          [ "$JOBS" -lt 2 ] && JOBS=2
+          JOBS="$CORES"
           export JOBS
-
-          echo "cores=$CORES mem=${MEM_GB}GB swap=${SWAP_MB}MB JOBS=$JOBS"
-          echo "OUT_DIR=${OUT_DIR:-default}"
+          echo "cores=$CORES JOBS=$JOBS OUT_DIR=${OUT_DIR:-default}"
           free -h
 
           cat > "${GITHUB_WORKSPACE}/do_build.sh" <<'EOS'
@@ -367,11 +304,6 @@ jobs:
           mka "${TARGET}" -j"${JOBS}"
           EOS
 
-          run_build() {
-            timeout "${BUILD_TIMEOUT_MIN}m" bash "${GITHUB_WORKSPACE}/do_build.sh" 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
-            return ${PIPESTATUS[0]}
-          }
-
           ( while true; do
               echo "[monitor] $(date +%H:%M) disk: $(df -h . | tail -1 | awk '{print $4" free"}') | mem: $(free -m | awk '/Mem:/{print $3"MB used, "$7"MB avail"}') | swap: $(free -m | awk '/Swap:/{print $3"MB used"}')"
               ps -eo pid,pcpu,pmem,rss,comm --sort=-rss | head -5
@@ -380,19 +312,11 @@ jobs:
           MON=$!
 
           set +e
-          run_build
-          RC=$?
-          if [ "$RC" -ne 0 ] && grep -Eq '(^|[[:space:]])Killed([[:space:]]|$)|Out of memory|OOM killer|oom-kill' "${GITHUB_WORKSPACE}/build.log" 2>/dev/null; then
-            cp -f "${GITHUB_WORKSPACE}/build.log" "${GITHUB_WORKSPACE}/build-attempt1-oom.log" 2>/dev/null || true
-            echo "OOM-like failure detected (rc=$RC). Retrying remaining targets with JOBS=1 to avoid kernel OOM without slowing the normal path."
-            export JOBS=1
-            echo "Retry: JOBS=$JOBS OUT_DIR=${OUT_DIR:-default}"
-            run_build
-            RC=$?
-          fi
+          timeout "${BUILD_TIMEOUT_MIN}m" bash "${GITHUB_WORKSPACE}/do_build.sh" 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
+          RC=${PIPESTATUS[0]}
           kill $MON 2>/dev/null || true
           echo "BUILD_RC=$RC" >> "$GITHUB_ENV"
-          echo "Build finished with code: $RC (124 = timed out; 137/143 often indicate a killed process)"
+          echo "Build finished with code: $RC (124 = timed out)"
           ccache -s | head -15
           exit 0
 
@@ -420,7 +344,6 @@ jobs:
             done
           fi
           cp -v "${OUT_BASE}/error.log" "$RESULT/" 2>/dev/null || true
-          cp -v "${GITHUB_WORKSPACE}/build-attempt1-oom.log" "$RESULT/" 2>/dev/null || true
           tail -n 3000 "${GITHUB_WORKSPACE}/build.log" > "$RESULT/build-tail.log" 2>/dev/null || true
           ls -lh "$RESULT"
 
