@@ -22,10 +22,18 @@ persist.dirac.acs.controller=afm
 persist.dirac.afm.mode=global
 persist.dirac.acs.startAtBoot=3
 
+# Bluetooth
+persist.vendor.bluetooth.a2dp_offload.disabled=true
+ro.vendor.bt.stack=fluoride
+persist.vendor.bt.a2dp.source_codec=sbc
+
 # Camera
-camera.disable_zsl_mode=1
-camera.mdp.cz.enable=1
-camera.mdp.dre.enable=0
+ro.vendor.mtk_cam_ba_enable=0
+ro.vendor.mtk_camera_app_version=3
+ro.vendor.mtk_cam_lomo_support=1
+ro.vendor.mtk_camera_bsp_support=0
+vendor.mtk.camera.app.fd.location=1
+persist.vendor.camera3.zsl.enable=1
 
 # Display / graphics
 #
