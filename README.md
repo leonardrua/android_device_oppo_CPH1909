@@ -610,6 +610,31 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 * `BUILD_BROKEN_DUP_RULES` and the duplicate-path decision are described in
   `BoardConfig.mk` next to the assignment.
 
+## Recent non-workflow changes
+
+The following property and tooling updates have been applied to the device tree.
+
+### `system.prop`
+
+* **Media / Zygote** (`c829f2f`): `ro.mtk_omacp_support=1`, `ro.zygote=zygote64_32`, and `ro.keystore.disable_strongbox=true` (the stock Trustonic TEE is keymaster 3.0 with no StrongBox/attestation ID).
+* **Low-RAM configuration** (`c2a9003`): `ro.config.low_ram=false`.
+* **Full-disk encryption crypto options** (`a4644f2`): `ro.crypto.dm_default_key.options_format.version=1`, `ro.crypto.volume.filenames_mode=aes-256-cts`, and `ro.crypto.allow_encrypt_override=true`, matching the FDE + metadata + TEE setup described in the *Encryption* section.
+* **Charging animation** (`bcb9e49`): `ro.charge.animation.hz=15`.
+
+### `vendor.prop`
+
+* **Bluetooth + camera** (`6024174`): the `persist.vendor.bluetooth.*` block was moved up near the top and `ro.vendor.mtk_cam_*` / `vendor.mtk.camera.app.fd.location` / `persist.vendor.camera3.zsl.enable` added; `camera.disable_zsl_mode` / `camera.mdp.cz/dre` were replaced with the `ro.vendor.mtk_cam_*` set.
+* **General `vendor.prop` rework** (`8a4ecb9`): added audio (e.g. `ro.vendor.audio.hfp.enable`, `ro.vendor.mtk_bessurround_support`, `vendor.audiohal.aurisys.support`) and graphics/display bits (`ro.vendor.mtk_hwc_support`, `ro.vendor.mtk_pq_support=2`, `ro.vendor.gpu.type=PowerVR`, `ro.surface_flinger.has_wide_color_display=false`, `ro.surface_flinger.has_HDR_display=false`); the Bluetooth block was relocated.
+* **Media / playback** (`5d4773b`): `media.settings.xml` now points at `/vendor/etc/media_profiles_V1_0.xml` (matching the stock profile file documented in *Media profiles*) and MTK video-playback capability flags were added (`wmv`, `flv`, `mp4`, `avi`, `hevc`, `mtk_sec_video_path_support`, `mtk_omx_core_log_enable=0`).
+* **Thermal + TEE** (`d83d426`): `ro.vendor.mtk_thermal_config=1` and the Trustonic TEE block (`ro.vendor.mtk_tee_support=1`, `ro.vendor.mtk_trustonic_tee_support=1`, `ro.vendor.mtk_sec_usb_check=0`).
+* **Remove Trustonic TEE duplicate** (`d933212`): the legacy `ro.mtk_trustonic_tee_support=1` was removed in favour of the `ro.vendor.mtk_*` TEE block above.
+* **GPS / GNSS** (`d0f5d78`): `persist.vendor.radio.gps.support=1`, plus `ro.vendor.mtk_shared_sdcard=1`, `persist.vendor.sys.usb.config=mtp`, and `ro.vendor.mtk_lcm_physical_rotation=0`.
+* **MTK WAPI / Passpoint** (`1f83bc3`): `ro.vendor.mtk_wapi_support=0` and `ro.vendor.mtk_passpoint_r1_support=1`.
+
+### Build / tooling scripts
+
+* **SHA-1 update script** (`ebc11f1`, `4e561e6`): `update-sha1sums.py` was removed and replaced with `update-sha1sums.sh`. It walks `proprietary-files.txt` and rewrites every `path|sha1sum` line with a fresh `sha1sum` computed against the extracted blobs in `vendor/oppo/CPH1909/proprietary/`, so SHA-1 pins stay valid after a vendor re-extract.
+
 ## Known limitations / porting notes
 
 * Fingerprint is wired to the AOSP biometric stack via
