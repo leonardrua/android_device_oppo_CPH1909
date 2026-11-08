@@ -85,6 +85,78 @@ Entries that exist on the stock 8.1 vendor partition but must not be copied are
 documented at the top of `proprietary-files.txt` (VINTF data, the 8.1 SELinux
 policy, mkshrc, and the generated `public.libraries.txt` /`fs_config*` files).
 
+## CI workflows
+
+The repository also contains two GitHub Actions workflows.
+
+### `build.yml` — Namespace build
+
+`Build LineageOS 17.1 (Oppo A5s CPH1909) - Namespace` is a manual
+(`workflow_dispatch`) build workflow that runs on the user-provisioned
+`namespace-profile-leonard` runner and writes its `out/` tree to the
+persistent `/cache` disk so that consecutive runs reuse ccache and
+intermediates. Its main characteristics:
+
+* Syncs the LineageOS 17.1 source with `repo`, then clones the device and
+  vendor trees and a source kernel tree
+  (`leonardrua/A5S-8.1-kernel-source`, branch
+  `lineageos-no-bakasu-susfs`) into
+  `kernel/oppo/CPH1909`. The kernel image itself is built from this source
+  tree rather than prebuilt (a newer approach than the
+  `prebuilt/Image.gz-dtb` layout described above); the tree is additionally
+  patched on the fly to keep warnings non-fatal.
+* The AArch64 UAPI header guard step (`Guard AArch64 signal context header
+  for ARM builds`) wraps `struct fpsimd_context` in
+  `arch/arm64/include/uapi/asm/sigcontext.h` with `#ifdef __aarch64__` so
+  32-bit targets can compile against it. This corresponds to commit
+  `ac03987` in the kernel repository and `ac03987` in this one.
+* Before the build starts it verifies the Git LFS artifact
+  `external/chromium-webview/prebuilt/arm64/webview.apk`. If the file is a
+  small LFS pointer (typical: 134 bytes, not the ~260 MB real APK) it runs
+  `git lfs pull` to materialise the real ZIP, then fails fast if the file is
+  still not a ZIP. This protects the run from the
+  `//external/chromium-webview:webview` `veridex` / `aapt2`
+  "failed opening zip: Invalid file" failure observed at ~99 % on the first
+  CI build (around `110688/111307`).
+* Builds with `lunch lineage_CPH1909-<type>` and `mka <target>`. The job
+  exposes `target`, `build_type`, `build_timeout_min`, `out_on_cache` and
+  `clean_out` dispatch inputs. `OUT_DIR`/`OUT_BASE` live on `/cache` when
+  the runner provides it, otherwise the workspace is used.
+* After the build the `Collect output` step packages the images, the
+  `lineage-*.zip` OTA, `build-tail.log` and, when non-empty, `error.log`
+  into a `result/` folder, which is uploaded as a workflow artifact named
+  `lineage-17.1-<device>-<target>` (default target `bacon` →
+  `lineage-17.1-CPH1909-bacon`).
+
+Because the runner blocks `swapon` and `zram` and clears `/cache` between
+runs, the workflow does **not** try to create its own swap. Rely on the
+runner-level swap instead; the build just reports what `free -h` sees.
+
+### `publish.yml` — optional publishing
+
+`Publish build artifacts (optional)` is a second, purely manual
+(`workflow_dispatch`) workflow that takes the artifact produced by a
+successful `build.yml` run and turns it into a GitHub draft pre-release of
+the device repository. It:
+
+* Defaults to the latest successful `Build LineageOS 17.1` run but accepts
+  an explicit `run_id`.
+* Defaults to the `lineage-17.1-CPH1909-bacon` artifact (or
+  `lineage-17.1-CPH1909-<target>`).
+* Downloads the artifact into `published/`, **deletes any zero-byte files**
+  (GitHub release assets must be at least 1 byte — the empty `error.log`
+  that produced `{"resource":"ReleaseAsset","code":"custom","field":"size",
+  "message":"size must be greater than or equal to 1"}` on the first
+  release attempt is filtered out here), then recomputes the list of
+  release assets from the remaining non-empty files and writes a
+  `SHA256SUMS` alongside them.
+* Creates the release with `softprops/action-gh-release` using an explicit
+  file list, with `draft` and `prerelease` both on by default; publish only
+  happens when the workflow is explicitly triggered.
+
+`recovery-build.yml` (legacy TWRP recovery build) and `ci.yml` (device
+tree integrity validation) are unchanged by the recent CI work.
+
 ## What changed for Android 10
 
 ### Boot, system-as-root and first-stage mount
@@ -527,6 +599,51 @@ first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
   reboots into recovery instead of hanging at the boot logo.
 * `BUILD_BROKEN_DUP_RULES` and the duplicate-path decision are described in
   `BoardConfig.mk` next to the assignment.
+
+## Recent CI work
+
+The GitHub Actions build and publishing workflows for this device are:
+
+* `.github/workflows/build.yml` — `Build LineageOS 17.1 (Oppo A5s CPH1909)
+  - Namespace`: a `workflow_dispatch`-driven build for the `leonardrua`
+  Namespace runner. Key properties:
+  - syncs the LineageOS 17.1 manifest, clones the device/vendor trees and
+    the `leonardrua/A5S-8.1-kernel-source` (`lineageos-no-bakasu-susfs`
+    branch) into `kernel/oppo/CPH1909`, and builds the **source** kernel
+    rather than a prebuilt one (newer than the `prebuilt/Image.gz-dtb`
+    layout described above);
+  - applies the `ac03987` kernel fixes: AArch64 `sigcontext.h`
+    `#ifdef __aarch64__` guard plus `-Wno-error` in
+    `scripts/Makefile.lib` to keep kernel warnings non-fatal;
+  - verifies `external/chromium-webview/prebuilt/arm64/webview.apk` is a
+    real ZIP (not an LFS pointer, ~134 bytes) and runs `git lfs pull` on
+    the prebuilt directory when it isn't, so the build no longer dies at
+    ~99 % with `veridex ... Expected valid zip or dex file` from
+    `//external/chromium-webview:webview`;
+  - drops all in-job swap / OOM / `-j1`-retry workarounds that were added
+    and then removed as the runner gained swap support — the workflow now
+    just prints `free -h` and `nproc --all` and uses `JOBS=$(nproc --all)`;
+  - `Collect output` copies the OTA zip, images, `build-tail.log`, and
+    only non-empty `error.log` into the upload folder; the workflow uploads
+    that folder as the `lineage-17.1-<device>-<target>` artifact.
+
+* `.github/workflows/publish.yml` — `Publish build artifacts (optional)`:
+  an **optional**, manual-only publisher that takes an existing build
+  artifact and turns it into a GitHub draft pre-release. Inputs include
+  `run_id` (defaults to the latest successful build), `target` (defaults to
+  `bacon`), `artifact_name`, `tag_name`, `release_name`, and `draft` /
+  `prerelease` booleans. It downloads the artifact, **hard-deletes any
+  zero-byte files** (GitHub rejects release assets with `size >= 1`; this
+  was needed because the previous empty `error.log` broke the release
+  creation with
+  `Validation Failed: {"resource":"ReleaseAsset","code":"custom",
+  "field":"size","message":"size must be greater than or equal to 1"}`),
+  builds a `SHA256SUMS` for the remaining files, and uploads them with
+  `softprops/action-gh-release` using an explicit non-empty file list.
+  Both `draft` and `prerelease` default to `true` so nothing is published
+  without an explicit trigger.
+
+* `ci.yml` and `recovery-build.yml` were left alone by the recent work.
 
 ## Known limitations / porting notes
 
