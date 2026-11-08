@@ -56,12 +56,34 @@ on `generated_kernel_headers`. Keeping a real kernel source tree at
 `kernel/oppo/CPH1909` is therefore required both for the image and for the
 headers.
 
-The CI build workflow clones `leonardrua/A5S-8.1-kernel-source` (branch
-`lineageos-no-bakasu-susfs`) into that path, with the GCC Linaro 6.3.1 +
-Python 2 toolchain and on-the-fly warning fixes (see
-[`## CI workflows`](#ci-workflows)). On a local build, check out the same
-tree at `kernel/oppo/CPH1909` relative to the LineageOS source root before
-lunching.
+The CI build workflow clones `leonardrua/A5S-8.1-kernel-source` into that
+path, with the GCC Linaro 6.3.1 + Python 2 toolchain and on-the-fly warning
+fixes (see [`## CI workflows`](#ci-workflows)). On a local build, check out
+the same tree at `kernel/oppo/CPH1909` relative to the LineageOS source root
+before lunching.
+
+The source tree is version `4.9.80` (`CONFIG_LOCALVERSION=""`), while the
+stock vendor image ships seven 4.9.77+ kernel modules — `wmt_drv.ko`,
+`wmt_chrdev_wifi.ko`, `wlan_drv_gen4m.ko`, `bt_drv.ko`, `gps_drv.ko`,
+`fmradio_drv.ko` and `met.ko` in `/vendor/lib/modules/`, loaded by
+`init.wmt_drv.rc` / `init.wlan_drv.rc` / `init.bt_drv.rc` / `init.gps_drv.rc`
+/ `init.fmradio_drv.rc` — all built with `CONFIG_MODVERSIONS=y`. That mix has
+been verified to work: a kernel built from this source boots on the stock
+vendor image and the stock modules load at boot.
+
+Why the version mismatch is not a problem, for the record:
+
+* `same_magic()` in the tree's `kernel/module.c` skips the kernel release
+  (`4.9.80` vs `4.9.77+`) whenever the module carries a `__versions`
+  (`modversions`) section, which all of the stock modules do. Only the flags
+  after it — `SMP preempt mod_unload modversions aarch64` — are compared, and
+  those match the source config.
+* `check_modinfo()`'s `return -ENOEXEC` after the version-magic `pr_err` is
+  commented out in this tree, so even a trailing vermagic mismatch only logs.
+* What still matters is the modversions CRC check in `check_version()`, which
+  resolves against the running kernel's exported-symbol CRCs. The MediaTek
+  driver ABI is shared between the two trees, so the modules resolve — which
+  is the part the boot test proves and static analysis could not.
 
 ## Extracting the vendor blobs
 
@@ -102,8 +124,7 @@ intermediates. Its main characteristics:
 
 * Syncs the LineageOS 17.1 source with `repo`, then clones the device and
   vendor trees and a source kernel tree
-  (`leonardrua/A5S-8.1-kernel-source`, branch
-  `lineageos-no-bakasu-susfs`) into
+  (`leonardrua/A5S-8.1-kernel-source`) into
   `kernel/oppo/CPH1909`. The kernel image is built from this source tree
   (`TARGET_KERNEL_SOURCE`/`TARGET_KERNEL_CONFIG`, no prebuilt image in the
   device tree); the tree is additionally
