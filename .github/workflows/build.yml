@@ -320,23 +320,9 @@ jobs:
                 echo "zram configured but swapon failed (likely blocked by runner)"
               fi
             else
-              echo "zram unavailable; falling back to swapfile"
+              echo "zram unavailable; swapon is often blocked on this runner, skipping swapfile creation"
               SWAP_FILE="${SWAP_FILE:-/cache/swapfile}"
-              SWAP_PARENT="$(dirname "$SWAP_FILE")"
-              if [ ! -d "$SWAP_PARENT" ]; then
-                SWAP_FILE="$GITHUB_WORKSPACE/swapfile"
-              fi
-              if [ ! -f "$SWAP_FILE" ] && sudo fallocate -l 12G "$SWAP_FILE" 2>/dev/null; then
-                sudo chmod 600 "$SWAP_FILE"
-                sudo mkswap "$SWAP_FILE" >/dev/null
-                if sudo swapon "$SWAP_FILE" 2>/dev/null; then
-                  echo "Enabled 12G swapfile at $SWAP_FILE"
-                  SWAP_ENABLED=true
-                else
-                  echo "swapfile created at $SWAP_FILE but swapon failed (likely blocked by runner); removing file"
-                  sudo rm -f "$SWAP_FILE" || true
-                fi
-              elif [ -f "$SWAP_FILE" ]; then
+              if [ -f "$SWAP_FILE" ]; then
                 sudo chmod 600 "$SWAP_FILE" 2>/dev/null || true
                 if sudo swapon "$SWAP_FILE" 2>/dev/null; then
                   echo "Reused swapfile at $SWAP_FILE"
@@ -344,8 +330,6 @@ jobs:
                 else
                   echo "Existing swapfile at $SWAP_FILE could not be activated"
                 fi
-              else
-                echo "Could not create swapfile at $SWAP_FILE; continuing without extra swap"
               fi
             fi
             SWAP_MB=$(free -m | awk '/Swap:/{print $2}')
