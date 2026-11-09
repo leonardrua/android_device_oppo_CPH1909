@@ -113,6 +113,14 @@ knowing about that set:
   unquickened `classes.dex` extracted from their `oat/arm64/*.vdex` files
   (vdexExtractor), so they re-sign with this build's platform key — both
   declare platform shared uids (`android.uid.phone`, `android.uid.system`).
+* The VoLTE video-telephony chain is imported as well: `/system/bin/vtservice`
+  and its full MTK dependency closure (`libmtk_vt_service.so`, `libsource.so`,
+  `libcomutils.so`, `libdpframework_mtk.so`, `libged_sys.so`,
+  `libgralloc_extra_sys.so`, `libion_mtk_sys.so`, `libion_ulit_sys.so`,
+  `libpq_prot_mtk.so`, `libsignal.so`, `libvt_avsync.so` plus the `/system`
+  HIDL interface libraries) — required by `init.vtservice.rc`, which starts
+  `class main` service `vtservice`. Both `vtservice` and `vtservice_hidl`
+  are labeled `mtk_vtservice_exec`.
 * Both apps' `<uses-library>` entries carry `required="false"`, and their
   signature|privileged permissions are allowlisted by
   `configs/permissions/privapp-permissions-ims.xml` (installed to

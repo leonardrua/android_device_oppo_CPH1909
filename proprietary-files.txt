@@ -68,14 +68,21 @@ system/lib64/vendor.qti.hardware.soter@1.0.so
 #
 # The stub jars (309 bytes, empty manifest only) provide the framework-layout
 # the stock image carried; nothing in this build's boot classpath references
-# them. libimsma*.so are the native side of the stock ims stack, required only
-# by system/lib/libmtk_vt_service.so, which is not shipped; they are imported
-# for layout parity and for the future Telephony work. com.coloros.libraries.xml
-# registers the com.coloros.statistics library (all three coloros stub jars
-# are imported verbatim).
+# them. libimsma*.so are the native side of the stock ims stack, required by
+# system/lib/libmtk_vt_service.so, which is required by system/bin/vtservice
+# (the VoLTE video-telephony service, started by init.vtservice.rc). The VT
+# service's full MTK dependency closure (libmtk_vt_service.so, libsource.so,
+# libcomutils.so, libdpframework_mtk.so, libged_sys.so, libgralloc_extra_sys.so,
+# libion_mtk_sys.so, libion_ulit_sys.so, libpq_prot_mtk.so, libsignal.so,
+# libvt_avsync.so plus the /system HIDL interface libraries
+# vendor.mediatek.hardware.{videotelephony@1.0,pq@2.0,power@1.1}.so) is
+# imported for the same reason. com.coloros.libraries.xml registers the
+# com.coloros.statistics library (all three coloros stub jars are imported
+# verbatim).
 
 -system/priv-app/ImsService/ImsService.apk
 -system/priv-app/OppoSimSettings/OppoSimSettings.apk
+system/bin/vtservice
 system/framework/ims-common.jar
 system/framework/mediatek-ims-common.jar
 system/framework/com.coloros.statistics.jar
@@ -85,6 +92,20 @@ system/lib/libimsma.so
 system/lib/libimsma_adapt.so
 system/lib/libimsma_rtp.so
 system/lib/libimsma_socketwrapper.so
+system/lib/libmtk_vt_service.so
+system/lib/libsource.so
+system/lib/libcomutils.so
+system/lib/libdpframework_mtk.so
+system/lib/libged_sys.so
+system/lib/libgralloc_extra_sys.so
+system/lib/libion_mtk_sys.so
+system/lib/libion_ulit_sys.so
+system/lib/libpq_prot_mtk.so
+system/lib/libsignal.so
+system/lib/libvt_avsync.so
+system/lib/vendor.mediatek.hardware.videotelephony@1.0.so
+system/lib/vendor.mediatek.hardware.pq@2.0.so
+system/lib/vendor.mediatek.hardware.power@1.1.so
 system/etc/permissions/com.coloros.libraries.xml
 
 -vendor/app/EmCamera/EmCamera.apk
