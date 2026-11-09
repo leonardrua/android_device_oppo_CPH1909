@@ -126,10 +126,14 @@ knowing about that set:
   `vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar`, `ifaamanager.jar`)
   plus OPPO's `org.ifaa.android.manager.permissions.xml`, which declares
   `ifaamanager.jar` (the OPPO IFAA fingerprint framework) a public library.
-  All three jars are 309-byte empty stubs; nothing in this ROM references
-  them — they are stock-layout parity. The stock system-side interface
-  libraries for the disabled OPPO fingerprint services are deliberately not
-  imported (see the vendor tree's README).
+  The two stock face framework stub jars are imported the same way
+  (`android.frameworks.faceservice-V1.0-java.jar`,
+  `vendor.oppo.hardware.biometrics.face-V1.0-java.jar`). All five jars are
+  309-byte empty stubs; nothing in this ROM references them — they are
+  stock-layout parity. There is no face permissions XML in stock, so none is
+  imported. The stock system-side interface libraries for the disabled OPPO
+  fingerprint and face services are deliberately not imported (see the vendor
+  tree's README).
 * Both apps' `<uses-library>` entries carry `required="false"`, and their
   signature|privileged permissions are allowlisted by
   `configs/permissions/privapp-permissions-ims.xml` (installed to
@@ -885,14 +889,20 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   first-wins `PRODUCT_COPY_FILES` overrides (before `CPH1909-vendor.mk`) disable
   the stock ColorOS `fps_hal` / `fpay_hal` init services, which register
   `vendor.oppo.hardware.biometrics.fingerprint@2.1` (not the AOSP interface) and
-  would contend for `/dev/silead_fp`. Vendor SELinux contexts/bring-up
+  would contend for `/dev/silead_fp`. A third first-wins override rc disables the
+  stock face service (`face_hal`): its DT_NEEDED system-side interface libraries
+  (`android.frameworks.faceservice@1.0.so` and `vendor.oppo.hardware.biometrics.
+  face@1.0.so`) are deliberately not imported, so it could never start in this
+  build; disabling it stops init from respawning a dead process at every late_start.
+  Vendor SELinux contexts/bring-up
   `permissive hal_fingerprint_default` are in `sepolicy/vendor/`. Face unlock is
   userspace-only on CPH1909 (no face driver in the authoritative kernel; stock
   vendor face service/`libmegface`/`libstface*` blobs exist, but LineageOS 17.1
-  has no AOSP `android.hardware.biometrics.face@1.0` default service), so only
+  has no AOSP `android.hardware.biometrics.face@1.0` default service — 17.1 ships
+  only the interface and its VTS, no passthrough implementation), so only
   fingerprint is wired to an AOSP interface. Boot-test to confirm shim load,
   `IBiometricsFingerprint/default` registration, `/dev/silead_fp` access, and
-  that stock `fps_hal`/`fpay_hal` remain disabled.
+  that stock `fps_hal`/`fpay_hal`/`face_hal` remain disabled.
 * The 8.1 vendor blobs are the highest-risk part of the port. The HIDL
   transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
   variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL

@@ -243,10 +243,13 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 # Disable the stock ColorOS biometric HIDL services that the blob vendor makefile
 # also installs. PRODUCT_COPY_FILES keeps the first entry for a destination, so
 # these overrides must stay before the CPH1909-vendor.mk inherit below. They stop
-# the stock vendor.oppo fingerprint (fps_hal) and fingerprintpay (fpay_hal)
-# services from contending with the AOSP fingerprint@2.1 service for /dev/silead_fp
-# and from registering interfaces the Lineage framework does not use.
+# the stock vendor.oppo face (face_hal), fingerprint (fps_hal) and fingerprintpay
+# (fpay_hal) services from registering interfaces the Lineage framework does not
+# use. face_hal is dead on arrival in this build (its DT_NEEDED system-side
+# libs are not imported), and fps_hal/fpay_hal would contend with the AOSP
+# fingerprint@2.1 service for /dev/silead_fp.
 PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/etc/init/vendor.oppo.hardware.biometrics.face@1.0-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/vendor.oppo.hardware.biometrics.face@1.0-service.rc \
     $(DEVICE_PATH)/rootdir/etc/init/vendor.oppo.hardware.biometrics.fingerprint@2.1-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/vendor.oppo.hardware.biometrics.fingerprint@2.1-service.rc \
     $(DEVICE_PATH)/rootdir/etc/init/vendor.oppo.hardware.biometrics.fingerprintpay@1.0-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/vendor.oppo.hardware.biometrics.fingerprintpay@1.0-service.rc
 

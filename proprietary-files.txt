@@ -111,9 +111,17 @@ system/etc/permissions/com.coloros.libraries.xml
 # module emits these paths). ifaamanager.jar is OPPO's IFAA fingerprint
 # framework stub; org.ifaa.android.manager.permissions.xml declares it a public
 # library, copied verbatim from stock.
+#
+# Stock face framework stubs, same 309-byte empty stub, same role: stock-layout
+# parity for the OPPO face stack. Nothing references them; the stock face_hal
+# cannot load (its DT_NEEDED system-side libs are deliberately not imported)
+# and its service is disabled via rootdir/etc/init/vendor.oppo.hardware.
+# biometrics.face@1.0-service.rc.
 system/framework/ifaamanager.jar
 system/framework/android.frameworks.fingerprintservice-V1.0-java.jar
 system/framework/vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar
+system/framework/android.frameworks.faceservice-V1.0-java.jar
+system/framework/vendor.oppo.hardware.biometrics.face-V1.0-java.jar
 system/etc/permissions/org.ifaa.android.manager.permissions.xml
 
 -vendor/app/EmCamera/EmCamera.apk

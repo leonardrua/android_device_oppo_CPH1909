@@ -1,0 +1,19 @@
+# Override the stock ColorOS face-unlock HIDL service (face_hal).
+#
+# The stock service registers vendor.oppo.hardware.biometrics.face@1.0, which
+# the AOSP/LineageOS 10 framework does not bind to. The OPPO face stack's
+# framework side (android.frameworks.faceservice@1.0::IFaceHalService, hosted
+# by the ColorOS system_server fork and consumed by ColorOS SystemUI/Settings)
+# is not in this ROM, and the two system-side interface libraries the service
+# DT_NEEDEDs (android.frameworks.faceservice@1.0.so and
+# vendor.oppo.hardware.biometrics.face@1.0.so) are deliberately not imported,
+# so the loader cannot start it at all in this build -- it would only spawn a
+# dead process at late_start forever. Disable it like fps_hal/fpay_hal. The
+# AOSP biometric stack stays wired to fingerprint only.
+service face_hal /vendor/bin/hw/vendor.oppo.hardware.biometrics.face@1.0-service
+    override
+    class late_start
+    user system
+    group system input
+    disabled
+    oneshot
