@@ -581,7 +581,12 @@ and `PowerManagerService` forwards it as
 `android.hardware.power@1.0`. The default AOSP `android.hardware.power@1.0-service`
 loads the legacy `libhardware` module and forwards `setFeature` to it, so this
 tree builds a small `power.mt6765` shim (`power/`) — in the style of the MT6765
-RMX2185 device trees — that writes `TARGET_TAP_TO_WAKE_NODE`. Both
+RMX2185 device trees — that writes `TARGET_TAP_TO_WAKE_NODE`. The stock legacy
+power HALs (`vendor/lib/hw/power.mt6765.so` and `power.default.so`, both
+32-bit and 64-bit) are deliberately excluded from `proprietary-files.txt`: they
+installed to the same vendor path as the shim while having no proc-node writer
+at all (verified: no `/proc` or `/sys` references in the binaries), so they were
+dropped from the vendor image to keep the shim the definitive `power.mt6765.so`. Both
 `android.hardware.power@1.0-service` and `power.mt6765` are added in
 `device.mk`, and `android.hardware.power@1.0::IPower/default` is declared in
 `manifest.xml`. This shim only handles DT2W (other power hints/interactive are
