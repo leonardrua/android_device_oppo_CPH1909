@@ -262,6 +262,15 @@ blobs, so `Android.mk` also creates the empty
 allowed to create directories under `/vendor` (`vendor_file_type` is excluded
 from AOSP's broad init rules).
 
+`init.mt6765.rc` also runs `restorecon_recursive /vendor/nvcfg` in its
+`post-fs-data` block. The stock nvcfg partition labels its contents
+`nvcfg_file`, which this policy does not define, so the inodes appear
+unlabeled and init relabels them to `mtk_nvcfg_file`. `device.te` grants init
+`read`/`getattr`/`relabelto` on `mtk_nvcfg_file` for that reason: AOSP's
+generic init rules exclude `vendor_file_type` from those permissions, while
+`relabelfrom` on `unlabeled` and `associate` on `file_type` over `labeledfs`
+are already covered by the platform policy.
+
 The same file also imports two ColorOS ramdisk scripts by relative name,
 `init.oppo.debug.rc` and `init.oppo.engineermode.rc`, and the debug script
 imports `init.oppo.reserve.rc` the same way. Relative imports resolve against

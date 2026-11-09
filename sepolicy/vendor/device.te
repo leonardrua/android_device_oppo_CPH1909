@@ -179,6 +179,17 @@ allow init {
 # post-fs-data/on boot: /opporeserve/* and /persist/rpmb_status.
 allow init { mtk_persist_file oppo_reserve_file }:dir create_dir_perms;
 
+# init.mt6765.rc runs restorecon_recursive /vendor/nvcfg in its post-fs-data
+# block. The stock nvcfg partition labels its contents nvcfg_file, which this
+# policy does not define, so they appear unlabeled and init must relabel them to
+# mtk_nvcfg_file. AOSP's broad init rules exclude vendor_file_type from relabelto
+# and from read/getattr on files, so grant what restorecon needs for this type:
+# read on directories (fts/opendir), getattr on entries (lstat/lgetfilecon) and
+# relabelto on the target. relabelfrom on unlabeled and associate on file_type
+# over labeledfs are already covered by the generic init/file rules.
+allow init mtk_nvcfg_file:dir read;
+allow init mtk_nvcfg_file:dir_file_class_set { getattr relabelto };
+
 ###
 ### GNSS
 ###
