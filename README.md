@@ -586,7 +586,7 @@ allocation, same `LOG_TAG "MTKPowerHAL"`, the sustained-performance and VR-mode
 hint handlers with `*((int *)data)` parsing, and the DT2W write through
 `TARGET_TAP_TO_WAKE_NODE` (`/proc/touchpanel/double_tap_enable`). The stock legacy
 power HALs (`vendor/lib/hw/power.mt6765.so` and `power.default.so`, both
-32-bit and 64-bit) are deliberately excluded from `proprietary-files.txt`: they
+32-bit and 64-bit) are deliberately absent from `proprietary-files.txt`: they
 installed to the same vendor path as the shim while having no proc-node writer
 at all (verified: no `/proc` or `/sys` references in the binaries), so they were
 dropped from the vendor image to keep the shim the definitive `power.mt6765.so`.
