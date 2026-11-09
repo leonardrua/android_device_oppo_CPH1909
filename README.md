@@ -580,13 +580,22 @@ and `PowerManagerService` forwards it as
 `IPower::setFeature(POWER_FEATURE_DOUBLE_TAP_TO_WAKE)` to
 `android.hardware.power@1.0`. The default AOSP `android.hardware.power@1.0-service`
 loads the legacy `libhardware` module and forwards `setFeature` to it, so this
-tree builds a small `power.mt6765` shim (`power/`) — in the style of the MT6765
-RMX2185 device trees — that writes `TARGET_TAP_TO_WAKE_NODE`. The stock legacy
+tree builds a small `power.mt6765` shim (`power/`) that mirrors the MT6765
+RMX2185 device trees' `Mediatek Power HAL`: same `power_open()` device-class
+allocation, same `LOG_TAG "MTKPowerHAL"`, the sustained-performance and VR-mode
+hint handlers with `*((int *)data)` parsing, and the DT2W write through
+`TARGET_TAP_TO_WAKE_NODE` (`/proc/touchpanel/double_tap_enable`). The stock legacy
 power HALs (`vendor/lib/hw/power.mt6765.so` and `power.default.so`, both
 32-bit and 64-bit) are deliberately excluded from `proprietary-files.txt`: they
 installed to the same vendor path as the shim while having no proc-node writer
 at all (verified: no `/proc` or `/sys` references in the binaries), so they were
-dropped from the vendor image to keep the shim the definitive `power.mt6765.so`. Both
+dropped from the vendor image to keep the shim the definitive `power.mt6765.so`.
+
+Note the AOSP `android.hardware.power@1.0-service` passthrough service supports
+both open()-based and open()-less legacy modules: with `methods->open` present
+(as here) it takes the `hw_module_methods->open()` branch, allocating a
+`power_module_t` as the device class, which is exactly the interface the stock
+MediaTek and RMX2185 modules expose. Both
 `android.hardware.power@1.0-service` and `power.mt6765` are added in
 `device.mk`, and `android.hardware.power@1.0::IPower/default` is declared in
 `manifest.xml`. This shim only handles DT2W (other power hints/interactive are

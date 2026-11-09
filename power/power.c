@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "CPH1909PowerHAL"
+#define LOG_TAG "MTKPowerHAL"
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -28,72 +29,131 @@
 #include <hardware/hardware.h>
 #include <hardware/power.h>
 
-static void sysfs_write(const char *path, const char *s)
+int sysfs_write(char *path, char *s)
 {
     char buf[80];
     int len;
-    int fd;
+    int ret = 0;
+    int fd = open(path, O_WRONLY);
 
-    fd = open(path, O_WRONLY | O_CLOEXEC);
     if (fd < 0) {
         strerror_r(errno, buf, sizeof(buf));
-        ALOGE("Error opening %s: %s", path, buf);
-        return;
+        ALOGE("Error opening %s: %s\n", path, buf);
+        return -1;
     }
 
     len = write(fd, s, strlen(s));
     if (len < 0) {
         strerror_r(errno, buf, sizeof(buf));
-        ALOGE("Error writing to %s: %s", path, buf);
+        ALOGE("Error writing to %s: %s\n", path, buf);
+
+        ret = -1;
     }
 
     close(fd);
+
+    return ret;
 }
 
 static void power_init(struct power_module *module)
 {
-    (void)module;
-
-    ALOGI("CPH1909 power HAL shim init");
+	if (module)
+    	ALOGI("power_init");
 }
 
 static void power_set_interactive(struct power_module *module, int on)
 {
-    (void)module;
-
-    ALOGV("power_set_interactive: %d", on);
+	if (module)
+    	ALOGI("power_set_interactive on:%d", on);
 }
 
-static void power_hint(struct power_module *module, power_hint_t hint,
-                       void *data)
+static void power_set_feature(struct power_module *module, feature_t feature, int state)
 {
-    (void)module;
-    (void)data;
-
-    ALOGV("power_hint: %d", hint);
-}
-
-static void set_feature(struct power_module *module, feature_t feature, int state)
-{
-    (void)module;
-#ifndef TAP_TO_WAKE_NODE
-    (void)state;
-#endif
+	if (module)
+		ALOGI("power_set_feature feature:%d, state:%d", feature, state);
 
     switch (feature) {
 #ifdef TAP_TO_WAKE_NODE
-    case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
-        ALOGI("double tap to wake: %s (%s)", state ? "on" : "off", TAP_TO_WAKE_NODE);
-        sysfs_write(TAP_TO_WAKE_NODE, state ? "1" : "0");
-        break;
+        case POWER_FEATURE_DOUBLE_TAP_TO_WAKE:
+            ALOGI("double tap to wake: %s (%s)", state ? "on" : "off", TAP_TO_WAKE_NODE);
+            sysfs_write(TAP_TO_WAKE_NODE, state ? "1" : "0");
+            break;
 #endif
-    default:
-        break;
+        default:
+            break;
     }
 }
 
+static void power_hint(struct power_module *module, power_hint_t hint,
+                       void *data) {
+
+    int param = 0;
+
+    if (data)
+	param = *((int *)data);
+
+    switch (hint) {
+        case POWER_HINT_SUSTAINED_PERFORMANCE:
+		if (module) {
+			if (param)
+    			ALOGI("POWER_HINT_SUSTAINED_PERFORMANCE, on");
+			else
+            		ALOGI("POWER_HINT_SUSTAINED_PERFORMANCE, off");
+			}
+            break;
+        case POWER_HINT_VR_MODE:
+		if (module) {
+            	if (param)
+    			ALOGI("POWER_HINT_VR_MODE, on");
+    		else
+    			ALOGI("POWER_HINT_VR_MODE, off");
+		}
+            break;
+        default:
+            break;
+    }
+}
+
+static int power_open(const hw_module_t* module, const char* name,
+                    hw_device_t** device)
+{
+
+	if (module)
+    	ALOGI("%s: enter; name=%s", __FUNCTION__, name);
+    int retval = 0; /* 0 is ok; -1 is error */
+
+    if (strcmp(name, POWER_HARDWARE_MODULE_ID) == 0) {
+        power_module_t *dev = (power_module_t *)calloc(1,
+                sizeof(power_module_t));
+
+        if (dev) {
+            /* Common hw_device_t fields */
+            dev->common.tag = HARDWARE_DEVICE_TAG;
+            dev->common.module_api_version = POWER_MODULE_API_VERSION_0_3;
+            dev->common.hal_api_version = HARDWARE_HAL_API_VERSION;
+
+            dev->init = power_init;
+            dev->powerHint = power_hint;
+            dev->setInteractive = power_set_interactive;
+            dev->setFeature = power_set_feature;
+            dev->get_number_of_platform_modes = NULL;
+            dev->get_platform_low_power_stats = NULL;
+            dev->get_voter_list = NULL;
+
+            *device = (hw_device_t*)dev;
+        } else {
+    		retval = -ENOMEM;
+		}
+    } else {
+        retval = -EINVAL;
+    }
+
+    ALOGD("%s: exit %d", __FUNCTION__, retval);
+    return retval;
+}
+
 static struct hw_module_methods_t power_module_methods = {
-    .open = NULL,
+    .open = power_open,
 };
 
 struct power_module HAL_MODULE_INFO_SYM = {
@@ -102,13 +162,13 @@ struct power_module HAL_MODULE_INFO_SYM = {
         .module_api_version = POWER_MODULE_API_VERSION_0_3,
         .hal_api_version = HARDWARE_HAL_API_VERSION,
         .id = POWER_HARDWARE_MODULE_ID,
-        .name = "CPH1909 Power HAL Shim",
+        .name = "Mediatek Power HAL",
         .author = "The Android Open Source Project",
         .methods = &power_module_methods,
     },
 
     .init = power_init,
     .setInteractive = power_set_interactive,
+    .setFeature = power_set_feature,
     .powerHint = power_hint,
-    .setFeature = set_feature,
 };
