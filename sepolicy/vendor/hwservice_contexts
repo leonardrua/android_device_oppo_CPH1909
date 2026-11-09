@@ -1,0 +1,11 @@
+# HwBinder service labels for vendor HALs.
+#
+# vendor.trustonic.soter@1.0-service (mtk_hal_soter) implements the
+# vendor.qti.hardware.soter@1.0 HAL and registers its ISoter interface with
+# hwservicemanager. The key omits the @1.0 version and the instance name, as
+# in the stock O-MR1 nonplat_hwservice_contexts and every other HIDL entry.
+#
+# The only client is SoterService (com.tencent.soter.soterserver), which runs
+# in the system_app domain. See device.te for the matching hwservice_manager
+# find/add rules.
+vendor.qti.hardware.soter::ISoter        u:object_r:hal_soter_hwservice:s0
