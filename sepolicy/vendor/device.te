@@ -109,10 +109,17 @@ type mtk_volte_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_volte)
 
 # vtservice_hidl (vendor/bin/hw/vtservice_hidl, init.vtservice.rc): MTK's
-# VoLTE video-telephony service, class hal.
+# VoLTE video-telephony service, class hal. /system/bin/vtservice is the
+# companion service (class main) and cannot share this domain: domains
+# entered from /system must carry coredomain (treble_sepolicy_tests) and
+# types labeling /system paths must carry system_file_type
+# (sepolicy_tests), while domains/types entered from /vendor must not.
 type mtk_vtservice, domain;
 type mtk_vtservice_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_vtservice)
+type mtk_vtservice_main, domain, coredomain;
+type mtk_vtservice_main_exec, exec_type, system_file_type, file_type;
+init_daemon_domain(mtk_vtservice_main)
 
 type mtk_ttyc_device, dev_type;
 type mtk_ccci_device, dev_type;
@@ -347,6 +354,7 @@ permissive mtk_netdagent;
 permissive mtk_thermal;
 permissive mtk_fuelgauged;
 permissive mtk_vtservice;
+permissive mtk_vtservice_main;
 permissive mtk_aee;
 permissive mtk_stp_dump;
 permissive mtk_connsyslogger;

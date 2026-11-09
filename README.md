@@ -119,8 +119,12 @@ knowing about that set:
   `libgralloc_extra_sys.so`, `libion_mtk_sys.so`, `libion_ulit_sys.so`,
   `libpq_prot_mtk.so`, `libsignal.so`, `libvt_avsync.so` plus the `/system`
   HIDL interface libraries) — required by `init.vtservice.rc`, which starts
-  `class main` service `vtservice`. Both `vtservice` and `vtservice_hidl`
-  are labeled `mtk_vtservice_exec`.
+  `class main` service `vtservice`. `vtservice_hidl` is labeled
+  `mtk_vtservice_exec` (vendor path, `vendor_file_type`); `/system/bin/vtservice`
+  is labeled `mtk_vtservice_main_exec` and given its own `mtk_vtservice_main`
+  domain (`coredomain` + `system_file_type`) because domains/types entered
+  from `/system` must carry those attributes (`treble_sepolicy_tests` /
+  `sepolicy_tests`). Both domains stay permissive during bring-up.
 * The stock fingerprint framework stub jars are imported
   (`android.frameworks.fingerprintservice-V1.0-java.jar`,
   `vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar`, `ifaamanager.jar`)
