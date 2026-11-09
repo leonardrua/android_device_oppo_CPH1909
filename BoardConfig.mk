@@ -87,6 +87,17 @@ BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.hardware=mt6765
 # recoverable and is the target the stock boot image uses.
 BOARD_KERNEL_CMDLINE += androidboot.init_fatal_reboot_target=recovery
 
+# BRING-UP ONLY -- remove before shipping. Initial bring-up builds run SELinux
+# in permissive mode so early boot can get past policy/sepolicy gaps without a
+# functional ROM. init reads androidboot.selinux from the kernel command line
+# (StatusFromCmdline() in system/core/init/selinux.cpp) and switches the policy
+# to permissive before any actions run, which also makes the permissive
+# domains in sepolicy/vendor/device.te redundant. Only builds compiled with
+# ALLOW_PERMISSIVE_SELINUX -- debuggable builds, i.e. userdebug/eng (the CI
+# default is userdebug) -- honour this; user builds ignore it. Do not ship a
+# release image with this line.
+BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
+
 BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)

@@ -822,6 +822,13 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   the real level of the frozen 8.1 vendor blobs.
 * `androidboot.init_fatal_reboot_target=recovery` — a fatal init failure
   reboots into recovery instead of hanging at the boot logo.
+* `androidboot.selinux=permissive` — BRING-UP ONLY. init's `StatusFromCmdline()`
+  reads `androidboot.selinux=permissive` from the kernel command line and runs
+  the policy in permissive mode before any actions execute (debuggable builds
+  only, i.e. userdebug/eng; the CI default is userdebug; user builds ignore
+  it). Useful while the sepolicy is still being brought up, and it makes the
+  permissive domains in `sepolicy/vendor/device.te` redundant. Remove before
+  shipping a release.
 * `BUILD_BROKEN_DUP_RULES` and the duplicate-path decision are described in
   `BoardConfig.mk` next to the assignment.
 
