@@ -168,6 +168,17 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/init.recovery.mt6765.rc:$(TARGET_COPY_OUT_RECOVERY)/root/init.recovery.mt6765.rc
 
+# IMS (VoLTE) permission declarations
+#
+# Declares the android.hardware.telephony.ims feature (this file ships with
+# AOSP's frameworks/native) and allows the two stock IMS applications
+# imported in the vendor tree (com.mediatek.ims, com.coloros.simsettings)
+# their signature|privileged permissions at install time. Without the
+# allowlist the framework refuses those permissions at package scan.
+PRODUCT_COPY_FILES += \
+    frameworks/native/data/etc/android.hardware.telephony.ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.telephony.ims.xml \
+    $(DEVICE_PATH)/configs/permissions/privapp-permissions-ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-ims.xml
+
 # zram helper started by the stock init.mt6765.rc from its `on fs` block.
 # See the header of the script for why this is a rewrite, not the stock copy.
 PRODUCT_COPY_FILES += \

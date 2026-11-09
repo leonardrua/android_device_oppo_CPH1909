@@ -99,6 +99,26 @@ copies every path in `proprietary-files.txt` to
 `vendor/oppo/CPH1909/proprietary/` and generates
 `vendor/oppo/CPH1909/CPH1909-vendor.mk`, which `device.mk` includes.
 
+### The `/system` side blobs
+
+The system partition blobs this device needs (the Soter Trustonic interface
+libraries, the IMS stack and the stub jars) also live in the vendor tree under
+`vendor/oppo/CPH1909/proprietary/system/` and are installed into `/system/...`
+by the vendor makefile / prebuilt modules; the device tree's blob list
+documents them in the same file as the vendor blobs. Two things are worth
+knowing about that set:
+
+* The stock `ImsService.apk` (`com.mediatek.ims`) and `OppoSimSettings.apk`
+  (`com.coloros.simsettings`) are dex-stripped and repacked with an
+  unquickened `classes.dex` extracted from their `oat/arm64/*.vdex` files
+  (vdexExtractor), so they re-sign with this build's platform key — both
+  declare platform shared uids (`android.uid.phone`, `android.uid.system`).
+* Both apps' `<uses-library>` entries carry `required="false"`, and their
+  signature|privileged permissions are allowlisted by
+  `configs/permissions/privapp-permissions-ims.xml` (installed to
+  `/system/etc/permissions/`) in addition to AOSP's
+  `android.hardware.telephony.ims.xml`.
+
 Entries that exist on the stock 8.1 vendor partition but must not be copied are
 documented at the top of `proprietary-files.txt` (VINTF data, the 8.1 SELinux
 policy, mkshrc, and the generated `public.libraries.txt` /`fs_config*` files).

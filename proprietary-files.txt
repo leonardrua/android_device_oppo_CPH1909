@@ -48,6 +48,45 @@
 system/lib/vendor.qti.hardware.soter@1.0.so
 system/lib64/vendor.qti.hardware.soter@1.0.so
 
+# Stock IMS (VoLTE) system-side blobs.
+#
+# ImsService is com.mediatek.ims (sharedUserId=android.uid.phone) and
+# OppoSimSettings is com.coloros.simsettings (sharedUserId=android.uid.system),
+# so both must be signed with the platform key: the committed APKs are
+# repacked with an unquickened classes.dex extracted from the stock
+# oat/arm64/*.vdex files (the stock APKs are dex-stripped and their vdex files
+# hold Android 8.1 quickened bytecode that Android 10 cannot execute), with
+# META-INF dropped. See the vendor README for the repack step. Re-extracting
+# from a stock dump overwrites the APKs with the dex-stripped stock ones, so
+# re-apply the repack.
+#
+# Similar MTK trees build the IMS service from the (non-dump) MTK framework
+# source; a dump-based port cannot, so the stock APKs are imported like
+# SoterService. The two IMS APKs declare <uses-library> entries with
+# required="false": com.mediatek.op.ims.common (which stock never shipped
+# either) and com.coloros.statistics, so the apps install regardless.
+#
+# The stub jars (309 bytes, empty manifest only) provide the framework-layout
+# the stock image carried; nothing in this build's boot classpath references
+# them. libimsma*.so are the native side of the stock ims stack, required only
+# by system/lib/libmtk_vt_service.so, which is not shipped; they are imported
+# for layout parity and for the future Telephony work. com.coloros.libraries.xml
+# registers the com.coloros.statistics library (all three coloros stub jars
+# are imported verbatim).
+
+-system/priv-app/ImsService/ImsService.apk
+-system/priv-app/OppoSimSettings/OppoSimSettings.apk
+system/framework/ims-common.jar
+system/framework/mediatek-ims-common.jar
+system/framework/com.coloros.statistics.jar
+system/framework/coloros.support.jar
+system/framework/com.nearme.romupdate.bugly.jar
+system/lib/libimsma.so
+system/lib/libimsma_adapt.so
+system/lib/libimsma_rtp.so
+system/lib/libimsma_socketwrapper.so
+system/etc/permissions/com.coloros.libraries.xml
+
 -vendor/app/EmCamera/EmCamera.apk
 vendor/app/EmCamera/oat/arm64/EmCamera.odex
 vendor/app/EmCamera/oat/arm64/EmCamera.vdex
