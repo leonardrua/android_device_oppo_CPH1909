@@ -107,6 +107,14 @@ system/lib/vendor.mediatek.hardware.videotelephony@1.0.so
 system/lib/vendor.mediatek.hardware.pq@2.0.so
 system/lib/vendor.mediatek.hardware.power@1.1.so
 system/etc/permissions/com.coloros.libraries.xml
+# Stock fingerprint framework stubs (all 309-byte empty jars, no AOSP/LineageOS
+# module emits these paths). ifaamanager.jar is OPPO's IFAA fingerprint
+# framework stub; org.ifaa.android.manager.permissions.xml declares it a public
+# library, copied verbatim from stock.
+system/framework/ifaamanager.jar
+system/framework/android.frameworks.fingerprintservice-V1.0-java.jar
+system/framework/vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar
+system/etc/permissions/org.ifaa.android.manager.permissions.xml
 
 -vendor/app/EmCamera/EmCamera.apk
 vendor/app/EmCamera/oat/arm64/EmCamera.odex

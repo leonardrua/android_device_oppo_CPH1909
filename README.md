@@ -121,6 +121,15 @@ knowing about that set:
   HIDL interface libraries) — required by `init.vtservice.rc`, which starts
   `class main` service `vtservice`. Both `vtservice` and `vtservice_hidl`
   are labeled `mtk_vtservice_exec`.
+* The stock fingerprint framework stub jars are imported
+  (`android.frameworks.fingerprintservice-V1.0-java.jar`,
+  `vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar`, `ifaamanager.jar`)
+  plus OPPO's `org.ifaa.android.manager.permissions.xml`, which declares
+  `ifaamanager.jar` (the OPPO IFAA fingerprint framework) a public library.
+  All three jars are 309-byte empty stubs; nothing in this ROM references
+  them — they are stock-layout parity. The stock system-side interface
+  libraries for the disabled OPPO fingerprint services are deliberately not
+  imported (see the vendor tree's README).
 * Both apps' `<uses-library>` entries carry `required="false"`, and their
   signature|privileged permissions are allowlisted by
   `configs/permissions/privapp-permissions-ims.xml` (installed to
