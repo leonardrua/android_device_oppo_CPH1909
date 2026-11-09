@@ -59,8 +59,6 @@ static int fingerprint_open(const hw_module_t *module, const char *id,
     const hw_module_t *real_module;
     int err;
 
-    (void)module;
-
     if (device == NULL) {
         return -EINVAL;
     }
