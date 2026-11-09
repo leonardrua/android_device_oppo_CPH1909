@@ -128,20 +128,20 @@ type mtk_sysenv, domain;
 type mtk_sysenv_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_sysenv)
 
-# Stock partition file types. These deliberately are NOT vendor_file_type:
-# init performs mkdir/chown/chmod/restorecon on all of them (init.mt6765.rc
-# and init.oppo.reserve.rc / init.oppo.seccommon.rc), and full-Treble
-# neverallows forbid every domain -- including init -- from
-# create/write/setattr/append/unlink/rename and relabelto on vendor_file_type.
-# As plain file_type they are covered by AOSP's generic init file rules. Mount
-# on them still needs the explicit mounton allows below (AOSP's mounton list
-# does not cover these types). The _exec types above stay vendor_file_type:
-# init never writes to them.
-type mtk_nvdata_file, file_type;
-type mtk_nvcfg_file, file_type;
-type mtk_protect_f_file, file_type;
-type mtk_protect_s_file, file_type;
-type mtk_persist_file, file_type;
+# Stock partition file types. All except oppo_reserve_file live under /vendor,
+# so they carry vendor_file_type (sepolicy_tests requires every /vendor file
+# type to be associated with that attribute). No rules beyond the mounton
+# allows below: AOSP neverallows forbid every domain -- including init -- from
+# create/write/setattr/append/unlink/rename and relabelto on vendor_file_type,
+# so the stock init.mt6765.rc chmod/chown/mkdir on them can only fail in an
+# enforcing build (the dirs exist in the vendor image as mount points created
+# by Android.mk). oppo_reserve_file is mounted at /opporeserve (root, not
+# under /vendor) and stays a plain file_type.
+type mtk_nvdata_file, file_type, vendor_file_type;
+type mtk_nvcfg_file, file_type, vendor_file_type;
+type mtk_protect_f_file, file_type, vendor_file_type;
+type mtk_protect_s_file, file_type, vendor_file_type;
+type mtk_persist_file, file_type, vendor_file_type;
 type oppo_reserve_file, file_type;
 
 type nvdata_block_device, dev_type;
@@ -159,13 +159,13 @@ type oppo_reserve_block_device, dev_type;
 ###
 ### init access to the OPPO / MediaTek partition mount points
 ###
-# fs_mgr (running in init) mounts these partitions on directories labelled with
-# the plain file_type types declared above (the stock factory labels are not in
-# this policy, so the mounted roots appear unlabeled). AOSP's mounton allow
-# list covers only the platform types, so the mount points need explicit
-# mounton. init is exempt from the mounton neverallow. mkdir/chown/chmod/
-# restorecon on these partitions need no device rules: as plain file_type they
-# fall under AOSP's generic init file rules.
+# fs_mgr, running in init for this legacy-Treble (API 27) device, mounts the
+# vendor subpartitions on directories labelled with the types declared above
+# (the stock factory labels are not in this policy, so the mounted roots are
+# unlabeled). AOSP's mounton allow list covers only the platform types, so
+# these need explicit allows. init is exempt from the
+# { domain -init } mounton neverallow; the vendor_file_type mkdir/setattr/
+# relabelto neverallows cannot be satisfied from here at all.
 allow init {
     mtk_nvdata_file
     mtk_nvcfg_file

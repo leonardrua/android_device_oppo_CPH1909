@@ -300,16 +300,16 @@ allowed to create directories under `/vendor` (`vendor_file_type` is excluded
 from AOSP's broad init rules).
 
 `init.mt6765.rc` also runs `restorecon_recursive /vendor/nvcfg` (and `/vendor/nvdata`) in its
-`post-fs-data` block. The stock nvcfg/nvdata partitions label their contents
-`nvcfg_file`/`nvdata_file`, which this policy does not define, so the inodes
-appear unlabeled and init relabels them. The mount-point types are therefore
-plain `file_type`, not `vendor_file_type`: full-Treble neverallows forbid every
-domain -- including init -- from create/write/setattr/append/unlink/rename on
-`vendor_file_type` directories and from `relabelto` on `vendor_file_type`, so a
-vendor-typed partition could never be fixed from init. As plain `file_type`, the
-mkdir/chown/chmod/restorecon all fall under AOSP's generic init file rules, and
-the stock rc needs no device-specific policy to work. The only device rules are
-the `mounton` allows (AOSP's mounton list covers only platform types).
+`post-fs-data` block. Those are no-ops in any AOSP 10 policy: full-Treble neverallows forbid
+every domain -- including init -- from `relabelto` on `vendor_file_type`, and `read`/`getattr`
+on the files are not covered either, so the stock lines can never fix labels from init. The
+mkdir/chown/chmod/restorecon in the stock rc will also be denied under enforcing (mkdir/chown/
+chmod on `vendor_file_type` directories are neverallowed for every domain); the partitions
+keep their factory labels, which this policy does not define, so their inodes appear
+`unlabeled` -- and all vendor domains in this policy are `permissive` during bring-up, so
+unlabeled reads are logged, not blocked. The only device rules are the `mounton` allows below
+(AOSP's mounton list covers only platform types), and `oppo_reserve_file` stays a plain
+`file_type` because `/opporeserve` is at the root, not under `/vendor`.
 
 The same file also imports two ColorOS ramdisk scripts by relative name,
 `init.oppo.debug.rc` and `init.oppo.engineermode.rc`, and the debug script
@@ -327,11 +327,14 @@ is disabled in the kernel) and the `persist.sys.mtk.pwkdump` triggers
 (`/proc/aee_kpd_enable` does not exist). What remains is the
 `/opporeserve` directory tree, the vendor-provided `init.oppo.seccommon.rc`
 hook, and the charger `mmi_charging_enable` switches. The reserve script also
-drops the stock `restorecon_recursive /opporeserve`: this policy labels the
-whole partition `oppo_reserve_file`, so every directory inherits that label and
-there is nothing to relabel. `sepolicy/vendor/device.te` grants init
-`mounton`/`create_dir_perms` on `oppo_reserve_file` and `mtk_persist_file`
-because AOSP's generic init rules exclude `vendor_file_type`.
+drops the stock `restorecon_recursive /opporeserve`: the mounts in
+`init.oppo.seccommon.rc` create the directory tree on the stock partition
+itself (the rest of the tree comes from the stock image), so no relabel is
+possible or needed, and `file_contexts` labels it `oppo_reserve_file`, which
+is a plain `file_type` (root, not `/vendor`). `sepolicy/vendor/device.te`
+grants init `mounton` on it and the vendor mount points; the init domain is
+neverallowed to create directories there, so the stock mkdir paths would be
+dead in an enforcing build regardless.
 
 ### Recovery init
 
