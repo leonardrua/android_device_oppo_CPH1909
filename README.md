@@ -262,14 +262,17 @@ blobs, so `Android.mk` also creates the empty
 allowed to create directories under `/vendor` (`vendor_file_type` is excluded
 from AOSP's broad init rules).
 
-`init.mt6765.rc` also runs `restorecon_recursive /vendor/nvcfg` in its
-`post-fs-data` block. The stock nvcfg partition labels its contents
-`nvcfg_file`, which this policy does not define, so the inodes appear
-unlabeled and init relabels them to `mtk_nvcfg_file`. `device.te` grants init
-`read`/`getattr`/`relabelto` on `mtk_nvcfg_file` for that reason: AOSP's
-generic init rules exclude `vendor_file_type` from those permissions, while
-`relabelfrom` on `unlabeled` and `associate` on `file_type` over `labeledfs`
-are already covered by the platform policy.
+`init.mt6765.rc` also runs `restorecon_recursive /vendor/nvcfg` (and `/vendor/nvdata`) in its
+`post-fs-data` block. The stock nvcfg/nvdata partitions label their contents
+`nvcfg_file`/`nvdata_file`, which this policy does not define, so the inodes
+appear unlabeled and init relabels them. The mount-point types are therefore
+plain `file_type`, not `vendor_file_type`: full-Treble neverallows forbid every
+domain -- including init -- from create/write/setattr/append/unlink/rename on
+`vendor_file_type` directories and from `relabelto` on `vendor_file_type`, so a
+vendor-typed partition could never be fixed from init. As plain `file_type`, the
+mkdir/chown/chmod/restorecon all fall under AOSP's generic init file rules, and
+the stock rc needs no device-specific policy to work. The only device rules are
+the `mounton` allows (AOSP's mounton list covers only platform types).
 
 The same file also imports two ColorOS ramdisk scripts by relative name,
 `init.oppo.debug.rc` and `init.oppo.engineermode.rc`, and the debug script
