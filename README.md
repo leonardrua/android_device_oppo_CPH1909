@@ -255,7 +255,34 @@ The stock `init.mt6765.rc` also runs `mount_all /vendor/etc/fstab.mt6765` in its
 `on fs` block. `fs_mgr_mount_all()` skips `recoveryonly` entries, so
 system/vendor/odm stay out of the second stage, and mounts the remaining
 partitions (data, cache, protect_f, protect_s, nvdata, nvcfg, persist,
-opporeserve) as before.
+opporeserve) as before. The vendor image is assembled from the extracted
+blobs, so `Android.mk` also creates the empty
+`/vendor/{protect_f,protect_s,nvdata,nvcfg,persist}` mount point directories;
+`init.mt6765.rc` and `fs_mgr` would `mkdir()` them at runtime, but init is not
+allowed to create directories under `/vendor` (`vendor_file_type` is excluded
+from AOSP's broad init rules).
+
+The same file also imports two ColorOS ramdisk scripts by relative name,
+`init.oppo.debug.rc` and `init.oppo.engineermode.rc`, and the debug script
+imports `init.oppo.reserve.rc` the same way. Relative imports resolve against
+init's working directory, which after `SwitchRoot("/system")` is the system
+image root, so the adapted copies live in `rootdir/` and are installed to
+`/init.oppo.*.rc` via `PRODUCT_COPY_FILES` (`$(TARGET_COPY_OUT_ROOT)` = `root/`,
+which `build_image.py` merges into system.img). The boot ramdisk itself stays
+minimal (`init` only) and is freed after the pivot.
+
+The adaptations drop everything that needs ColorOS userland binaries absent
+from `proprietary-files.txt` (junklog, nativedump, perf_record and the
+`autochmod.sh` helpers), the phoenix crash-log actions (`CONFIG_OPPO_PHOENIX`
+is disabled in the kernel) and the `persist.sys.mtk.pwkdump` triggers
+(`/proc/aee_kpd_enable` does not exist). What remains is the
+`/opporeserve` directory tree, the vendor-provided `init.oppo.seccommon.rc`
+hook, and the charger `mmi_charging_enable` switches. The reserve script also
+drops the stock `restorecon_recursive /opporeserve`: this policy labels the
+whole partition `oppo_reserve_file`, so every directory inherits that label and
+there is nothing to relabel. `sepolicy/vendor/device.te` grants init
+`mounton`/`create_dir_perms` on `oppo_reserve_file` and `mtk_persist_file`
+because AOSP's generic init rules exclude `vendor_file_type`.
 
 ### Recovery init
 

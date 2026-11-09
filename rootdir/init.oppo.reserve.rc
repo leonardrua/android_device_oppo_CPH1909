@@ -1,0 +1,27 @@
+##################################################################################
+### Adapted from the OPPO CPH1909 8.1 boot ramdisk init.oppo.reserve.rc
+###
+### /opporeserve is mounted from the opporeserve2 partition by
+### mount_all /vendor/etc/fstab.mt6765 in the stock vendor `on fs` block, which
+### runs before post-fs-data. The stock directory tree is kept as-is.
+###
+### The stock trailing `restorecon_recursive /opporeserve` is dropped: this
+### policy labels the whole partition as oppo_reserve_file (the stock
+### fine-grained media/system/camera types are not defined here), so every
+### directory below inherits that label and there is nothing to relabel.
+##################################################################################
+
+on post-fs-data
+    mkdir /opporeserve/radio 0770 radio system
+    mkdir /opporeserve/system 0770 system system
+    mkdir /opporeserve/system/config 0770 system system
+    mkdir /opporeserve/media 0770 system system
+    mkdir /opporeserve/media/dropbox 0770 system system
+    mkdir /opporeserve/media/log 0770 system system
+    mkdir /opporeserve/media/log/usage 0770 system system
+    mkdir /opporeserve/media/log/criticalLog 0770 system system
+    mkdir /opporeserve/media/log/criticalLog/persist 0770 system system
+    mkdir /opporeserve/media/log/criticalLog/cache 0770 system system
+    mkdir /opporeserve/media/engineermode 0770 system system
+    mkdir /opporeserve/media/ColorOS 0770 system system
+    mkdir /opporeserve/media/Camera 0770 system system

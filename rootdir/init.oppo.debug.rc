@@ -1,0 +1,17 @@
+##################################################################################
+### Adapted from the OPPO CPH1909 8.1 boot ramdisk init.oppo.debug.rc
+###
+### The stock file also defined the ColorOS debug services (junklog, junkdmesg,
+### nativedump, perf_record, ...) and the phoenix crash-log actions. None of the
+### binaries those services execute ship with this tree, CONFIG_OPPO_PHOENIX is
+### disabled in the kernel and /proc/aee_kpd_enable does not exist, so all of
+### that is dropped. The two imports are kept:
+###
+###  - init.oppo.reserve.rc creates the directory tree on the /opporeserve
+###    partition.
+###  - init.oppo.seccommon.rc is shipped in the vendor image and hands the
+###    Trustonic secure-common node to the fingerprint stack.
+##################################################################################
+
+import init.oppo.reserve.rc
+import /vendor/etc/init/hw/init.oppo.seccommon.rc

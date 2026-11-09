@@ -89,4 +89,24 @@ $(FINGERPRINT_DEFAULT_SYMLINK):
 
 ALL_DEFAULT_INSTALLED_MODULES += $(FINGERPRINT_DEFAULT_SYMLINK)
 
+# Partition mount points inside the vendor partition.
+#
+# fstab.mt6765 mounts protect1, protect2, nvdata, nvcfg and persist on
+# /vendor/protect_f, /vendor/protect_s, /vendor/nvdata, /vendor/nvcfg and
+# /vendor/persist. The stock vendor image contains those directories, but this
+# build assembles vendor/ from the extracted blobs, so they have to be created
+# explicitly. init.mt6765.rc's `on init` block and fs_mgr's __mount() both
+# mkdir() them, but init is not allowed to create directories under /vendor:
+# vendor_file_type is excluded from the broad init rules in AOSP's init.te.
+VENDOR_MOUNT_POINTS += $(TARGET_OUT_VENDOR)/protect_f
+VENDOR_MOUNT_POINTS += $(TARGET_OUT_VENDOR)/protect_s
+VENDOR_MOUNT_POINTS += $(TARGET_OUT_VENDOR)/nvdata
+VENDOR_MOUNT_POINTS += $(TARGET_OUT_VENDOR)/nvcfg
+VENDOR_MOUNT_POINTS += $(TARGET_OUT_VENDOR)/persist
+
+$(VENDOR_MOUNT_POINTS):
+	@mkdir -p $@
+
+ALL_DEFAULT_INSTALLED_MODULES += $(VENDOR_MOUNT_POINTS)
+
 endif

@@ -145,6 +145,20 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/fstab.mt6765:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6765
 
+# OPPO init scripts from the stock boot ramdisk
+#
+# The stock vendor init.mt6765.rc imports init.oppo.debug.rc and
+# init.oppo.engineermode.rc by relative name, and the debug script imports
+# init.oppo.reserve.rc the same way. Relative imports resolve against init's
+# working directory, which is the system image root after first-stage init
+# pivots to it. Install the three adapted scripts there. The boot ramdisk stays
+# minimal (init only) and is freed after the pivot, so a ramdisk copy would not
+# be visible when the vendor scripts are parsed.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/init.oppo.debug.rc:$(TARGET_COPY_OUT_ROOT)/init.oppo.debug.rc \
+    $(DEVICE_PATH)/rootdir/init.oppo.engineermode.rc:$(TARGET_COPY_OUT_ROOT)/init.oppo.engineermode.rc \
+    $(DEVICE_PATH)/rootdir/init.oppo.reserve.rc:$(TARGET_COPY_OUT_ROOT)/init.oppo.reserve.rc
+
 # Recovery init
 #
 # Recovery imports /init.recovery.${ro.hardware}.rc from its ramdisk; with

@@ -1,0 +1,23 @@
+##################################################################################
+### Adapted from the OPPO CPH1909 8.1 boot ramdisk init.oppo.engineermode.rc
+###
+### The stock file started the ColorOS engineering-mode daemons and created
+### /data/engineermode, /data/theme_bak and /persist/engineermode for them.
+### Those binaries are not shipped by this tree and the directories are
+### ColorOS bookkeeping, so they are dropped. The charging switches below are
+### kept: they only touch the MTK charger driver's battery node
+### (mtk_charger.c registers mmi_charging_enable). The stock
+### stop_charging_enable writes are dropped because that node does not exist in
+### this kernel.
+###
+### Note: this policy does not give the node a dedicated label, so it falls
+### under the generic sysfs type that AOSP's init.te neverallows init from
+### writing. The triggers are therefore dormant unless a device genfscon and a
+### matching allow are added later.
+##################################################################################
+
+on property:sys.engineermode.chargeswitch=true
+    write /sys/class/power_supply/battery/mmi_charging_enable 1
+
+on property:sys.engineermode.chargeswitch=false
+    write /sys/class/power_supply/battery/mmi_charging_enable 0

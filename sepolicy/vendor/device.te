@@ -148,6 +148,38 @@ type logo_block_device, dev_type;
 type oppo_reserve_block_device, dev_type;
 
 ###
+### init access to the OPPO / MediaTek partition mount points
+###
+# fs_mgr runs mount_all from init and mounts these partitions on directories
+# labelled with vendor-only types. AOSP init.te grants mounton only for a fixed
+# list of platform types and excludes vendor_file_type from its broad file
+# rules, so the mount point types need an explicit mounton. The imported
+# init.oppo.reserve.rc and init.oppo.seccommon.rc additionally create
+# directories under /opporeserve and /persist, which needs create_dir_perms.
+allow init {
+    mtk_nvdata_file
+    mtk_nvcfg_file
+    mtk_persist_file
+    mtk_protect_f_file
+    mtk_protect_s_file
+    oppo_reserve_file
+}:dir mounton;
+
+# The vendor init.mt6765.rc mkdir/chmod/chown of these mount points in its
+# `on init` block. The directories are created by Android.mk (the blobs do not
+# carry them), so the mkdir hits EEXIST and only the chmod/chown remain.
+allow init {
+    mtk_nvdata_file
+    mtk_nvcfg_file
+    mtk_protect_f_file
+    mtk_protect_s_file
+}:dir setattr;
+
+# init.oppo.reserve.rc and init.oppo.seccommon.rc create their trees at
+# post-fs-data/on boot: /opporeserve/* and /persist/rpmb_status.
+allow init { mtk_persist_file oppo_reserve_file }:dir create_dir_perms;
+
+###
 ### GNSS
 ###
 type mtk_mnld, domain;
