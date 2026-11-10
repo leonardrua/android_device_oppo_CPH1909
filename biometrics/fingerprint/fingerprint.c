@@ -59,6 +59,11 @@ static int fingerprint_open(const hw_module_t *module, const char *id,
     const hw_module_t *real_module;
     int err;
 
+    /* AOSP 10's global base flags pass -Wunused-parameter with -Werror
+     * (seen in the failing CI build's clang command line). We do not
+     * need the module pointer: the Silead module is opened via dlopen. */
+    (void)module;
+
     if (device == NULL) {
         return -EINVAL;
     }
