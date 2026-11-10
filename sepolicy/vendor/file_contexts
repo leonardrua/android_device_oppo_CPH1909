@@ -239,12 +239,17 @@
 # authoritative 8.1 kernel). The AOSP fingerprint@2.1 service wraps the stock
 # legacy Silead HAL module via the fingerprint.mt6765 shim.
 /dev/silead_fp                                                                                  u:object_r:silead_fpd_device:s0
-/dev/esfp0                                                                                      u:object_r:egis_fp_device:s0
-# /persist/silead and /data/vendor/silead hold Silead calibration/template data.
-# Labelled fingerprint_vendor_data_file so the AOSP hal_fingerprint attribute
-# grants the expected data access.
-/data/vendor/silead(/.*)?                                                                       u:object_r:fingerprint_vendor_data_file:s0
-/(mnt/vendor/)?persist/silead(/.*)?                                                             u:object_r:fingerprint_vendor_data_file:s0
+/dev/esfp0                                                                                      u:object_r:egis_device:s0
+# Silead calibration/template data and the ColorOS face-unlock data dirs.
+# The /data regex mirrors the stock 8.1 vendor file_contexts exactly
+# (/data/(vendor|system)/silead); the persist entry additionally covers the
+# /mnt/vendor/persist mounted view. No AOSP attribute rule touches these
+# types -- the device.te allows above are the only grants, so they must stay
+# in sync with the stock ones.
+/data/(vendor|system)/silead(/.*)?                                                              u:object_r:silead_fpd_data_file:s0
+/(mnt/vendor/)?persist/silead(/.*)?                                                             u:object_r:silead_fpd_data_file:s0
+/data/system/users/[0-9]+/facedata(/.*)?                                                        u:object_r:face_data_file:s0
+/data/system/users/[0-9]+/faceunlock(/.*)?                                                      u:object_r:face_picture_file:s0
 
 /(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.cryptoeng@1\.0-service                      u:object_r:mtk_hal_cryptoeng_exec:s0
 

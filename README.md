@@ -913,8 +913,18 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   face@1.0.so`) are deliberately not imported, so it could never start in this
   build; disabling it stops init from respawning a dead process at every late_start.
   Vendor SELinux contexts/bring-up
-  `permissive hal_fingerprint_default` are in `sepolicy/vendor/`. Face unlock is
-  userspace-only on CPH1909 (no face driver in the authoritative kernel; stock
+  `permissive hal_fingerprint_default` are in `sepolicy/vendor/`. The
+  biometrics policy mirrors the stock 8.1 vendor policy: `silead_fpd_device`
+  (`/dev/silead_fp`), `egis_device` (`/dev/esfp0`), `silead_fpd_data_file`
+  (`/data/{vendor,system}/silead`, `/persist/silead`), `face_data_file`
+  (`/data/system/users/*/facedata`) and `face_picture_file`
+  (`/data/system/users/*/faceunlock`) are labeled with the stock types, and
+  `device.te` grants `hal_fingerprint_default` the same sensor-node and
+  data-file allows the stock `hal_fingerprint_default`/`hal_face` rules had
+  (the AOSP `hal_fingerprint` attribute grants only cover
+  `fingerprint_vendor_data_file`, which the ColorOS/Silead paths do not use,
+  so the device rules are what makes the domain enforceable-ready). Face
+  unlock is userspace-only on CPH1909 (no face driver in the authoritative kernel; stock
   vendor face service/`libmegface`/`libstface*` blobs exist, but LineageOS 17.1
   has no AOSP `android.hardware.biometrics.face@1.0` default service — 17.1 ships
   only the interface and its VTS, no passthrough implementation), so only

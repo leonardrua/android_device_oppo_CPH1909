@@ -388,7 +388,27 @@ type oppoalgo_daemon, domain;
 type oppoalgo_daemon_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(oppoalgo_daemon)
 type silead_fpd_device, dev_type;
-type egis_fp_device, dev_type;
+type egis_device, dev_type;
+
+# Biometrics data files. These names and attributes mirror the stock 8.1
+# vendor policy (vendor/etc/selinux/nonplat_sepolicy.cil in the dump), not
+# the AOSP ones: the stock ROM labels /data/*/silead and the face-unlock
+# dirs with its own types, and the stock allows are written against them.
+type silead_fpd_data_file, file_type, data_file_type;
+type face_data_file, file_type, data_file_type;
+type face_picture_file, file_type, data_file_type;
+
+### Biometrics device-node and data access.
+### Mirrors the stock 8.1 allows for hal_fingerprint_default / hal_face
+### (see vendor/etc/selinux/nonplat_sepolicy.cil in the stock dump). The
+### permissive hal_fingerprint_default line above stays during bring-up;
+### these rules are what lets the domain work once it is converted.
+allow hal_fingerprint_default silead_fpd_device:chr_file rw_file_perms;
+allow hal_fingerprint_default egis_device:chr_file rw_file_perms;
+allow hal_fingerprint_default silead_fpd_data_file:file create_file_perms;
+allow hal_fingerprint_default silead_fpd_data_file:dir { ioctl read write getattr lock add_name remove_name search open };
+allow hal_face face_data_file:file create_file_perms;
+allow hal_face face_data_file:dir { ioctl read write getattr lock add_name remove_name search open };
 
 type mtk_hal_silead, domain;
 type mtk_hal_silead_exec, exec_type, vendor_file_type, file_type;
