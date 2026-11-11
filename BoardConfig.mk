@@ -58,7 +58,9 @@ TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
 BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909
-TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig
+# The kernel build uses the A.46 firmware defconfig (a46_defconfig), matching
+# the A.46 baseline the kernel/oppo/CPH1909 lineageos branch carries.
+TARGET_KERNEL_CONFIG := a46_defconfig
 TARGET_KERNEL_CLANG_COMPILE := false
 TARGET_KERNEL_CROSS_COMPILE_PREFIX := $(abspath .)/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05/bin/aarch64-linux-gnu-
 TARGET_KERNEL_ADDITIONAL_FLAGS += ODM_WT_EDIT=yes
