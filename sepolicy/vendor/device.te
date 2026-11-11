@@ -394,9 +394,14 @@ type egis_device, dev_type;
 # vendor policy (vendor/etc/selinux/nonplat_sepolicy.cil in the dump), not
 # the AOSP ones: the stock ROM labels /data/*/silead and the face-unlock
 # dirs with its own types, and the stock allows are written against them.
+# face_data_file and face_picture_file are only used on /data/system/...
+# (never /data/vendor), so they must additionally carry the
+# core_data_file_type attribute; AOSP's sepolicy_tests rejects types on
+# /data/ without it. silead_fpd_data_file labels both /data/vendor and
+# /data/system paths, so it is deliberately not added.
 type silead_fpd_data_file, file_type, data_file_type;
-type face_data_file, file_type, data_file_type;
-type face_picture_file, file_type, data_file_type;
+type face_data_file, file_type, data_file_type, core_data_file_type;
+type face_picture_file, file_type, data_file_type, core_data_file_type;
 
 ### Biometrics device-node and data access.
 ### Mirrors the stock 8.1 allows for hal_fingerprint_default / hal_face
