@@ -408,6 +408,17 @@ type face_picture_file, file_type, data_file_type, core_data_file_type;
 ### (see vendor/etc/selinux/nonplat_sepolicy.cil in the stock dump). The
 ### permissive hal_fingerprint_default line above stays during bring-up;
 ### these rules are what lets the domain work once it is converted.
+#
+# face_data_file/face_picture_file must carry core_data_file_type for the
+# sepolicy_tests /data/ rule. The AOSP public neverallows then forbid
+# vendor domains (hal_face_default, via the hal_face attribute) from any
+# but append/getattr/ioctl/read/write/map on core_data_file_type files,
+# and from touching core_data_file_type dirs at all. The stock 8.1 face
+# HAL is a vendor service that legitimately uses /data/system/.../facedata,
+# so hal_face_default joins data_between_core_and_vendor_violators — AOSP's
+# designated attribute for exactly this vendor-symbolic data dependency
+# (cf. hal_drm_widevine in LineageOS device trees).
+typeattribute hal_face_default data_between_core_and_vendor_violators;
 allow hal_fingerprint_default silead_fpd_device:chr_file rw_file_perms;
 allow hal_fingerprint_default egis_device:chr_file rw_file_perms;
 allow hal_fingerprint_default silead_fpd_data_file:file create_file_perms;
