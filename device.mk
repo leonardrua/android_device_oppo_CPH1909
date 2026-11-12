@@ -13,8 +13,10 @@ PRODUCT_AAPT_PREF_CONFIG := xhdpi
 TARGET_SCREEN_HEIGHT := 1520
 TARGET_SCREEN_WIDTH := 720
 
-# API level: the device launched on 8.1 (API 27) with 8.1-era vendor blobs
-PRODUCT_SHIPPING_API_LEVEL := 27
+# The device launched on 8.1 (API 27) with 8.1-era vendor blobs.
+# PRODUCT_SHIPPING_API_LEVEL := 27 comes from the product configuration
+# (lineage_CPH1909.mk inherits product/product_launched_with_o_mr1.mk, the
+# same mechanism LineageOS 17.1 trees of other 8.1-launched devices use).
 
 # Framework resource overlay
 #

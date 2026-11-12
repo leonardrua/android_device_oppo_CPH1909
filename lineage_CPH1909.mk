@@ -4,15 +4,18 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# Inherit from those products. Most specific first.
+# Inherit from those products. Most specific first, matching the layout used
+# by LineageOS 17.1 trees of other devices that launched with 8.1 stock
+# (product_launched_with_o_mr1.mk sets PRODUCT_SHIPPING_API_LEVEL := 27).
 $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
-
-# Inherit from the CPH1909 device
-$(call inherit-product, device/oppo/CPH1909/device.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/product_launched_with_o_mr1.mk)
 
 # Inherit some common LineageOS stuff
 $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
+
+# Inherit from the CPH1909 device
+$(call inherit-product, device/oppo/CPH1909/device.mk)
 
 PRODUCT_NAME := lineage_CPH1909
 PRODUCT_DEVICE := CPH1909
