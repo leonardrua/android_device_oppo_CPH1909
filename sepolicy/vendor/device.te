@@ -104,9 +104,24 @@ type mtk_md_ctrl, domain;
 type mtk_md_ctrl_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_md_ctrl)
 
-type mtk_volte, domain;
-type mtk_volte_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_volte)
+# Keep the four stock MTK IMS daemons in separate domains, as in the stock
+# vendor policy. They remain permissive during bring-up so denials can be
+# collected per process before writing allow rules.
+type mtk_volte_imcb, domain;
+type mtk_volte_imcb_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_volte_imcb)
+
+type mtk_volte_imsm_93, domain;
+type mtk_volte_imsm_93_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_volte_imsm_93)
+
+type mtk_volte_stack, domain;
+type mtk_volte_stack_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_volte_stack)
+
+type mtk_volte_ua, domain;
+type mtk_volte_ua_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_volte_ua)
 
 # vtservice_hidl (vendor/bin/hw/vtservice_hidl, init.vtservice.rc): MTK's
 # VoLTE video-telephony service, class hal. /system/bin/vtservice is the
@@ -341,7 +356,10 @@ permissive mtk_muxd;
 permissive mtk_muxreport;
 permissive mtk_ccci;
 permissive mtk_md_ctrl;
-permissive mtk_volte;
+permissive mtk_volte_imcb;
+permissive mtk_volte_imsm_93;
+permissive mtk_volte_stack;
+permissive mtk_volte_ua;
 permissive mtk_nvram_daemon;
 permissive mtk_sysenv;
 permissive mtk_mnld;

@@ -93,13 +93,13 @@
 /(vendor|system/vendor)/bin/ccci_fsd                                                          u:object_r:mtk_ccci_exec:s0
 /(vendor|system/vendor)/bin/ccci_rpcd                                                         u:object_r:mtk_ccci_exec:s0
 /(vendor|system/vendor)/bin/md_ctrl                                                           u:object_r:mtk_md_ctrl_exec:s0
-# The MTK IMS/VoLTE service binaries, all started on mtk.md1.status=ready
-# (init.volte_imcb.rc / init.volte_imsm_93.rc / init.volte_stack.rc /
-# init.volte_ua.rc).
-/(vendor|system/vendor)/bin/volte_imcb                                                        u:object_r:mtk_volte_exec:s0
-/(vendor|system/vendor)/bin/volte_stack                                                       u:object_r:mtk_volte_exec:s0
-/(vendor|system/vendor)/bin/volte_ua                                                          u:object_r:mtk_volte_exec:s0
-/(vendor|system/vendor)/bin/volte_imsm_93                                                     u:object_r:mtk_volte_exec:s0
+# MTK IMS/VoLTE services, started on mtk.md1.status=ready. Give each stock
+# daemon its own exec type/domain so AVCs identify the service that needs a
+# rule (the domains stay permissive during bring-up).
+/(vendor|system/vendor)/bin/volte_imcb                                                        u:object_r:mtk_volte_imcb_exec:s0
+/(vendor|system/vendor)/bin/volte_imsm_93                                                     u:object_r:mtk_volte_imsm_93_exec:s0
+/(vendor|system/vendor)/bin/volte_stack                                                       u:object_r:mtk_volte_stack_exec:s0
+/(vendor|system/vendor)/bin/volte_ua                                                          u:object_r:mtk_volte_ua_exec:s0
 
 ###
 ### NVRAM / factory data
