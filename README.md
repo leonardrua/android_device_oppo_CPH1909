@@ -125,6 +125,15 @@ knowing about that set:
   domain (`coredomain` + `system_file_type`) because domains/types entered
   from `/system` must carry those attributes (`treble_sepolicy_tests` /
   `sepolicy_tests`). Both domains stay permissive during bring-up.
+* The stock `/system/lib` and `/system/lib64` MediaTek native libraries are
+  also stored in the vendor tree and installed at their original `/system`
+  paths. This includes the MediaTek HIDL interface library
+  `vendor.mediatek.hardware.camera.device@1.1.so`, a direct dependency of the
+  stock camera stack, and the directly required 64-bit gralloc/ION/UBSan
+  support libraries. The API-27 MediaTek framework implementation JARs and
+  precompiled ART/OAT files are not included; they are not drop-in Android 10
+  framework artifacts. The separately documented 309-byte empty framework
+  stubs remain a distinct exception.
 * The stock fingerprint framework stub jars are imported
   (`android.frameworks.fingerprintservice-V1.0-java.jar`,
   `vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar`, `ifaamanager.jar`)
