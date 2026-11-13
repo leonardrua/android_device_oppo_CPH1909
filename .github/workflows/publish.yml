@@ -1,17 +1,25 @@
 name: Publish build artifacts (optional)
 
+run-name: Publish ${{ inputs.device_name }} (${{ inputs.target }})${{ inputs.run_id && format(' from run {0}', inputs.run_id) || '' }}
+
 on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: 'Build run ID to publish; leave blank to use the latest successful "Build LineageOS 17.1" run'
+        description: 'Build run ID to publish (blank = latest successful run containing the target artifact)'
         required: false
+        type: string
         default: ''
+      device_name:
+        description: 'Device codename (must match the build workflow)'
+        required: true
+        type: string
+        default: 'CPH1909'
       target:
         description: 'Build target that produced the artifact'
         required: true
-        default: 'bacon'
         type: choice
+        default: 'bacon'
         options:
           - bacon
           - bootimage
@@ -19,16 +27,19 @@ on:
           - productimage
           - systemimage
       artifact_name:
-        description: 'Artifact name (defaults to lineage-17.1-CPH1909-<target>)'
+        description: 'Artifact name override (defaults to lineage-17.1-<device_name>-<target>)'
         required: false
+        type: string
         default: ''
       tag_name:
-        description: 'Git tag to create/push for the release (defaults to publish-<run_id>)'
+        description: 'Git tag to create/update for the release (defaults to publish-<run_id>)'
         required: false
+        type: string
         default: ''
       release_name:
-        description: 'Release title (defaults to "LineageOS 17.1 for CPH1909 (<target>)")'
+        description: 'Release title (defaults to "LineageOS 17.1 for <device_name> (<target>) (build <run_id>)")'
         required: false
+        type: string
         default: ''
       draft:
         description: 'Create as a draft release'
@@ -40,127 +51,330 @@ on:
         required: true
         type: boolean
         default: true
+      include_logs:
+        description: 'Include build-tail.log and error.log in the release assets'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
+  actions: read
   contents: write
+
+concurrency:
+  group: publish-${{ inputs.device_name }}-${{ inputs.tag_name || inputs.run_id || inputs.target }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Scripts read inputs from the environment and never interpolate ${{ }} directly.
+      IN_RUN_ID: ${{ inputs.run_id }}
+      IN_DEVICE: ${{ inputs.device_name }}
+      TARGET: ${{ inputs.target }}
+      IN_ARTIFACT_NAME: ${{ inputs.artifact_name }}
+      IN_TAG_NAME: ${{ inputs.tag_name }}
+      IN_RELEASE_NAME: ${{ inputs.release_name }}
+      DRAFT: ${{ inputs.draft }}
+      PRERELEASE: ${{ inputs.prerelease }}
+      INCLUDE_LOGS: ${{ inputs.include_logs }}
+      BUILD_WORKFLOW_NAME: 'Build LineageOS 17.1 (Oppo A5s CPH1909) - Namespace'
+
     steps:
-      - name: Resolve build run
+      - name: Resolve and validate build run
         id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -e
-          RUN_ID='${{ github.event.inputs.run_id }}'
-          if [ -z "$RUN_ID" ]; then
-            RUN_ID=$(gh run list \
-              --repo '${{ github.repository }}' \
-              --workflow 'Build LineageOS 17.1 (Oppo A5s CPH1909) - Namespace' \
+          set -euo pipefail
+
+          fail() { echo "::error::$*"; exit 1; }
+
+          trim() {
+            local s="$1"
+            s="${s#"${s%%[![:space:]]*}"}"
+            s="${s%"${s##*[![:space:]]}"}"
+            printf '%s' "$s"
+          }
+
+          device=$(trim "$IN_DEVICE")
+          [[ "$device" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
+            || fail "device_name may only contain letters, digits, '.', '_' and '-'"
+
+          artifact_name=$(trim "$IN_ARTIFACT_NAME")
+          if [ -z "$artifact_name" ]; then
+            artifact_name="lineage-17.1-${device}-${TARGET}"
+          fi
+
+          run_id=$(trim "$IN_RUN_ID")
+          run_created_at=""
+          run_url=""
+
+          if [ -z "$run_id" ]; then
+            if ! runs_json=$(gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow "$BUILD_WORKFLOW_NAME" \
               --status success \
-              --limit 1 \
-              --json databaseId --jq '.[0].databaseId')
-            echo "Latest successful build run: $RUN_ID"
-          fi
-          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
-            echo "::error::No run_id provided and no successful Build LineageOS 17.1 run found"
-            exit 1
-          fi
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              --limit 25 \
+              --json databaseId,createdAt,url); then
+              fail "Could not list runs for workflow '$BUILD_WORKFLOW_NAME'; pass run_id explicitly or check BUILD_WORKFLOW_NAME"
+            fi
 
-          TARGET='${{ github.event.inputs.target }}'
-          ARTIFACT='${{ github.event.inputs.artifact_name }}'
-          if [ -z "$ARTIFACT" ]; then
-            ARTIFACT="lineage-17.1-CPH1909-${TARGET}"
-          fi
-          echo "artifact_name=$ARTIFACT" >> "$GITHUB_OUTPUT"
-          echo "Artifact: $ARTIFACT"
+            run_count=$(jq 'length' <<< "$runs_json")
+            if [ "$run_count" -eq 0 ]; then
+              fail "No successful runs found for workflow '$BUILD_WORKFLOW_NAME'"
+            fi
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+            saw_expired=false
+            for cid in $(jq -r '.[].databaseId' <<< "$runs_json"); do
+              artifacts_json=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$cid/artifacts" --paginate 2>/dev/null || echo '{"artifacts":[]}')
+              match_state=$(jq -r --arg name "$artifact_name" '
+                [.artifacts[] | select(.name == $name)] | .[0] |
+                if . == null then "missing"
+                elif .expired then "expired"
+                else "ok"
+                end
+              ' <<< "$artifacts_json")
+
+              if [ "$match_state" = "ok" ]; then
+                run_id="$cid"
+                run_created_at=$(jq -r --argjson id "$cid" '.[] | select(.databaseId == $id) | .createdAt' <<< "$runs_json")
+                run_url=$(jq -r --argjson id "$cid" '.[] | select(.databaseId == $id) | .url' <<< "$runs_json")
+                break
+              elif [ "$match_state" = "expired" ]; then
+                saw_expired=true
+              fi
+            done
+
+            if [ -z "$run_id" ]; then
+              if [ "$saw_expired" = "true" ]; then
+                fail "Found matching '$artifact_name' artifacts in recent successful runs, but all have expired"
+              else
+                fail "None of the last $run_count successful '$BUILD_WORKFLOW_NAME' runs contain artifact '$artifact_name'"
+              fi
+            fi
+            echo "Resolved latest matching build run: $run_id ($run_created_at)"
+          else
+            [[ "$run_id" =~ ^[1-9][0-9]*$ ]] \
+              || fail "run_id must be a positive integer (got: '$run_id')"
+
+            if ! run_json=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id"); then
+              fail "Workflow run $run_id not found in $GITHUB_REPOSITORY"
+            fi
+
+            run_status=$(jq -r '.status // empty' <<< "$run_json")
+            run_conclusion=$(jq -r '.conclusion // empty' <<< "$run_json")
+            run_created_at=$(jq -r '.created_at // empty' <<< "$run_json")
+            run_url=$(jq -r '.html_url // empty' <<< "$run_json")
+
+            if [ "$run_status" != "completed" ]; then
+              fail "Run $run_id has not finished yet (status=$run_status)"
+            fi
+            if [ "$run_conclusion" != "success" ]; then
+              echo "::warning::Run $run_id concluded with '$run_conclusion' (not 'success')"
+            fi
+
+            artifacts_json=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" --paginate)
+            match_state=$(jq -r --arg name "$artifact_name" '
+              [.artifacts[] | select(.name == $name)] | .[0] |
+              if . == null then "missing"
+              elif .expired then "expired"
+              else "ok"
+              end
+            ' <<< "$artifacts_json")
+
+            case "$match_state" in
+              ok) ;;
+              expired)
+                fail "Artifact '$artifact_name' in run $run_id has expired"
+                ;;
+              missing)
+                available=$(jq -r '[.artifacts[].name] | join(", ")' <<< "$artifacts_json")
+                fail "Artifact '$artifact_name' not found in run $run_id. Available artifacts: ${available:-<none>}"
+                ;;
+            esac
+          fi
+
+          tag_name=$(trim "$IN_TAG_NAME")
+          if [ -z "$tag_name" ]; then
+            tag_name="publish-${run_id}"
+          fi
+          git check-ref-format "refs/tags/$tag_name" >/dev/null 2>&1 \
+            || fail "Invalid git tag name: '$tag_name'"
+
+          release_name=$(trim "$IN_RELEASE_NAME")
+          if [ -z "$release_name" ]; then
+            release_name="LineageOS 17.1 for ${device} (${TARGET}) (build ${run_id})"
+          fi
+
+          {
+            echo "device=$device"
+            echo "run_id=$run_id"
+            echo "run_created_at=$run_created_at"
+            echo "run_url=${run_url:-${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}}"
+            echo "artifact_name=$artifact_name"
+            echo "tag_name=$tag_name"
+            echo "release_name=$release_name"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Run:      $run_id ($run_created_at)"
+          echo "Artifact: $artifact_name"
+          echo "Tag:      $tag_name"
+          echo "Title:    $release_name"
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ steps.resolve.outputs.artifact_name }}
           run-id: ${{ steps.resolve.outputs.run_id }}
           github-token: ${{ github.token }}
           path: published
+          digest-mismatch: error
 
-      - name: List and summarize published files
-        id: summary
+      - name: Prepare release assets, checksums, and notes
+        id: prepare
+        env:
+          DEVICE: ${{ steps.resolve.outputs.device }}
+          RUN_ID: ${{ steps.resolve.outputs.run_id }}
+          RUN_CREATED_AT: ${{ steps.resolve.outputs.run_created_at }}
+          RUN_URL: ${{ steps.resolve.outputs.run_url }}
+          ARTIFACT_NAME: ${{ steps.resolve.outputs.artifact_name }}
+          TAG_NAME: ${{ steps.resolve.outputs.tag_name }}
+          RELEASE_NAME: ${{ steps.resolve.outputs.release_name }}
         run: |
-          set -e
-          mkdir -p published
+          set -euo pipefail
+
+          fail() { echo "::error::$*"; exit 1; }
+
           cd published
-          echo "Raw contents (after download):"
-          find . -maxdepth 1 -mindepth 1 -printf '%f\n' | sort
+          rm -f SHA256SUMS
+
+          echo "Downloaded files:"
+          find . -type f -printf '%P (%s bytes)\n' | sort
+
           echo "Removing zero-byte files (GitHub rejects empty release assets):"
-          find . -type f -size 0 -printf '  - %f\n' -delete
-          mapfile -t FILES < <(find . -type f -size +0 -printf '%f\n' | sort)
-          if [ "${#FILES[@]}" -eq 0 ]; then
-            echo "::error::No non-empty files remain after cleanup"
-            exit 1
-          fi
-          echo "Non-empty files to publish:"
-          ls -lh -- "${FILES[@]}"
-          {
-            echo "### Files to publish"
-            for f in "${FILES[@]}"; do
-              echo "- \`$f\` ($(stat -c '%s' "$f") bytes)"
-            done
-          } >> "$GITHUB_STEP_SUMMARY"
+          find . -type f -size 0 -printf '  - %P\n' -delete
 
-      - name: Compute checksums
-        run: |
-          cd published
-          sha256sum -- * > SHA256SUMS
+          if [ "$INCLUDE_LOGS" != "true" ]; then
+            for log_file in build-tail.log error.log; do
+              if [ -f "$log_file" ]; then
+                echo "Excluding log file (include_logs=false): $log_file"
+                rm -f "$log_file"
+              fi
+            done
+          fi
+
+          mapfile -t FILES < <(find . -type f -size +0 -printf '%P\n' | sort)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            if [ "$INCLUDE_LOGS" != "true" ]; then
+              fail "No publishable build files remain (only empty files or logs were present; set include_logs=true to publish logs)"
+            else
+              fail "No non-empty files remain in the downloaded artifact"
+            fi
+          fi
+
+          # GitHub Releases enforce a hard 2 GiB (2,147,483,648 bytes) per-asset limit.
+          max_asset_bytes=2147483648
+          for f in "${FILES[@]}"; do
+            [[ "$f" != *$'\n'* ]] || fail "Unsupported newline in filename"
+            size_bytes=$(stat -c '%s' "$f")
+            if [ "$size_bytes" -ge "$max_asset_bytes" ]; then
+              size_gib=$(awk -v b="$size_bytes" 'BEGIN { printf "%.2f GiB", b / 1073741824 }')
+              fail "File '$f' ($size_gib) exceeds the GitHub Releases 2 GiB per-asset limit"
+            fi
+          done
+
+          # Write SHA256SUMS via $RUNNER_TEMP so it never includes itself.
+          sha256sum -- "${FILES[@]}" > "$RUNNER_TEMP/SHA256SUMS"
+          mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS
           cat SHA256SUMS
 
-      - name: Resolve release inputs
-        id: release
-        run: |
-          RUN_ID='${{ steps.resolve.outputs.run_id }}'
-          TARGET='${{ github.event.inputs.target }}'
-          TAG='${{ github.event.inputs.tag_name }}'
-          NAME='${{ github.event.inputs.release_name }}'
-          if [ -z "$TAG" ]; then
-            TAG="publish-${RUN_ID}"
-          fi
-          if [ -z "$NAME" ]; then
-            NAME="LineageOS 17.1 for CPH1909 (${TARGET}) (build ${RUN_ID})"
-          fi
-          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          mapfile -t FILES < <(find published -type f -size +0 -printf 'published/%f\n' | sort)
           {
-            echo "files<<EOF"
-            for f in "${FILES[@]}"; do echo "$f"; done
-            echo "EOF"
+            echo "Published from [workflow run #${RUN_ID}](${RUN_URL})."
+            echo ""
+            echo "- **Device:** \`${DEVICE}\`"
+            echo "- **Target:** \`${TARGET}\`"
+            echo "- **Artifact:** \`${ARTIFACT_NAME}\`"
+            if [ -n "$RUN_CREATED_AT" ]; then
+              echo "- **Build timestamp:** \`${RUN_CREATED_AT}\`"
+            fi
+            echo ""
+            echo "### Checksums (SHA-256)"
+            echo ""
+            echo "| File | Size | SHA-256 |"
+            echo "| --- | ---: | --- |"
+            while IFS= read -r line; do
+              sha="${line%% *}"
+              rel_path="${line#*  }"
+              size_bytes=$(stat -c '%s' "$rel_path")
+              size_hr=$(numfmt --to=iec-i --suffix=B "$size_bytes")
+              printf '| `%s` | %s | `%s` |\n' "$rel_path" "$size_hr" "$sha"
+            done < SHA256SUMS
+          } > "$RUNNER_TEMP/release-body.md"
+
+          all_files=("${FILES[@]}" "SHA256SUMS")
+          eof_marker="EOF_FILES_${RANDOM}_${RANDOM}"
+          {
+            echo "files<<${eof_marker}"
+            printf '%s\n' "${all_files[@]}"
+            echo "${eof_marker}"
           } >> "$GITHUB_OUTPUT"
-          echo "Tag: $TAG"
-          echo "Name: $NAME"
-          printf 'Files:\n'; printf '  - %s\n' "${FILES[@]}"
+
+          df -h .
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        id: release_upload
+        uses: softprops/action-gh-release@v3
         with:
           token: ${{ github.token }}
-          tag_name: ${{ steps.release.outputs.tag_name }}
-          name: ${{ steps.release.outputs.name }}
-          files: ${{ steps.release.outputs.files }}
-          draft: ${{ github.event.inputs.draft }}
-          prerelease: ${{ github.event.inputs.prerelease }}
+          tag_name: ${{ steps.resolve.outputs.tag_name }}
+          name: ${{ steps.resolve.outputs.release_name }}
+          body_path: ${{ runner.temp }}/release-body.md
+          working_directory: published
+          files: ${{ steps.prepare.outputs.files }}
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
           generate_release_notes: false
-          body: |
-            Published from workflow run **${{ github.repository }}/actions/runs/${{ steps.resolve.outputs.run_id }}**.
 
-            Target: `${{ github.event.inputs.target }}`
-            Artifact: `${{ steps.resolve.outputs.artifact_name }}`
-
-            See `SHA256SUMS` for SHA-256 checksums of the published files.
+      - name: Write job summary
+        if: always()
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_URL: ${{ steps.release_upload.outputs.url }}
+          RELEASE_OUTCOME: ${{ steps.release_upload.outcome }}
+          TAG_NAME: ${{ steps.resolve.outputs.tag_name }}
+          RELEASE_NAME: ${{ steps.resolve.outputs.release_name }}
+          RUN_ID: ${{ steps.resolve.outputs.run_id }}
+          RUN_URL: ${{ steps.resolve.outputs.run_url }}
+          ARTIFACT_NAME: ${{ steps.resolve.outputs.artifact_name }}
+        run: |
+          {
+            echo "## Publish Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Outcome | \`${RELEASE_OUTCOME:-not-run}\` |"
+            if [ -n "${RELEASE_URL:-}" ]; then
+              echo "| Release | [${RELEASE_NAME}](${RELEASE_URL}) (\`${TAG_NAME}\`) |"
+            elif [ -n "${TAG_NAME:-}" ]; then
+              echo "| Tag | \`${TAG_NAME}\` |"
+            fi
+            echo "| Draft / Prerelease | \`${DRAFT}\` / \`${PRERELEASE}\` |"
+            if [ -n "${RUN_ID:-}" ]; then
+              echo "| Source Build | [#${RUN_ID}](${RUN_URL}) (\`${ARTIFACT_NAME}\`) |"
+            fi
+            echo ""
+            if [ -d published ] && [ -f published/SHA256SUMS ]; then
+              echo "### Published Assets"
+              echo '```text'
+              ls -lh published
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
