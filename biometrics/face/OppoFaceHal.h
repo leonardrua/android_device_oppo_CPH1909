@@ -35,25 +35,27 @@
  *
  * TO FINISH (reverse-engineering checklist)
  * -----------------------------------------
- *   1. Recover the vendor HAL definition and build the interface library, or
- *      regenerate it into the tree as
- *      vendor/oppo/hardware/biometrics/face/1.0/{types,IBiometricsFace}.hal.
- *      The vendor method set (from the interface library symbols) is:
+ *   1. The vendor interface has been reconstructed from the interface
+ *      library (reference reconstruction under biometrics/face/hal/).
+ *      Recovered:
  *
- *          setNotify            preEnroll            postEnroll
- *          getAuthenticatorId   cancelEnrollment     enroll
- *          cancelAuthentication authenticate         remove
- *          setActiveGroup       get                  verifyFace
- *          cancelCommand        executeCommand       dynamicallyConfigLog
- *          getPreViewWidth      getPreViewHeight     getEnrollmentTotalTimes
- *          setPreviewSurface    setPreviewFrame      updateRusNativeData
- *          updateSettingSwitchStatus
+ *        * 22 IBiometricsFace methods, with transaction codes 1..22 in
+ *          declaration order, full argument types and return wire types;
+ *        * 11 IBiometricsFaceClientCallback methods, codes 1..11;
+ *        * the 5 enums (RequestStatus/FaceError/FaceAcquiredInfo/
+ *          FaceLogType/SwitchType) with values, and the 3 structs
+ *          (RectHal/Point/FaceInfoWrapper) with layouts.
  *
- *      Note it is fingerprint-shaped (setNotify/preEnroll/postEnroll/
- *      getAuthenticatorId/enroll/remove/setActiveGroup/authenticate/cancel),
- *      which suggests the AOSP 8.1 fingerprint HAL as its starting point, but
- *      the parameter and return types are NOT recoverable from a stripped .so
- *      and must be taken from the real definition, not guessed.
+ *      The vendor method set is fingerprint-shaped (setNotify/preEnroll/
+ *      postEnroll/getAuthenticatorId/enroll/remove/setActiveGroup/
+ *      authenticate/cancel), i.e. derived from the AOSP fingerprint HAL.
+ *
+ *      NOTE: the HIDL interface hash is SHA256 of the .hal *source file*
+ *      (hidl-gen hashing/Hash.cpp), so a hand reconstruction cannot match
+ *      the vendor's frozen hash (IBiometricsFace = fb9438a6...). Do NOT
+ *      regenerate and ship the interface library; link the prebuilt
+ *      vendor.oppo.hardware.biometrics.face@1.0.so instead, which already
+ *      carries the correct hash.
  *   2. Import the two system-side interface libraries the stock service
  *      DT_NEEDEDs (system/lib/vendor.oppo.hardware.biometrics.face@1.0.so and
  *      system/lib/android.frameworks.faceservice@1.0.so) and re-enable the

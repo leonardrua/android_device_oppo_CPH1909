@@ -1,0 +1,115 @@
+/*
+ * RECONSTRUCTED — NOT the original file.
+ *
+ * Package: vendor.oppo.hardware.biometrics.face@1.0
+ * Recovered by reverse-engineering the stock interface library
+ *   system/lib64/vendor.oppo.hardware.biometrics.face@1.0.so
+ * of the CPH1909 dump (/home/asus/a5s-dump).
+ *
+ * Enum names+values were read from the generated toString() jump tables in
+ * .rodata/.text; struct layouts from the generated toString() bodies (field
+ * order, type and offset). See /tmp/opencode/enums.py.
+ *
+ * CAVEAT: hidl-gen hashes the *exact source file bytes* (SHA256 of the .hal
+ * file; see hidl-gen hashing/Hash.cpp + Interface::emitDigestChain). This
+ * reconstruction therefore cannot be expected to reproduce the vendor's
+ * frozen interface hash. It is a readable, ABI-faithful reference, not a
+ * byte-exact copy. Comments/whitespace/declaration order are NOT verified.
+ */
+
+package vendor.oppo.hardware.biometrics.face@1.0;
+
+/*
+ * Values are negative errno (Linux convention). SYS_UNKNOWN (1) is the only
+ * non-errno value observed.
+ */
+enum RequestStatus : int32_t {
+    SYS_OK        = 0,
+    SYS_UNKNOWN   = 1,
+    SYS_ENOENT    = -2,
+    SYS_EINTR     = -4,
+    SYS_EIO       = -5,
+    SYS_EAGAIN    = -11,
+    SYS_ENOMEM    = -12,
+    SYS_EACCES    = -13,
+    SYS_EFAULT    = -14,
+    SYS_EBUSY     = -16,
+    SYS_EINVAL    = -22,
+    SYS_ENOSPC    = -28,
+    SYS_ETIMEDOUT = -110,
+};
+
+enum FaceError : int32_t {
+    ERROR_NO_ERROR           = 0,
+    ERROR_HW_UNAVAILABLE     = 1,
+    ERROR_UNABLE_TO_PROCESS  = 2,
+    ERROR_TIMEOUT            = 3,
+    ERROR_NO_SPACE           = 4,
+    ERROR_CANCELED           = 5,
+    ERROR_UNABLE_TO_REMOVE   = 6,
+    ERROR_FACE_VENDOR_BASE   = 1000,
+};
+
+/*
+ * Values 8..100 exist in the jump table but map to no distinct name (they
+ * reuse a default/unnamed string). They are intentionally omitted.
+ */
+enum FaceAcquiredInfo : int32_t {
+    ACQUIRED_GOOD            = 0,
+    ACQUIRED_PARTIAL         = 1,
+    ACQUIRED_INSUFFICIENT    = 2,
+    ACQUIRED_IMAGER_DIRTY    = 3,
+    ACQUIRED_TOO_SLOW        = 4,
+    ACQUIRED_TOO_FAST        = 5,
+    ACQUIRED_FAR_FACE        = 6,
+    ACQUIRED_NEAR_FACE       = 7,
+    ACQUIRED_NO_FACE         = 101,
+    ACQUIRED_SHIFTING        = 102,
+    ACQUIRED_DARK            = 103,
+    ACQUIRED_HACKER          = 104,
+    ACQUIRED_LOW_SIMILARITY  = 105,
+    ACQUIRED_BRIGHT          = 106,
+    ACQUIRED_LEFT            = 107,
+    ACQUIRED_RIGHT           = 108,
+    ACQUIRED_UP              = 109,
+    ACQUIRED_DOWN            = 110,
+    ACQUIRED_VENDOR_BASE     = 1000,
+};
+
+enum FaceLogType : int32_t {
+    TYPE_LOG   = 1,
+    TYPE_IMAGE = 2,
+    TYPE_PERF  = 3,
+};
+
+enum SwitchType : int32_t {
+    TYPE_CLOSE_EYE_DETECT = 1,
+};
+
+/* Layout: four uint32 (toString prints unsigned). 16 bytes. */
+struct RectHal {
+    uint32_t left;
+    uint32_t top;
+    uint32_t right;
+    uint32_t bottom;
+};
+
+/* Layout: two float (toString prints float). 8 bytes. */
+struct Point {
+    float x;
+    float y;
+};
+
+/*
+ * Layout: five float then uint32 (toString prints float x5 then unsigned).
+ * 24 bytes. Only used by operator==/operator!=/toString; no interface method
+ * references it in the recovered method set.
+ */
+struct FaceInfoWrapper {
+    float score;
+    float yaw;
+    float pitch;
+    float roll;
+    float eye_dist;
+    uint32_t ID;
+};

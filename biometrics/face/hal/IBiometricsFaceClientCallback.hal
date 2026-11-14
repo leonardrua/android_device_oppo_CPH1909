@@ -1,0 +1,43 @@
+/*
+ * RECONSTRUCTED — NOT the original file.
+ *
+ * Package: vendor.oppo.hardware.biometrics.face@1.0
+ * Method order = HIDL transaction codes recovered from
+ * BpHwBiometricsFaceClientCallback::_hidl_<m> (the constant passed to
+ * transact()): 1..11 in the order below. Argument types come from the
+ * demangled BpHw...::<method>(...) symbols.
+ *
+ * The frozen interface hash of this file is (from getHashChain):
+ *   5d07959171b724da3c1291296e1a975308ccaf395cff2db76e9706398f7207a1
+ * This reconstruction will not reproduce it (hidl-gen hashes file bytes).
+ */
+
+package vendor.oppo.hardware.biometrics.face@1.0;
+
+import types;
+
+interface IBiometricsFaceClientCallback {
+
+    onEnrollResult(uint64_t deviceId, uint32_t faceId, uint32_t groupId, uint32_t remaining);
+
+    onAcquired(uint64_t deviceId, FaceAcquiredInfo acquiredInfo);
+
+    onAuthenticated(uint64_t deviceId, uint32_t faceId, uint32_t groupId,
+                    uint32_t token, vec<uint8_t> hat);
+
+    onError(uint64_t deviceId, FaceError error);
+
+    onRemoved(uint64_t deviceId, uint32_t faceId, uint32_t groupId);
+
+    onEnumerate(uint64_t deviceId, vec<uint32_t> faceIds, uint32_t groupId);
+
+    onCommandResult(uint64_t deviceId, vec<uint32_t> result, vec<string> data);
+
+    onFilterFailedAcquired(uint64_t deviceId, uint32_t info);
+
+    onFailReasonAcquired(uint64_t deviceId, uint32_t info);
+
+    unlockRawImageDelivery(uint32_t value);
+
+    onStaticsReport(uint32_t arg1, uint32_t arg2);
+};

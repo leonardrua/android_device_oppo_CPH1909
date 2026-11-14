@@ -1,0 +1,101 @@
+/*
+ * RECONSTRUCTED — NOT the original file.
+ *
+ * Package: vendor.oppo.hardware.biometrics.face@1.0
+ *
+ * Method order = HIDL transaction codes recovered from
+ * BpHwBiometricsFace::_hidl_<m> (the constant passed to transact()):
+ * 1..22 in the order below. Argument types come from the demangled
+ * BpHwBiometricsFace::<method>(...) symbols; return wire types from the
+ * Bn/Bp parcel decode (scalar int32_t / uint64_t).
+ *
+ * The frozen interface hash of this file is (from getHashChain):
+ *   fb9438a6ebdaf8052c1d27f21e321317e19f227e6b799cd4bf0bac9ea325d7ce
+ * This reconstruction will not reproduce it (hidl-gen hashes file bytes).
+ *
+ * UNRESOLVED (do not affect the wire ABI, only the source hash):
+ *   * Whether the int32_t-returning methods are declared as RequestStatus or
+ *     as raw int32_t. RequestStatus is assumed here because the enum exists
+ *     and is generated a toString(); every other enum in types.hal is used by
+ *     the interface, so RequestStatus is almost certainly the declared return.
+ *   * Exact enum declaration order (values are explicit, so ABI is fixed).
+ *   * Original argument names (only wire types are recovered).
+ */
+
+package vendor.oppo.hardware.biometrics.face@1.0;
+
+import IBiometricsFaceClientCallback;
+import types;
+
+interface IBiometricsFace {
+
+    /* 1 */
+    authenticate(uint64_t operationId, uint32_t gid, uint32_t arg3)
+        generates (RequestStatus status);
+
+    /* 2 */
+    cancelAuthentication() generates (RequestStatus status);
+
+    /* 3 — hat is a fixed 69-byte array (hidl_array<uint8_t, 69>) */
+    enroll(uint8_t[69] hat, uint32_t gid, uint32_t timeoutSec)
+        generates (RequestStatus status);
+
+    /* 4 */
+    cancelEnrollment() generates (RequestStatus status);
+
+    /* 5 */
+    preEnroll() generates (uint64_t challenge);
+
+    /* 6 */
+    remove(uint32_t gid, uint32_t fid) generates (RequestStatus status);
+
+    /* 7 */
+    getAuthenticatorId() generates (uint64_t authenticatorId);
+
+    /* 8 */
+    setActiveGroup(uint32_t gid, string storePath) generates (RequestStatus status);
+
+    /* 9 */
+    setNotify(IBiometricsFaceClientCallback clientCallback, bool arg2)
+        generates (uint64_t deviceId);
+
+    /* 10 */
+    postEnroll() generates (RequestStatus status);
+
+    /* 11 */
+    executeCommand(uint32_t command) generates (RequestStatus status);
+
+    /* 12 */
+    cancelCommand(uint32_t command) generates (RequestStatus status);
+
+    /* 13 */
+    get(uint32_t gid) generates (RequestStatus status);
+
+    /* 14 */
+    verifyFace(vec<uint8_t> face, uint64_t operationId, uint32_t gid)
+        generates (RequestStatus status);
+
+    /* 15 */
+    getEnrollmentTotalTimes() generates (RequestStatus status);
+
+    /* 16 */
+    setPreviewFrame(RectHal rect) generates (RequestStatus status);
+
+    /* 17 — no arguments in the recovered Bp signature */
+    setPreviewSurface() generates (RequestStatus status);
+
+    /* 18 */
+    getPreViewWidth() generates (RequestStatus status);
+
+    /* 19 */
+    getPreViewHeight() generates (RequestStatus status);
+
+    /* 20 */
+    dynamicallyConfigLog(FaceLogType type, uint32_t arg2) generates (RequestStatus status);
+
+    /* 21 */
+    updateRusNativeData(float arg1) generates (RequestStatus status);
+
+    /* 22 */
+    updateSettingSwitchStatus(SwitchType type, bool enabled) generates (RequestStatus status);
+};
