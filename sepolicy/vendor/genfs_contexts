@@ -1,0 +1,4 @@
+# /proc/touchpanel/double_tap_enable -- the DT2W enable node exposed by the
+# OPPO touchpanel drivers. Written by power.mt6765 (hal_power_default); see
+# file.te for the type and hal_power_default.te for the rule.
+genfscon proc /touchpanel/double_tap_enable u:object_r:proc_dt2w:s0

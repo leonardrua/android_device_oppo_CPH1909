@@ -1,0 +1,13 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# android.hardware.power@1.0-service runs in hal_power_default (its AOSP
+# binary is labelled hal_power_default_exec) and loads power.mt6765, which
+# opens TARGET_TAP_TO_WAKE_NODE O_WRONLY and writes "1"/"0" for
+# POWER_FEATURE_DOUBLE_TAP_TO_WAKE. Traversing /proc and the unlabelled
+# /proc/touchpanel directory is already covered by the global
+# "allow domain proc:dir r_dir_perms"; only the file itself needs access.
+allow hal_power_default proc_dt2w:file rw_file_perms;

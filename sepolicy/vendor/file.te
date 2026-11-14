@@ -1,0 +1,12 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Double-tap-to-wake proc node, written by power.mt6765 through
+# TARGET_TAP_TO_WAKE_NODE (BoardConfig.mk). The OPPO touchpanel drivers
+# (himax_summer, NT36525B, ipio_touch_mmi) create it 0666 under
+# /proc/touchpanel, so only this one file is relabeled; the rest of the
+# touchpanel procfs stays generic proc.
+type proc_dt2w, fs_type, proc_type;

@@ -597,7 +597,10 @@ tree builds a small `power.mt6765` shim (`power/`) that mirrors the MT6765
 RMX2185 device trees' `Mediatek Power HAL`: same `power_open()` device-class
 allocation, same `LOG_TAG "MTKPowerHAL"`, the sustained-performance and VR-mode
 hint handlers with `*((int *)data)` parsing, and the DT2W write through
-`TARGET_TAP_TO_WAKE_NODE` (`/proc/touchpanel/double_tap_enable`). The stock legacy
+`TARGET_TAP_TO_WAKE_NODE` (`/proc/touchpanel/double_tap_enable`). The node is
+labelled `proc_dt2w` by `sepolicy/vendor/genfs_contexts` and `hal_power_default`
+is granted write access (`sepolicy/vendor/hal_power_default.te`), so DT2W is
+not dependent on the permissive bring-up. The stock legacy
 power HALs (`vendor/lib/hw/power.mt6765.so` and `power.default.so`, both
 32-bit and 64-bit) are deliberately absent from `proprietary-files.txt`: they
 installed to the same vendor path as the shim while having no proc-node writer

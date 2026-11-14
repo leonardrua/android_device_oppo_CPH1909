@@ -249,6 +249,9 @@ BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 # touchpanel proc node below. android.hardware.power@1.0-service forwards the
 # framework POWER_FEATURE_DOUBLE_TAP_TO_WAKE feature to power.mt6765, which
 # writes this node. The setting is surfaced by config_supportDoubleTapWake.
+# The node is labelled proc_dt2w by sepolicy/vendor/genfs_contexts and is
+# writable by hal_power_default (the AOSP power service's domain), so DT2W
+# works with SELinux enforcing, not just during the permissive bring-up.
 TARGET_TAP_TO_WAKE_NODE := /proc/touchpanel/double_tap_enable
 
 # Properties
