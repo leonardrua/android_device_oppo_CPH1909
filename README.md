@@ -940,17 +940,21 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   so unlike fingerprint there is nothing to wrap. `biometrics/face/` therefore
   builds a source `android.hardware.biometrics.face@1.0-service` that registers
   the AOSP interface the Lineage biometric stack binds to and forwards to the
-  OPPO backend through `OppoFaceHal`. That forwarding is a documented scaffold
-  today: the stock face service implements a *custom*, vendor-namespaced
-  interface (`vendor.oppo.hardware.biometrics.face@1.0::IBiometricsFace`,
+  OPPO backend through `OppoFaceHal`. The stock face service implements a
+  *custom*, vendor-namespaced interface
+  (`vendor.oppo.hardware.biometrics.face@1.0::IBiometricsFace`,
   fingerprint-shaped — setNotify/preEnroll/postEnroll/getAuthenticatorId/enroll/
-  remove/setActiveGroup/authenticate/cancel). That interface was reconstructed
-  from the stock interface library (`biometrics/face/hal/` holds the reference
-  `.hal`; the exact source bytes are not in the dump), but the backend is not
-  wired in yet, so `OppoFaceHal` reports `OPERATION_NOT_SUPPORTED`; the
-  reverse-engineering checklist is in `biometrics/face/OppoFaceHal.h`. No face
-  feature XML is installed, so Settings does not surface face unlock: the service
-  is wired but inert. Boot-test to confirm shim load,
+  remove/setActiveGroup/authenticate/cancel). That interface is reconstructed
+  from the stock interface library and **built** as a `hidl_interface`
+  (`interfaces/vendor/hardware/biometrics/face/1.0/`; the exact source bytes are
+  not in the dump, so the frozen hash differs — `getService()` matches by name).
+  `OppoFaceHal` implements the forwarding (with a vendor→AOSP callback adapter),
+  but the stock face service stays disabled (it also needs the ColorOS
+  `android.frameworks.faceservice@1.0` handshake), so every operation still
+  reports `OPERATION_NOT_SUPPORTED`; the reverse-engineering checklist is in
+  `biometrics/face/OppoFaceHal.h`. No face feature XML is installed, so Settings
+  does not surface face unlock: the service is wired but inert. Boot-test to
+  confirm shim load,
   `IBiometricsFingerprint/default` registration, `/dev/silead_fp` access,
   `IBiometricsFace/default` registration, and that stock
   `fps_hal`/`fpay_hal`/`face_hal` remain disabled.

@@ -1,0 +1,21 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Declares vendor.oppo as a HIDL package root so hidl-gen can locate the
+// reconstructed OPPO face interface at
+//   <this dir>/hardware/biometrics/face/1.0/
+// A hidl_interface whose `root` is "vendor.oppo" needs this module: Soong
+// fails the build with "Cannot find package root specification" without it,
+// and hidl-gen is handed "-rvendor.oppo:<dir>" to find the .hal files.
+//
+// `path` is intentionally omitted. It defaults to this Android.bp's directory
+// (device/oppo/CPH1909/interfaces/vendor), so the module keeps working
+// regardless of where the tree is checked out. This mirrors how
+// LineageOS/android_device_realme_RMX1801 declares vendor.oppo for its
+// vendor.oppo.hardware.biometrics.fingerprint@2.1 interface.
+//
+hidl_package_root {
+    name: "vendor.oppo",
+}

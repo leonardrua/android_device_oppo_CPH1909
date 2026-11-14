@@ -5,7 +5,8 @@
  *
  * Entry point for the OPPO CPH1909 android.hardware.biometrics.face@1.0
  * service. Registers the AOSP interface so the Lineage biometric stack can
- * bind to it; the implementation is currently a scaffold (see OppoFaceHal.h).
+ * bind to it; the implementation forwards to the (disabled) OPPO backend, so
+ * operations report OPERATION_NOT_SUPPORTED (see OppoFaceHal.h).
  */
 
 #define LOG_TAG "android.hardware.biometrics.face@1.0-service"
@@ -36,7 +37,7 @@ int main() {
         return 1;
     }
 
-    ALOGI("android.hardware.biometrics.face@1.0 service ready (scaffold)");
+    ALOGI("android.hardware.biometrics.face@1.0 service ready (backend disabled)");
     joinRpcThreadpool();
 
     /* joinRpcThreadpool() should never return. */

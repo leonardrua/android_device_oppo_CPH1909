@@ -188,10 +188,12 @@ system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
 # library, copied verbatim from stock.
 #
 # Stock face framework stubs, same 309-byte empty stub, same role: stock-layout
-# parity for the OPPO face stack. Nothing references them; the stock face_hal
-# cannot load (its DT_NEEDED system-side libs are deliberately not imported)
-# and its service is disabled via rootdir/etc/init/vendor.oppo.hardware.
-# biometrics.face@1.0-service.rc.
+# parity for the OPPO face stack. Nothing references them, and the stock
+# face_hal still cannot load: its DT_NEEDED system-side libs are deliberately
+# not imported and its service is disabled via rootdir/etc/init/vendor.oppo.
+# hardware.biometrics.face@1.0-service.rc. The face HIDL interface itself is
+# built from source (interfaces/vendor/hardware/biometrics/face/1.0/), not
+# imported.
 system/framework/ifaamanager.jar
 system/framework/android.frameworks.fingerprintservice-V1.0-java.jar
 system/framework/vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar

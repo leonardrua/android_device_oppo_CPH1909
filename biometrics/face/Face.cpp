@@ -6,7 +6,8 @@
  * android.hardware.biometrics.face@1.0 implementation for the OPPO CPH1909.
  *
  * Each AOSP operation is forwarded to OppoFaceHal, the single boundary that
- * owns the (currently scaffold) connection to the OPPO vendor face backend.
+ * owns the forwarding to the OPPO vendor face backend. The stock backend is
+ * disabled in this build, so operations report OPERATION_NOT_SUPPORTED.
  */
 
 #define LOG_TAG "android.hardware.biometrics.face@1.0-service"
@@ -26,9 +27,10 @@ namespace implementation {
  * sentinel must be cast to the int32_t member. */
 Face::Face() : mOppo(new OppoFaceHal()), mUserId(static_cast<int32_t>(UserHandle::NONE)) {
     if (!mOppo->initialize()) {
-        ALOGW("OPPO face backend is a scaffold: the AOSP face@1.0 interface is "
-              "registered but every operation reports OPERATION_NOT_SUPPORTED "
-              "until the vendor interface is wired in (see OppoFaceHal.h)");
+        ALOGW("OPPO face backend is disabled: the AOSP face@1.0 interface is "
+              "registered and forwarding is implemented, but every operation "
+              "reports OPERATION_NOT_SUPPORTED until the stock vendor service "
+              "is enabled (see OppoFaceHal.h)");
     }
 }
 

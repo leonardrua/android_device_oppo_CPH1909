@@ -15,9 +15,11 @@
 //
 // This service therefore provides the AOSP interface the Lineage framework
 // expects and delegates every call to OppoFaceHal, the single forwarding
-// boundary to the OPPO backend. OppoFaceHal is a documented scaffold today
-// (see OppoFaceHal.h): it reports OPERATION_NOT_SUPPORTED until the vendor
-// interface is reconstructed and imported.
+// boundary to the OPPO backend. OppoFaceHal forwards to the reconstructed
+// vendor.oppo.hardware.biometrics.face@1.0 interface (built from
+// interfaces/vendor/hardware/biometrics/face/1.0/, see OppoFaceHal.h). The
+// stock vendor backend service is disabled in this build, so the proxy
+// registers but reports OPERATION_NOT_SUPPORTED until it is enabled.
 //
 cc_binary {
     name: "android.hardware.biometrics.face@1.0-service",
@@ -31,12 +33,15 @@ cc_binary {
     ],
     shared_libs: [
         "android.hardware.biometrics.face@1.0",
+        "vendor.oppo.hardware.biometrics.face@1.0",
         "libhidlbase",
+        "libhidltransport",
         "liblog",
         "libutils",
     ],
     cflags: [
         "-Wall",
         "-Werror",
+        "-Wno-unused-parameter",
     ],
 }

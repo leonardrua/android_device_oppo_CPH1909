@@ -1,0 +1,41 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Source-built HIDL interface for the stock OPPO face backend.
+//
+// The .hal files in this directory are a reference *reconstruction* of the
+// vendor interface (see README.md); the frozen interface hash therefore
+// differs from the stock library's. That is expected and does not block the
+// proxy: HIDL getService() matches a service by its interface name, not by
+// hash -- the hash only feeds IServiceManager::listByInterface
+// (libhidltransport ServiceManagement.cpp getRawServiceInternal() ->
+// canCastInterface(), a descriptor comparison). So this library's generated
+// client (BpHw) still connects to the stock vendor service.
+//
+// The package root "vendor.oppo" is declared in interfaces/vendor/Android.bp,
+// which is what lets hidl-gen find these files; the on-disk path must be
+//   interfaces/vendor/hardware/biometrics/face/1.0/
+// (package root + <package minus root> + <version>). The generated headers land
+// under vendor/oppo/hardware/biometrics/face/1.0/ and are included by
+// OppoFaceHal.cpp. This mirrors how the Realme RMX1801 / OPPO MTK trees rebuild
+// vendor.oppo.hardware.biometrics.fingerprint@2.1.
+//
+// gen_java is disabled: only this device's C++ proxy service consumes the
+// interface (the Lineage framework binds the *AOSP* face@1.0 interface, not
+// this vendor one).
+//
+hidl_interface {
+    name: "vendor.oppo.hardware.biometrics.face@1.0",
+    root: "vendor.oppo",
+    srcs: [
+        "types.hal",
+        "IBiometricsFace.hal",
+        "IBiometricsFaceClientCallback.hal",
+    ],
+    interfaces: [
+        "android.hidl.base@1.0",
+    ],
+    gen_java: false,
+}

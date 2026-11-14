@@ -1,13 +1,27 @@
-# Reconstructed vendor face HAL interface (reference only)
+# Reconstructed vendor face HAL interface (built from source)
 
 These `.hal` files are a **reference reconstruction** of the stock OPPO
 interface, reverse-engineered from the CPH1909 dump,
 primarily `system/lib64/vendor.oppo.hardware.biometrics.face@1.0.so`
 (the 32-bit `system/lib/...` twin agrees).
 
-They are **not built** (no Soong module references them) and are **not** a
-byte-exact copy of the original. They document the vendor ABI that
-`OppoFaceHal` is intended to forward to.
+They **are built**: `Android.bp` in this directory declares the
+`vendor.oppo.hardware.biometrics.face@1.0` `hidl_interface`, which
+`biometrics/face/Android.bp` links so the AOSP face@1.0 service can forward
+to the stock backend. They are still **not a byte-exact copy** of the
+original, so the regenerated interface hash differs from the vendor's (see
+below); that does not block `getService()`, which matches by interface name.
+
+Two build details are easy to get wrong and would fail the build if changed:
+
+* The package root `vendor.oppo` is declared by a `hidl_package_root` module
+  in `interfaces/vendor/Android.bp`. Without it Soong aborts with
+  "Cannot find package root specification for package root 'vendor.oppo'".
+* These files must stay at
+  `interfaces/vendor/hardware/biometrics/face/1.0/`, i.e.
+  `<hidl_package_root dir>/<package minus root>/<version>/`. hidl-gen is handed
+  `-rvendor.oppo:<hidl_package_root dir>` and `opendir`s that path to find the
+  `.hal` files, so the directory is not free-form.
 
 Package: `vendor.oppo.hardware.biometrics.face@1.0`
 
@@ -51,11 +65,13 @@ Consequence: reproducing `fb9438a6...` would require the **exact original
 dump. This reconstruction is an ABI-faithful *reference*, not a byte-exact
 copy, so its regenerated hash will differ.
 
-**This does not block the proxy.** To forward calls, link the prebuilt vendor
-library (`vendor.oppo.hardware.biometrics.face@1.0.so`), whose generated
-`BpHw...`/`BnHw...` code already embeds the correct hash. The hash only lives
-in the `.so`; the header only declares the class. Do **not** regenerate and
-ship the interface library ourselves.
+**This does not block the proxy.** `getService()` resolves a service by
+interface *name* (descriptor), not by hash: `getRawServiceInternal()` in
+`libhidltransport` calls `canCastInterface()`, which compares descriptor
+strings. The hash is only used by `IServiceManager::listByInterface`. So the
+reconstructed library built from `Android.bp` here connects to the stock
+vendor service by name even though its `getHashChain()` reports a different
+digest.
 
 ## Remaining uncertainties (affect source hash, not wire ABI)
 

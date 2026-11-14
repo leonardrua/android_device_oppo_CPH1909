@@ -115,10 +115,13 @@ PRODUCT_PACKAGES += \
 # service and the vendor ships no legacy face HAL module, so unlike fingerprint
 # there is nothing to wrap: android.hardware.biometrics.face@1.0-service is
 # built from source (biometrics/face/) to provide the interface the Lineage
-# stack binds to, and forwards to the OPPO backend through OppoFaceHal. That
-# forwarding is still a documented scaffold (it reports OPERATION_NOT_SUPPORTED)
-# because the vendor .hal is not in the dump; see biometrics/face/OppoFaceHal.h.
-# The stock face_hal service stays disabled (different, non-AOSP interface).
+# stack binds to, and forwards to the OPPO backend through OppoFaceHal. The
+# vendor interface is rebuilt from a reconstruction of the stock library
+# (interfaces/vendor/hardware/biometrics/face/1.0/). The stock face_hal service
+# stays disabled (it also needs the ColorOS android.frameworks.faceservice@1.0
+# handshake), so the proxy registers but every operation reports
+# OPERATION_NOT_SUPPORTED until that backend is enabled; see
+# biometrics/face/OppoFaceHal.h. This does not claim face unlock works.
 PRODUCT_PACKAGES += \
     android.hardware.biometrics.face@1.0-service \
     android.hardware.biometrics.fingerprint@2.1-service \
