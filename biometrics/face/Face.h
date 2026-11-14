@@ -31,17 +31,21 @@ class Face : public IBiometricsFace {
     Face();
     virtual ~Face();
 
-    Return<OptionalUint64> setCallback(
-        const sp<IBiometricsFaceClientCallback>& clientCallback) override;
+    /* hidl-gen only elides the callback for scalar/enum returns; the
+     * Optional* returns are unions, so the generated pure virtual is the
+     * callback form. Match it exactly or it hides the base virtual. */
+    Return<void> setCallback(const sp<IBiometricsFaceClientCallback>& clientCallback,
+                             setCallback_cb _hidl_cb) override;
     Return<Status> setActiveUser(int32_t userId, const hidl_string& storePath) override;
-    Return<OptionalUint64> generateChallenge(uint32_t challengeTimeoutSec) override;
+    Return<void> generateChallenge(uint32_t challengeTimeoutSec,
+                                   generateChallenge_cb _hidl_cb) override;
     Return<Status> enroll(const hidl_vec<uint8_t>& hat, uint32_t timeoutSec,
                           const hidl_vec<Feature>& disabledFeatures) override;
     Return<Status> revokeChallenge() override;
     Return<Status> setFeature(Feature feature, bool enabled, const hidl_vec<uint8_t>& hat,
                               uint32_t faceId) override;
-    Return<OptionalBool> getFeature(Feature feature, uint32_t faceId) override;
-    Return<OptionalUint64> getAuthenticatorId() override;
+    Return<void> getFeature(Feature feature, uint32_t faceId, getFeature_cb _hidl_cb) override;
+    Return<void> getAuthenticatorId(getAuthenticatorId_cb _hidl_cb) override;
     Return<Status> cancel() override;
     Return<Status> enumerate() override;
     Return<Status> remove(uint32_t faceId) override;

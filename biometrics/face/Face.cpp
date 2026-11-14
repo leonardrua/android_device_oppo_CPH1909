@@ -34,10 +34,11 @@ Face::Face() : mOppo(new OppoFaceHal()), mUserId(static_cast<int32_t>(UserHandle
 
 Face::~Face() = default;
 
-Return<OptionalUint64> Face::setCallback(
-        const sp<IBiometricsFaceClientCallback>& clientCallback) {
+Return<void> Face::setCallback(const sp<IBiometricsFaceClientCallback>& clientCallback,
+                               setCallback_cb _hidl_cb) {
     mClientCallback = clientCallback;
-    return mOppo->setNotify(clientCallback);
+    _hidl_cb(mOppo->setNotify(clientCallback));
+    return Void();
 }
 
 Return<Status> Face::setActiveUser(int32_t userId, const hidl_string& storePath) {
@@ -45,9 +46,11 @@ Return<Status> Face::setActiveUser(int32_t userId, const hidl_string& storePath)
     return mOppo->setActiveUser(userId, storePath);
 }
 
-Return<OptionalUint64> Face::generateChallenge(uint32_t challengeTimeoutSec) {
+Return<void> Face::generateChallenge(uint32_t challengeTimeoutSec,
+                                     generateChallenge_cb _hidl_cb) {
     (void)challengeTimeoutSec;
-    return mOppo->preEnroll();
+    _hidl_cb(mOppo->preEnroll());
+    return Void();
 }
 
 Return<Status> Face::enroll(const hidl_vec<uint8_t>& hat, uint32_t timeoutSec,
@@ -64,12 +67,14 @@ Return<Status> Face::setFeature(Feature feature, bool enabled, const hidl_vec<ui
     return mOppo->setFeature(feature, enabled, hat, faceId);
 }
 
-Return<OptionalBool> Face::getFeature(Feature feature, uint32_t faceId) {
-    return mOppo->getFeature(feature, faceId);
+Return<void> Face::getFeature(Feature feature, uint32_t faceId, getFeature_cb _hidl_cb) {
+    _hidl_cb(mOppo->getFeature(feature, faceId));
+    return Void();
 }
 
-Return<OptionalUint64> Face::getAuthenticatorId() {
-    return mOppo->getAuthenticatorId();
+Return<void> Face::getAuthenticatorId(getAuthenticatorId_cb _hidl_cb) {
+    _hidl_cb(mOppo->getAuthenticatorId());
+    return Void();
 }
 
 Return<Status> Face::cancel() {
