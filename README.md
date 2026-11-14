@@ -362,6 +362,84 @@ alias for the `by-name` fstab paths, makes the backlight writable, opens the
 Trustonic `mobicore` nodes used by keymaster during sideload, and stops the MTK
 hung-task watchdog from firing while recovery idles at the menu.
 
+### init fatal errors and the recoverable reboot
+
+`BOARD_KERNEL_CMDLINE` carries `androidboot.init_fatal_reboot_target=recovery`
+(`BoardConfig.mk`). init reads it once in `SetFatalRebootTarget()`
+(`system/core/init/reboot_utils.cpp`) and stores it; without the option the
+default is `bootloader`. Every fatal exit path then funnels through
+`InitFatalReboot()`, which calls `RebootSystem(ANDROID_RB_RESTART2, "recovery")`
+— the kernel `LINUX_REBOOT_CMD_RESTART2` with the argument `recovery`, which
+MTK's LK maps back to the recovery partition. So an init `LOG(FATAL)`,
+`CHECK()` or fatal signal parks the device in recovery instead of hanging at
+the logo.
+
+There are two ways to reach it:
+
+* **`LOG(FATAL)`/`CHECK()` in PID 1.** `InitKernelLogging()` installs the
+  `InitAborter` (`init/util.cpp`) as libbase's aborter, so a fatal log from init
+  aborts through `InitFatalReboot()` before it even raises a signal. This is
+  unconditional: it applies to user builds too, not only debuggable ones.
+* **Fatal signals.** `InstallRebootSignalHandlers()` catches
+  SIGABRT/SIGBUS/SIGFPE/SIGILL/SIGSEGV/SIGSYS/SIGTRAP and forks to
+  `InitFatalReboot()`. It is installed only when `REBOOT_BOOTLOADER_ON_PANIC` is
+  1, i.e. debuggable builds (userdebug/eng — the CI default), from
+  `FirstStageMain()`, `SetupSelinux()` and `SecondStageMain()`. A user build
+  takes the kernel default instead.
+
+The sites init can reach on this device, in boot order:
+
+| Phase | Site | Fires when |
+| --- | --- | --- |
+| first stage | `first_stage_init.cpp:179` | one of the `CHECKCALL` mounts/mkdirs (`/dev`, `/dev/pts`, `/proc`, `/apex`, ...) failed |
+| first stage | `first_stage_init.cpp:219`, `switch_root.cpp:41-94` | `DoFirstStageMount()` failed: the DT fstab (`firmware/android/fstab` in `mt6765.dts`) `/system`/`/vendor` entry could not be resolved or mounted, or the `/system` pivot failed |
+| first stage | `first_stage_init.cpp:244` | `/system/bin/init` missing after the pivot |
+| selinux_setup | `selinux.cpp:428` | `LoadPolicy()` failed — split-policy load: unreadable `/vendor/etc/selinux/plat_sepolicy_vers.txt`, missing `/vendor/etc/selinux/{vendor_sepolicy.cil,plat_pub_versioned.cil}`, missing `/system/etc/selinux/mapping/<vers>.cil`, or `secilc` failed |
+| selinux_setup | `selinux.cpp:435,440` | `security_setenforce()` mismatch, or `/sys/fs/selinux/checkreqprot` not writable |
+| second stage | `selinux.cpp:506` (via `property_service.cpp`) | `/vendor/etc/selinux/plat_sepolicy_vers.txt` unreadable/empty when the property service starts |
+| second stage | `init.cpp:350` | ueventd did not write `/dev/.coldboot_done` within 60 s (ueventd crash-looping or stuck) |
+| second stage | `property_service.cpp:128,131` | property area/contexts could not be initialised |
+| second stage | `security.cpp:179,194` | mmap entropy / `kptr_restrict` setup failed |
+| second stage | `service.cpp:203` | a `service` command line contains a `${prop}` that expands empty |
+| second stage | `service.cpp:291-342` | a service's `rlimit`, `user`/`group`, `seclabel` or capabilities could not be applied (`setuid`/`setgroups`/`setexeccon`/`setpriority` failed) |
+| second stage | `service.cpp:389` | a `critical` service exited 4 times in 4 min or before `sys.boot_completed` |
+| second stage | `ueventd.cpp:235,238` (ueventd) | a coldboot handler subprocess crashed; ueventd aborts, init restarts it, and after 4 crashes the `service.cpp:389` fatal fires |
+
+Reachability notes for this tree:
+
+* First-stage mount uses the DT fstab, not `rootdir/etc/fstab.mt6765`. With
+  `CONFIG_MTK_DM_VERITY_OFF=y` the `/system` and `/vendor` entries are plain
+  `wait`, so there is no verity/AVB check to fail; the realistic trigger is a
+  missing/renamed `by-name` node or an unfinished fastboot flash.
+* The SELinux fatals are the ones to watch if the vendor policy plumbing
+  changes. They should not fire in a normal build: `BOARD_VENDOR_SEPOLICY_DIRS`
+  makes the build emit `vendor_sepolicy.cil` and `plat_pub_versioned.cil`
+  (`system/sepolicy/Android.mk`), `BOARD_SEPOLICY_VERS` defaults to
+  `PLATFORM_SEPOLICY_VERSION`, and the stock 8.1 `/vendor/etc/selinux/*` is
+  deliberately not imported (`proprietary-files.txt`), so
+  `plat_sepolicy_vers.txt` and the `/system/etc/selinux/mapping/<vers>.cil` it
+  names agree. When this path does fire, the log line above the fatal names the
+  exact file.
+* Only `ueventd` is `critical` among the services the platform `init.rc` starts
+  (`system/core/rootdir/init.rc`); the vendor `critical` services are in
+  `factory_init.rc` and `meta_init.rc`,
+  which normal boot never imports (`init.mt6765.rc`: "DO NOT import the new rc
+  file after this line"). A service that merely crash-loops without `critical`
+  is restarted, not fatal.
+* A failing builtin in an action (`write`, `setprop`, `symlink`, ...) is *not*
+  fatal — `Action::ExecuteCommand()` only logs it (`init/action.cpp`). The fatal
+  expansion case is specific to a `service` command line (`Service::Start()` ->
+  `ExpandArgsAndExecv()`).
+
+Because init logs through the kernel logger, the fatal line lands in the kernel
+log buffer, and the MTK ram console preserves the previous boot's log. After
+the reboot into recovery, read it from TWRP:
+`adb shell cat /proc/last_kmsg` (created 0444 by
+`drivers/misc/mediatek/ram_console/mtk_ram_console.c`), or from
+`/sys/fs/pstore/console-ramoops-0` (`CONFIG_PSTORE=y`,
+`pstore-reserved-memory@54410000` in `mt6765.dts`). It holds the log *up to*
+the fatal init line, which is the fastest way to tell which site above tripped.
+
 ### Vendor partition and VNDK
 
 `TARGET_COPY_OUT_VENDOR := vendor` (required by build/make whenever
