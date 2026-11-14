@@ -95,18 +95,20 @@ PRODUCT_PACKAGES += \
 #
 # The CPH1909 uses a Silead sensor behind /dev/silead_fp (CONFIG_SILEAD_FP=y in
 # the authoritative 8.1 kernel; Goodix DTS is commented out, Egis is present but
-# secondary). The stock vendor image ships the legacy HAL as
-# fingerprint.silead.default.so (backed by libsl_fp_impl.so) and a stock HIDL
-# service that registers the *vendor* interface
+# secondary). The stock vendor image ships both legacy HALs,
+# fingerprint.silead.default.so (backed by libsl_fp_impl.so) and
+# fingerprint.egis.default.so (backed by vendor.egistec...@4.0.so/libRbsFlow.so,
+# /dev/esfp0), plus a stock HIDL service that registers the *vendor* interface
 # vendor.oppo.hardware.biometrics.fingerprint@2.1, not the AOSP one that the
 # Lineage/Android 10 framework binds to.
 #
 # hw_get_module("fingerprint") probes fingerprint.<ro.hardware>.so with
 # ro.hardware=mt6765, but libhardware rejects a module whose HMI id does not
-# match the requested class id and the Silead module's HMI id is
-# "fingerprint.silead". fingerprint.mt6765 is therefore a tiny shim (built from
+# match the requested class id (the vendor HMI ids are "fingerprint.silead" and
+# "fingerprint.egis"). fingerprint.mt6765 is therefore a tiny shim (built from
 # biometrics/fingerprint/) that exports a "fingerprint"-id HMI and forwards
-# open() to the Silead module via dlopen. The AOSP default 2.1 service then
+# open() via dlopen to the first vendor module that works, in the same order as
+# the stock service: Silead, then Egis. The AOSP default 2.1 service then
 # registers android.hardware.biometrics.fingerprint@2.1::IBiometricsFingerprint.
 #
 # Face unlock is userspace-only on this device (stock megface/stface libs and

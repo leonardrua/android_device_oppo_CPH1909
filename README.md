@@ -909,14 +909,18 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   `biometrics/fingerprint/` (`fingerprint.mt6765`, `proprietary`, multilib): it
   exports the `FINGERPRINT_HARDWARE_MODULE_ID` HMI (required because Android 10
   `libhardware` rejects an `hmi->id`/`class_id` mismatch) and `dlopen`s/forwards
-  the stock legacy Silead HAL (`fingerprint.silead.default.so`, API 2.1,
-  `libsl_fp_impl.so`, `/dev/silead_fp`). `Android.mk` installs a
+  `open()` to the first working stock legacy vendor HAL, trying Silead
+  (`fingerprint.silead.default.so`, API 2.1, `libsl_fp_impl.so`,
+  `/dev/silead_fp`) then Egis (`fingerprint.egis.default.so`, API 2.1,
+  `vendor.egistec.hardware.fingerprint@4.0.so`/`libRbsFlow.so`, `/dev/esfp0`) —
+  the same order the stock service uses, and it records the winner in
+  `persist.sys.fp.vendor`. `Android.mk` installs a
   `fingerprint.default.so` → `fingerprint.mt6765.so` alias. `device.mk`
   builds/installs `android.hardware.biometrics.fingerprint@2.1-service` and
   first-wins `PRODUCT_COPY_FILES` overrides (before `CPH1909-vendor.mk`) disable
   the stock ColorOS `fps_hal` / `fpay_hal` init services, which register
   `vendor.oppo.hardware.biometrics.fingerprint@2.1` (not the AOSP interface) and
-  would contend for `/dev/silead_fp`. A third first-wins override rc disables the
+  would contend for the sensor node (`/dev/silead_fp` or `/dev/esfp0`). A third first-wins override rc disables the
   stock face service (`face_hal`): its DT_NEEDED system-side interface libraries
   (`android.frameworks.faceservice@1.0.so` and `vendor.oppo.hardware.biometrics.
   face@1.0.so`) are deliberately not imported, so it could never start in this
@@ -955,9 +959,9 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   `biometrics/face/OppoFaceHal.h`. No face feature XML is installed, so Settings
   does not surface face unlock: the service is wired but inert. Boot-test to
   confirm shim load,
-  `IBiometricsFingerprint/default` registration, `/dev/silead_fp` access,
-  `IBiometricsFace/default` registration, and that stock
-  `fps_hal`/`fpay_hal`/`face_hal` remain disabled.
+  `IBiometricsFingerprint/default` registration, sensor-node access
+  (`/dev/silead_fp` or `/dev/esfp0`), `IBiometricsFace/default` registration,
+  and that stock `fps_hal`/`fpay_hal`/`face_hal` remain disabled.
 * The 8.1 vendor blobs are the highest-risk part of the port. The HIDL
   transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
   variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL
