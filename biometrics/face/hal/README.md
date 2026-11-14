@@ -1,7 +1,7 @@
 # Reconstructed vendor face HAL interface (reference only)
 
 These `.hal` files are a **reference reconstruction** of the stock OPPO
-interface, reverse-engineered from the CPH1909 dump (`/home/asus/a5s-dump`),
+interface, reverse-engineered from the CPH1909 dump,
 primarily `system/lib64/vendor.oppo.hardware.biometrics.face@1.0.so`
 (the 32-bit `system/lib/...` twin agrees).
 
