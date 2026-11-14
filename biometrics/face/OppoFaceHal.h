@@ -25,11 +25,12 @@
  * knows about the vendor interface, mirroring how biometrics/fingerprint/
  * is the only place that knows about the Silead module.
  *
- * STATUS: SCAFFOLD. The vendor .hal definition is not in the dump and is not
- * public, so the proxy cannot be completed without reconstructing it (the
- * method set below was extracted from the DT_NEEDED interface library
- * system/lib/vendor.oppo.hardware.biometrics.face@1.0.so of the stock image).
- * Until then every method reports Status::OPERATION_NOT_SUPPORTED and logs
+ * STATUS: SCAFFOLD. The vendor interface has since been reconstructed from the
+ * stock interface library (the reference .hal files are under
+ * biometrics/face/hal/), but there is still no backend to talk to: the two
+ * system-side interface libraries the stock service DT_NEEDEDs are not
+ * imported and the stock service itself is disabled. Until the forwarding is
+ * implemented every method reports Status::OPERATION_NOT_SUPPORTED and logs
  * once. This compiles and registers the AOSP interface, so the plumbing is
  * ready; it does not claim face unlock works.
  *
@@ -64,8 +65,9 @@
  *      declared in the stock *system* manifest) is an OPPO framework extension
  *      absent from LineageOS, so the vendor service's framework handshake may
  *      still not complete.
- *   3. Link the regenerated vendor interface library here, replace the stubs
- *      with getService("vendor.oppo.hardware.biometrics.face@1.0::"
+ *   3. Link the *prebuilt* vendor interface library here (do not regenerate it;
+ *      see the NOTE above), replace the stubs with
+ *      getService("vendor.oppo.hardware.biometrics.face@1.0::"
  *      "IBiometricsFace") calls, and map the AOSP face@1.0 semantics
  *      (setCallback/setActiveUser/generateChallenge/enroll/revokeChallenge/
  *      setFeature/getFeature/getAuthenticatorId/cancel/enumerate/remove/
