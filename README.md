@@ -933,13 +933,25 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   (the AOSP `hal_fingerprint` attribute grants only cover
   `fingerprint_vendor_data_file`, which the ColorOS/Silead paths do not use,
   so the device rules are what makes the domain enforceable-ready). Face
-  unlock is userspace-only on CPH1909 (no face driver in the authoritative kernel; stock
-  vendor face service/`libmegface`/`libstface*` blobs exist, but LineageOS 17.1
-  has no AOSP `android.hardware.biometrics.face@1.0` default service — 17.1 ships
-  only the interface and its VTS, no passthrough implementation), so only
-  fingerprint is wired to an AOSP interface. Boot-test to confirm shim load,
-  `IBiometricsFingerprint/default` registration, `/dev/silead_fp` access, and
-  that stock `fps_hal`/`fpay_hal`/`face_hal` remain disabled.
+  unlock is userspace-only on CPH1909 (no face driver in the authoritative
+  kernel; stock vendor face service/`libmegface`/`libstface*` blobs exist). AOSP
+  10 ships no `android.hardware.biometrics.face@1.0` default service — 17.1 ships
+  only the interface and its VTS — and the vendor ships no legacy face HAL module,
+  so unlike fingerprint there is nothing to wrap. `biometrics/face/` therefore
+  builds a source `android.hardware.biometrics.face@1.0-service` that registers
+  the AOSP interface the Lineage biometric stack binds to and forwards to the
+  OPPO backend through `OppoFaceHal`. That forwarding is a documented scaffold
+  today: the stock face service implements a *custom*, vendor-namespaced
+  interface (`vendor.oppo.hardware.biometrics.face@1.0::IBiometricsFace`,
+  fingerprint-shaped — setNotify/preEnroll/postEnroll/getAuthenticatorId/enroll/
+  remove/setActiveGroup/authenticate/cancel), whose `.hal` is neither in the dump
+  nor public, so `OppoFaceHal` reports `OPERATION_NOT_SUPPORTED`; the
+  reverse-engineering checklist is in `biometrics/face/OppoFaceHal.h`. No face
+  feature XML is installed, so Settings does not surface face unlock: the service
+  is wired but inert. Boot-test to confirm shim load,
+  `IBiometricsFingerprint/default` registration, `/dev/silead_fp` access,
+  `IBiometricsFace/default` registration, and that stock
+  `fps_hal`/`fpay_hal`/`face_hal` remain disabled.
 * The 8.1 vendor blobs are the highest-risk part of the port. The HIDL
   transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
   variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL

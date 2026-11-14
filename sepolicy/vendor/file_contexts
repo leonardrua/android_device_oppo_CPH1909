@@ -231,6 +231,11 @@
 # the standard hal_face / hal_fingerprint attributes where the interface matches,
 # so that the framework's biometric stack can talk to them once bring-up is done.
 /(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.biometrics\.face@1\.0-service            u:object_r:hal_face_default_exec:s0
+# android.hardware.biometrics.face@1.0-service is the source-built AOSP face
+# service (biometrics/face/). AOSP ships no face@1.0 default binary, so its
+# file_contexts has no entry for it; it shares hal_face_default with the stock
+# service above (both present the face HAL to userspace).
+/(vendor|system/vendor)/bin/hw/android\.hardware\.biometrics\.face@1\.0-service                u:object_r:hal_face_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.biometrics\.fingerprint@2\.1-service     u:object_r:hal_fingerprint_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.oppo\.hardware\.biometrics\.fingerprintpay@1\.0-service  u:object_r:hal_fingerprint_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.silead\.hardware\.fingerprintext@1\.0-service            u:object_r:mtk_hal_silead_exec:s0

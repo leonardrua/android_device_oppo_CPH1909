@@ -1,0 +1,11 @@
+# android.hardware.biometrics.face@1.0 service for the OPPO CPH1909.
+#
+# Registers the AOSP face@1.0 interface that the Lineage biometric stack binds
+# to. The implementation is a scaffold that forwards (once completed) to the
+# stock OPPO face backend; see biometrics/face/OppoFaceHal.h. The stock ColorOS
+# face_hal service stays disabled (vendor.oppo.hardware.biometrics.face@1.0 is
+# a different, non-AOSP interface).
+service face_hal_default /vendor/bin/hw/android.hardware.biometrics.face@1.0-service
+    class hal
+    user system
+    group system

@@ -111,10 +111,16 @@ PRODUCT_PACKAGES += \
 #
 # Face unlock is userspace-only on this device (stock megface/stface libs and
 # vendor.oppo.hardware.biometrics.face@1.0-service; no face driver in the
-# authoritative CPH1909 kernel and no AOSP android.hardware.biometrics.face@1.0
-# default service in 17.1), so only fingerprint is wired to an AOSP interface
-# here.
+# authoritative CPH1909 kernel). Android 10 ships no AOSP face@1.0 default
+# service and the vendor ships no legacy face HAL module, so unlike fingerprint
+# there is nothing to wrap: android.hardware.biometrics.face@1.0-service is
+# built from source (biometrics/face/) to provide the interface the Lineage
+# stack binds to, and forwards to the OPPO backend through OppoFaceHal. That
+# forwarding is still a documented scaffold (it reports OPERATION_NOT_SUPPORTED)
+# because the vendor .hal is not in the dump; see biometrics/face/OppoFaceHal.h.
+# The stock face_hal service stays disabled (different, non-AOSP interface).
 PRODUCT_PACKAGES += \
+    android.hardware.biometrics.face@1.0-service \
     android.hardware.biometrics.fingerprint@2.1-service \
     fingerprint.mt6765
 

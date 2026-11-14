@@ -1,0 +1,42 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Source-built android.hardware.biometrics.face@1.0 service for the OPPO
+// CPH1909 (A5s, MT6765).
+//
+// Unlike fingerprint, there is no legacy HAL module to wrap and no AOSP face
+// service to load one: Android 10 ships only the face@1.0 interface definition
+// (hardware/interfaces/biometrics/face/1.0/*.hal), not a default implementation.
+// The stock vendor face stack registers a *custom* interface
+// (vendor.oppo.hardware.biometrics.face@1.0::IBiometricsFace) that the AOSP
+// framework does not bind to.
+//
+// This service therefore provides the AOSP interface the Lineage framework
+// expects and delegates every call to OppoFaceHal, the single forwarding
+// boundary to the OPPO backend. OppoFaceHal is a documented scaffold today
+// (see OppoFaceHal.h): it reports OPERATION_NOT_SUPPORTED until the vendor
+// interface is reconstructed and imported.
+//
+cc_binary {
+    name: "android.hardware.biometrics.face@1.0-service",
+    proprietary: true,
+    relative_install_path: "hw",
+    init_rc: ["android.hardware.biometrics.face@1.0-service.rc"],
+    srcs: [
+        "Face.cpp",
+        "OppoFaceHal.cpp",
+        "service.cpp",
+    ],
+    shared_libs: [
+        "android.hardware.biometrics.face@1.0",
+        "libhidlbase",
+        "liblog",
+        "libutils",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}

@@ -338,6 +338,11 @@ permissive rutilsdaemon;
 permissive hal_audio_default;
 permissive hal_bluetooth_default;
 permissive hal_camera_default;
+# hal_face_default now hosts the source-built android.hardware.biometrics.face@1.0
+# service (biometrics/face/), alongside the stock OPPO face service that shares
+# the type. Keep it permissive during bring-up like the other standard HAL
+# domains so a missing rule logs instead of killing the service.
+permissive hal_face_default;
 permissive hal_fingerprint_default;
 permissive hal_graphics_composer_default;
 permissive hal_light_default;
