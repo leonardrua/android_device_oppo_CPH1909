@@ -67,9 +67,16 @@ stock vendor image ships seven 4.9.77+ kernel modules — `wmt_drv.ko`,
 `wmt_chrdev_wifi.ko`, `wlan_drv_gen4m.ko`, `bt_drv.ko`, `gps_drv.ko`,
 `fmradio_drv.ko` and `met.ko` in `/vendor/lib/modules/`, loaded by
 `init.wmt_drv.rc` / `init.wlan_drv.rc` / `init.bt_drv.rc` / `init.gps_drv.rc`
-/ `init.fmradio_drv.rc` — all built with `CONFIG_MODVERSIONS=y`. That mix has
-been verified to work: a kernel built from this source boots on the stock
-vendor image and the stock modules load at boot.
+/ `init.fmradio_drv.rc` — all built with `CONFIG_MODVERSIONS=y`. The stock
+boot ramdisk also ships `fpsgo.ko`, a small FPSGO companion module that
+provides the implementation behind `xgf_est_slptime_fp`, which the source-built
+kernel exports. It is kept in this tree at `rootdir/modules/fpsgo.ko` (SHA-256
+`ab532998884b64151dc2c0d7c82a20ea37c3cd9d3001d7742e67d1cf3b932d8d`) and is
+installed by `device.mk` as `/system/lib/modules/fpsgo.ko`, matching the path
+used by the vendor `insmod /lib/modules/fpsgo.ko` line. The prior kernel module
+mix without this companion binary has been verified to work: a kernel built
+from this source boots on the stock vendor image and the stock modules load at
+boot.
 
 Why the version mismatch is not a problem, for the record:
 
@@ -125,6 +132,15 @@ knowing about that set:
   domain (`coredomain` + `system_file_type`) because domains/types entered
   from `/system` must carry those attributes (`treble_sepolicy_tests` /
   `sepolicy_tests`). Both domains stay permissive during bring-up.
+* Additional stock `/system/bin` helpers referenced by the vendor init tree are
+  imported at their original system paths, along with their direct native-library
+  closure: `autochmod.sh`, `emdlogger1`, `emdlogger2`, `emdlogger5`, `factory`,
+  `iwpriv`, `mdlogger` and `meta_tst`, plus `libmdloggerrecycle.so` and
+  `libmemoryDumpEncoder.so` in both system library directories, and 64-bit
+  `libaudiocustparam.so`, `libkmsetkey.so`, `libminiui.so` and
+  `libsysenv_system.so`. These are factory/meta/modem/logging tools, not
+  replacements for AOSP-built platform services; the stock `/system/bin` files
+  that are absent from the stock dump or are AOSP-built are not imported.
 * The stock `/system/lib` and `/system/lib64` MediaTek native libraries are
   also stored in the vendor tree and installed at their original `/system`
   paths. This includes the MediaTek HIDL interface library
@@ -523,12 +539,12 @@ and `vendor/etc/init/*.rc` (all 201 services in 94 rc files) and against
 
 Two notes on services deliberately *not* given a domain:
 
-* `init.mt6765.rc` starts `service oae /system/bin/oae_server -s` with
-  `seclabel u:r:oae_server:s0`, but `oae_server` is a ColorOS-only system
-  binary that neither the stock dump nor `proprietary-files.txt` ships (it
-  sits in a `#ifdef COLOROS_EDIT` block). No `oae_server` type is declared:
-  the exec would fail anyway, and a domain exists only to make a missing
-  binary appear started.
+* `init.mt6765.rc` retains the stock `service oae /system/bin/oae_server -s`
+  entry with `seclabel u:r:oae_server:s0`. The service is disabled on the
+  stock image as well: `oae_server` is a ColorOS-only system binary that
+  neither the stock dump nor the OTA list ships, so Android init's
+  `stat()` check fails and marks the service disabled before fork. It is kept
+  for stock-image parity; no `oae_server` domain is declared or imported.
 * The KTV HAL (`vendor.oppo.hardware.ktv@1.0-service`) is in the stock
   `vendor/etc/init/` but its binary and rc are not in
   `proprietary-files.txt`, so it never starts and needs no label.

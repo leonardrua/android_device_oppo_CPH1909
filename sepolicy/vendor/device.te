@@ -399,14 +399,13 @@ permissive mtk_bip;
 # oppoalgo_daemon: OPPO's camera-algo helper (init.mt6765.rc, started on
 # sys.boot_completed=1).
 #
-# NOTE on the oae service in the same rc file: init.mt6765.rc defines
+# NOTE on the oae service in the same rc file: init.mt6765.rc retains
 #     service oae /system/bin/oae_server -s
 #     seclabel u:r:oae_server:s0
-# but oae_server is a ColorOS-only system binary that this vendor image does not
-# ship (it is absent from both the stock dump and proprietary-files.txt), and it
-# sits inside a #ifdef COLOROS_EDIT block. No oae_server domain is declared on
-# purpose: the service cannot exec a binary that does not exist, so declaring the
-# seclabel domain would just hide one failure behind another.
+# for stock-image parity. oae_server is a ColorOS-only system binary absent from
+# both the stock dump and proprietary-files.txt, so init's stat() preflight
+# disables the service before fork; it is not an added capability. No
+# oae_server domain is declared in this policy.
 type oppoalgo_daemon, domain;
 type oppoalgo_daemon_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(oppoalgo_daemon)

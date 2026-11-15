@@ -172,6 +172,15 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/init.oppo.engineermode.rc:$(TARGET_COPY_OUT_ROOT)/init.oppo.engineermode.rc \
     $(DEVICE_PATH)/rootdir/init.oppo.reserve.rc:$(TARGET_COPY_OUT_ROOT)/init.oppo.reserve.rc
 
+# Stock ramdisk-only FPSGO kernel module
+#
+# The stock boot ramdisk ships lib/modules/fpsgo.ko. The stock init.mt6765.rc
+# loads it with `insmod /lib/modules/fpsgo.ko`. On this non-system-as-root
+# layout /lib resolves to /system/lib after first-stage init pivots, so install
+# the verified stock module at the path the vendor RC already uses.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/modules/fpsgo.ko:$(TARGET_COPY_OUT_SYSTEM)/lib/modules/fpsgo.ko
+
 # Recovery init
 #
 # Recovery imports /init.recovery.${ro.hardware}.rc from its ramdisk; with
