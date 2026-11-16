@@ -66,4 +66,13 @@ vendor.egistec.hardware.fingerprint::IBiometricsFingerprintRbs	u:object_r:hal_fi
 # vendor.qti.hardware.soter@1.0 HAL and registers its ISoter interface with
 # hwservicemanager. The only client is SoterService
 # (com.tencent.soter.soterserver), which runs in the system_app domain.
+#
+# IMPORTANT: keep this file's final newline. system/sepolicy/Android.mk defines
+# an `add_nl` helper for exactly this case ("allow OEM policy configuration
+# files without a final newline (0x0A) to be built correctly by the m4(1) macro
+# processor"), but hwservice_contexts.mk does not apply it -- it hands the raw
+# file list straight to m4. Without the trailing newline, m4 fuses this file's
+# last line into the first line of the next contexts file (LineageOS's
+# vendor.lineage.biometrics.fingerprint.inscreen), and checkfc dies with:
+#   invalid MLS context s0vendor.lineage.biometrics.fingerprint.inscreen::IFingerprintInscreen
 vendor.qti.hardware.soter::ISoter	u:object_r:hal_soter_hwservice:s0
