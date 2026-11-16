@@ -48,6 +48,32 @@
 system/lib/vendor.qti.hardware.soter@1.0.so
 system/lib64/vendor.qti.hardware.soter@1.0.so
 
+# Android 8.1 platform libraries that Android 10 no longer provides but that
+# the stock 8.1 blobs still DT_NEEDED. Both stay at their stock /system/lib[64]
+# locations so the VNDK-lite vendor namespace resolves them (its default
+# namespace searches /system/${LIB} before /vendor/${LIB}).
+#
+#   libstdc++.so
+#       Android 10 dropped the GNU libstdc++ from the platform (libc++ is the
+#       only C++ runtime). 126 vendor ELFs still DT_NEEDED it: the MTK camera
+#       stack (camerahalserver -> camera.provider@2.4-impl-mediatek ->
+#       libcam.*), the IMS/modem daemons (volte_*, bip, wfca, epdg_wod,
+#       starter, charon, stroke), and libs such as libhwuiext.so and
+#       libmediatek_exceptionlog.so. The dynamic linker aborts them with
+#       "library \"libstdc++.so\" not found" before main().
+#
+#   libkeymaster_staging.so
+#       The stock 8.1 android.hardware.keymaster@3.0-impl.so (32- and 64-bit)
+#       links the 8.1 keymaster staging library. Android 10 replaced it with
+#       libkeymaster3device, which the 8.1 passthrough implementation cannot
+#       use. Without this file the keymaster@3.0 service fails its passthrough
+#       load ("Could not get passthrough implementation"), taking down
+#       keystore and, with FDE /data, decryption.
+system/lib/libkeymaster_staging.so
+system/lib64/libkeymaster_staging.so
+system/lib/libstdc++.so
+system/lib64/libstdc++.so
+
 # Stock IMS (VoLTE) system-side blobs.
 #
 # ImsService is com.mediatek.ims (sharedUserId=android.uid.phone) and
