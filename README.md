@@ -72,11 +72,13 @@ boot ramdisk also ships `fpsgo.ko`, a small FPSGO companion module that
 provides the implementation behind `xgf_est_slptime_fp`, which the source-built
 kernel exports. It is kept in this tree at `rootdir/modules/fpsgo.ko` (SHA-256
 `ab532998884b64151dc2c0d7c82a20ea37c3cd9d3001d7742e67d1cf3b932d8d`) and is
-installed by `device.mk` as `/system/lib/modules/fpsgo.ko`, matching the path
-used by the vendor `insmod /lib/modules/fpsgo.ko` line. The prior kernel module
-mix without this companion binary has been verified to work: a kernel built
-from this source boots on the stock vendor image and the stock modules load at
-boot.
+installed by `device.mk` as `/system/lib/modules/fpsgo.ko`. The vendor
+`init.mt6765.rc` in this tree is edited from the stock original to load that
+path instead of the stock `/lib/modules/fpsgo.ko` — Android 10's system image
+root has no `/lib`, and no `/lib` alias is created for a single insmod line.
+The prior kernel module mix without this companion binary has been verified to
+work: a kernel built from this source boots on the stock vendor image and the
+stock modules load at boot.
 
 Why the version mismatch is not a problem, for the record:
 

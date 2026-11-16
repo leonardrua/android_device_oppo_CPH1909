@@ -198,11 +198,15 @@ PRODUCT_COPY_FILES += \
 
 # Stock ramdisk-only FPSGO kernel module
 #
-# The stock boot ramdisk ships lib/modules/fpsgo.ko. The stock init.mt6765.rc
-# loads it with `insmod /lib/modules/fpsgo.ko`. Android 10's system image root
-# has no /lib, so BoardConfig.mk creates the legacy /lib -> /system/lib alias
-# through BOARD_ROOT_EXTRA_SYMLINKS; install the module at the path the vendor
-# RC already uses.
+# The stock boot ramdisk ships lib/modules/fpsgo.ko, and the stock init.mt6765.rc
+# loaded it with `insmod /lib/modules/fpsgo.ko`. Android 10's system image root
+# has no /lib, so the vendor init script in this tree has been edited to load
+# /system/lib/modules/fpsgo.ko -- the path used here. Nothing else in the tree
+# references /lib, so no compatibility symlink is needed.
+#
+# NOTE: re-extracting vendor/etc/init/hw/init.mt6765.rc from a stock dump
+# restores the old /lib path. Re-apply that one-line edit after any re-extract
+# (it is a plain text change in the vendor blob tree).
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/modules/fpsgo.ko:$(TARGET_COPY_OUT_SYSTEM)/lib/modules/fpsgo.ko
 

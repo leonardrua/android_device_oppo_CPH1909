@@ -144,15 +144,12 @@ BOARD_USES_METADATA_PARTITION := true
 # not under /vendor).
 BOARD_ROOT_EXTRA_FOLDERS := opporeserve mnt/cd-rom custom
 
-# The stock MTK init.mt6765.rc loads the FPSGO companion module with
-#     insmod /lib/modules/fpsgo.ko
-# but Android 10's system image root does not contain /lib (rootdir only
-# creates bin/etc/... and the folders above), while device.mk installs the
-# module at /system/lib/modules/fpsgo.ko. Provide the legacy /lib alias at
-# build time; it cannot be created at runtime because the system image is
-# mounted read-only. Format is <target>:<link_name>.
-BOARD_ROOT_EXTRA_SYMLINKS := /system/lib:lib
-
+# The stock MTK init.mt6765.rc loaded the FPSGO companion module from
+# /lib/modules/fpsgo.ko. Android 10's system image root has no /lib, and rather
+# than add a legacy /lib -> /system/lib alias for a single insmod line, the
+# vendor rc is pointed at the real path (/system/lib/modules/fpsgo.ko) where
+# device.mk installs it. See the note in the vendor tree's init.mt6765.rc.
+#
 # Encryption: the device ships FDE, backed by the Trustonic Kinibi TEE, not FBE.
 # Android 10 still supports FDE for legacy devices. The fstab uses
 # `encryptable=` (not the stock `forceencrypt=`) so an already-encrypted /data is
