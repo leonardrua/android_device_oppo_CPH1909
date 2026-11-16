@@ -203,6 +203,17 @@
 /vendor/persist(/.*)?                                                                         u:object_r:mtk_persist_file:s0
 /opporeserve(/.*)?                                                                            u:object_r:oppo_reserve_file:s0
 
+# /persist is a root-level symlink to /vendor/persist, created by
+# BOARD_ROOT_EXTRA_SYMLINKS in BoardConfig.mk. AOSP labels its own root links
+# (/d, /etc, /sdcard, /bin, /charger) u:object_r:rootfs:s0 in
+# system/sepolicy/private/file_contexts and ships no /persist rule, so without
+# this line e2fsdroid's selabel_lookup() has nothing to resolve when it walks
+# the staged system image and the build dies with
+#     set_selinux_xattr: No such file or directory searching for label "/persist"
+# The target is a symlink, so the label must match the link itself (no trailing
+# wildcard) -- the kernel resolves the target at access time.
+/persist                                                                                      u:object_r:rootfs:s0
+
 ###
 ### Block devices
 ###
