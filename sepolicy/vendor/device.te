@@ -94,13 +94,35 @@ type hal_cryptoeng_hwservice, hwservice_manager_type;
 type hal_fingerprintpay_hwservice, hwservice_manager_type;
 
 # --- HAL domains: add/find on their own hwservice type ---
-# MediaTek daemons
+#
+# Rules for a HAL service type must go through the attribute macros, not raw
+# allow rules. hal_attribute_hwservice() in system/sepolicy/public/te_macros
+# generates, for hal_gnss:
+#
+#     allow hal_gnss_client hal_gnss_hwservice:hwservice_manager find;
+#     add_hwservice(hal_gnss_server, hal_gnss_hwservice)
+#       -> allow hal_gnss_server hal_gnss_hwservice:hwservice_manager { add find };
+#       -> neverallow { domain -hal_gnss_server } hal_gnss_hwservice:hwservice_manager add;
+#
+# and build_test_only adds
+#
+#     neverallow { domain -hal_gnss_client -hal_gnss_server } \
+#         hal_gnss_hwservice:hwservice_manager find;
+#
+# A raw `allow mtk_mnld hal_gnss_hwservice:hwservice_manager { add find };`
+# would violate both neverallows, because mtk_mnld is in neither the _client nor
+# the _server attribute. mtk_mnld is granted those attributes with
+# hal_server_domain()/hal_client_domain() further down this file, where its type
+# is declared -- see the GNSS section.
+
+# MediaTek daemons with device-private hwservice types. Those types are
+# declared in this file, not in AOSP, so there is no platform neverallow to
+# satisfy and a plain allow is correct.
 allow mtk_hal_dfps mtk_hal_dfps_hwservice:hwservice_manager { add find };
 allow mtk_hal_keyattestation mtk_hal_keyattestation_hwservice:hwservice_manager { add find };
 allow mtk_hal_mms mtk_hal_mms_hwservice:hwservice_manager { add find };
 allow mtk_hal_mtkcodecservice hal_mtkcodecservice_hwservice:hwservice_manager { add find };
 allow mtk_hal_pq mtk_hal_pq_hwservice:hwservice_manager { add find };
-allow mtk_mnld hal_gnss_hwservice:hwservice_manager { add find };
 allow mtk_lbs mtk_hal_lbs_hwservice:hwservice_manager { add find };
 allow mtk_netdagent mtk_hal_netdagent_hwservice:hwservice_manager { add find };
 allow mtk_nvram_daemon nvram_agent_binder_hwservice:hwservice_manager { add find };
@@ -109,16 +131,18 @@ allow mtk_volte_ua volte_rcs_ua_hwservice:hwservice_manager { add find };
 allow mtk_vtservice mtk_hal_videotelephony_hwservice:hwservice_manager { add find };
 allow mtk_hal_cryptoeng hal_cryptoeng_hwservice:hwservice_manager { add find };
 
-# --- Client find rules (stock policy equivalents) ---
-# system_server and apps find the camera, GNSS, power, and RIL HALs.
+# --- Client find rules ---
+#
+# system_server already gets hal_gnss_hwservice find from AOSP's
+# `hal_client_domain(system_server, hal_gnss)` in private/system_server.te,
+# and hal_camera_hwservice find from its own hal_camera_client membership.
+# Repeating either here is redundant and, for hal_camera, a neverallow
+# violation (hal_camera_client is not an attribute system_server carries), so
+# both raw rules are deliberately absent.
 allow system_server mtk_hal_power_hwservice:hwservice_manager find;
 allow system_server mtk_hal_rild_hwservice:hwservice_manager find;
-allow system_server hal_gnss_hwservice:hwservice_manager find;
-allow system_server hal_camera_hwservice:hwservice_manager find;
 # rild finds the modem HAL.
 allow rild mtk_hal_rild_hwservice:hwservice_manager find;
-# hal_camera_default finds the MTK camera extension HALs.
-allow hal_camera_default hal_camera_hwservice:hwservice_manager find;
 
 ###
 ### Trustonic Kinibi TEE
@@ -264,6 +288,24 @@ allow init {
 type mtk_mnld, domain;
 type mtk_mnld_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_mnld)
+
+# mtk_mnld is MTK's GNSS daemon. It registers the platform gnss interface, so
+# it is a hal_gnss server; it is also the only thing that talks to the
+# vendor.mediatek.hardware.gnss@1.1 service, so it is a hal_gnss client.
+#
+# These macros must come after the type declaration above: checkpolicy resolves
+# types at parse time and rejects a typeattribute for an undeclared type.
+# A raw `allow mtk_mnld hal_gnss_hwservice:hwservice_manager { add find };`
+# cannot work -- hal_attribute_hwservice() in system/sepolicy/public/te_macros
+# generates
+#
+#     neverallow { domain -hal_gnss_server } hal_gnss_hwservice:hwservice_manager add;
+#     neverallow { domain -hal_gnss_client -hal_gnss_server } \
+#         hal_gnss_hwservice:hwservice_manager find;
+#
+# and mtk_mnld satisfies neither until it carries the attributes.
+hal_server_domain(mtk_mnld, hal_gnss)
+hal_client_domain(mtk_mnld, hal_gnss)
 
 type mtk_agpsd, domain;
 type mtk_agpsd_exec, exec_type, vendor_file_type, file_type;
