@@ -59,6 +59,67 @@ allow mtk_hal_soter system_app:binder { call transfer };
 allow system_app mtk_hal_soter:fd use;
 allow mtk_hal_soter system_app:fd use;
 
+# HwBinder service types for the MTK/OPPO vendor HALs declared in
+# sepolicy/vendor/hwservice_contexts. Each type is declared here and the
+# corresponding HAL domain is granted add/find on its own hwservice type
+# (plus hidl_base_hwservice for the root descriptor). Clients in the
+# system_app / hal_* domains get find rules where the stock policy has them.
+#
+# The stock 8.1 vendor policy (nonplat_sepolicy.cil) grants these same
+# transitions; without them, every vendor HIDL service registers as
+# default_hwservice and the per-interface type transitions are impossible.
+
+# --- MediaTek hwservice types ---
+type mtk_hal_bluetooth_hwservice, hwservice_manager_type;
+type mtk_hal_rild_hwservice, hwservice_manager_type;
+type mtk_hal_power_hwservice, hwservice_manager_type;
+type mtk_hal_lbs_hwservice, hwservice_manager_type;
+type mtk_hal_wifi_hostapd_hwservice, hwservice_manager_type;
+type mtk_hal_imsa_hwservice, hwservice_manager_type;
+type nvram_agent_binder_hwservice, hwservice_manager_type;
+type mtk_hal_pq_hwservice, hwservice_manager_type;
+type mtk_hal_keyattestation_hwservice, hwservice_manager_type;
+type mtk_hal_mms_hwservice, hwservice_manager_type;
+type mtk_hal_wfo_hwservice, hwservice_manager_type;
+type mtk_hal_keyinstall_hwservice, hwservice_manager_type;
+type mtk_hal_videotelephony_hwservice, hwservice_manager_type;
+type volte_uce_ua_hwservice, hwservice_manager_type;
+type hal_mtkcodecservice_hwservice, hwservice_manager_type;
+type mtk_hal_netdagent_hwservice, hwservice_manager_type;
+type volte_rcs_ua_hwservice, hwservice_manager_type;
+type mtk_hal_dfps_hwservice, hwservice_manager_type;
+
+# --- OPPO hwservice types ---
+type hal_cryptoeng_hwservice, hwservice_manager_type;
+type hal_fingerprintpay_hwservice, hwservice_manager_type;
+
+# --- HAL domains: add/find on their own hwservice type ---
+# MediaTek daemons
+allow mtk_hal_dfps mtk_hal_dfps_hwservice:hwservice_manager { add find };
+allow mtk_hal_keyattestation mtk_hal_keyattestation_hwservice:hwservice_manager { add find };
+allow mtk_hal_mms mtk_hal_mms_hwservice:hwservice_manager { add find };
+allow mtk_hal_mtkcodecservice hal_mtkcodecservice_hwservice:hwservice_manager { add find };
+allow mtk_hal_pq mtk_hal_pq_hwservice:hwservice_manager { add find };
+allow mtk_mnld hal_gnss_hwservice:hwservice_manager { add find };
+allow mtk_lbs mtk_hal_lbs_hwservice:hwservice_manager { add find };
+allow mtk_netdagent mtk_hal_netdagent_hwservice:hwservice_manager { add find };
+allow mtk_nvram_daemon nvram_agent_binder_hwservice:hwservice_manager { add find };
+allow mtk_volte_imcb volte_uce_ua_hwservice:hwservice_manager { add find };
+allow mtk_volte_ua volte_rcs_ua_hwservice:hwservice_manager { add find };
+allow mtk_vtservice mtk_hal_videotelephony_hwservice:hwservice_manager { add find };
+allow mtk_hal_cryptoeng hal_cryptoeng_hwservice:hwservice_manager { add find };
+
+# --- Client find rules (stock policy equivalents) ---
+# system_server and apps find the camera, GNSS, power, and RIL HALs.
+allow system_server mtk_hal_power_hwservice:hwservice_manager find;
+allow system_server mtk_hal_rild_hwservice:hwservice_manager find;
+allow system_server hal_gnss_hwservice:hwservice_manager find;
+allow system_server hal_camera_hwservice:hwservice_manager find;
+# rild finds the modem HAL.
+allow rild mtk_hal_rild_hwservice:hwservice_manager find;
+# hal_camera_default finds the MTK camera extension HALs.
+allow hal_camera_default hal_camera_hwservice:hwservice_manager find;
+
 ###
 ### Trustonic Kinibi TEE
 ###

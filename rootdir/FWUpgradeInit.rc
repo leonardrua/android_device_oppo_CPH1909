@@ -1,0 +1,16 @@
+# Stub for the stock /FWUpgradeInit.rc.
+#
+# The stock 8.1 boot ramdisk ships this file at the filesystem root and
+# init.mt6765.rc imports it by absolute path:
+#
+#     import /FWUpgradeInit.rc
+#
+# It holds the ColorOS firmware-upgrade (OTA recovery) init actions. The
+# CPH1909 A.46 dump does not contain it, and this tree does not ship any
+# of the upgrade binaries it would reference, so the import would fail
+# with "cannot open /FWUpgradeInit.rc" on every boot.
+#
+# This file is installed into the root of the system image (which is the
+# root filesystem on this non-system-as-root, ramdisk-booting device) by
+# device.mk, so init can read it. Keep it empty (comments only): init
+# accepts an empty rc file.

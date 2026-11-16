@@ -142,7 +142,7 @@ BOARD_USES_METADATA_PARTITION := true
 # second-stage init has somewhere to mount the extra MediaTek partitions
 # listed in fstab.mt6765 (/opporeserve and friends live at the filesystem root,
 # not under /vendor).
-BOARD_ROOT_EXTRA_FOLDERS := opporeserve
+BOARD_ROOT_EXTRA_FOLDERS := opporeserve mnt/cd-rom custom
 
 # The stock MTK init.mt6765.rc loads the FPSGO companion module with
 #     insmod /lib/modules/fpsgo.ko

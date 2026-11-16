@@ -172,6 +172,20 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/init.oppo.engineermode.rc:$(TARGET_COPY_OUT_ROOT)/init.oppo.engineermode.rc \
     $(DEVICE_PATH)/rootdir/init.oppo.reserve.rc:$(TARGET_COPY_OUT_ROOT)/init.oppo.reserve.rc
 
+# Stub for the stock /FWUpgradeInit.rc.
+#
+# init.mt6765.rc imports /FWUpgradeInit.rc by absolute path (line 6 of the
+# vendor init script). The stock ramdisk ships it at the filesystem root,
+# but the CPH1909 A.46 dump does not contain it and this tree does not
+# ship the ColorOS firmware-upgrade binaries it would reference. Without
+# this stub, init logs "cannot open /FWUpgradeInit.rc" on every boot.
+#
+# Install it at the root of the system image (which is the root filesystem
+# on this non-system-as-root, ramdisk-booting device), alongside the
+# init.oppo.*.rc files above.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/FWUpgradeInit.rc:$(TARGET_COPY_OUT_ROOT)/FWUpgradeInit.rc
+
 # Stock ramdisk-only FPSGO kernel module
 #
 # The stock boot ramdisk ships lib/modules/fpsgo.ko. The stock init.mt6765.rc

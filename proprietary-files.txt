@@ -74,6 +74,24 @@ system/lib64/libkeymaster_staging.so
 system/lib/libstdc++.so
 system/lib64/libstdc++.so
 
+# AED (MTK exception debug) + its dependency libmrdump.
+#
+# libhwuiext.so (vendor/lib[64], the MTK HWUI extension loaded by
+# libandroid_runtime/HWUI) and ccci_mdinit, libudf.so, lib3a.ccudrv.so,
+# volte_imcb have DT_NEEDED libaed.so. libaed.so itself DT_NEEDEDs
+# libmrdump.so -- note this is libmrdump.so, not the already-imported
+# libmrdumpv.so (different soname, different library). Both live in the
+# stock /system/lib[64] and neither exists in Android 10:
+#   libaed.so   - MTK-only, no AOSP equivalent
+#   libmrdump.so - MTK-only, no AOSP equivalent
+# Without libaed.so the HWUI extension fails to load (libhwuiext.so is in
+# the DT_NEEDED closure of every HWUI-using process) and ccci_mdinit
+# (modem) cannot start.
+system/lib/libaed.so
+system/lib64/libaed.so
+system/lib/libmrdump.so
+system/lib64/libmrdump.so
+
 # Stock IMS (VoLTE) system-side blobs.
 #
 # ImsService is com.mediatek.ims (sharedUserId=android.uid.phone) and
@@ -586,6 +604,8 @@ vendor/etc/init/hw/init.oppo.face.rc
 vendor/etc/init/hw/init.oppo.seccommon.rc
 vendor/etc/init/hw/init.project.rc
 vendor/etc/init/hw/init.sensor_1_0.rc
+vendor/etc/init/hw/init.volte.rc
+vendor/etc/init/hw/init.mal.rc
 vendor/etc/init/hw/meta_init.connectivity.rc
 vendor/etc/init/hw/meta_init.modem.rc
 vendor/etc/init/hw/meta_init.project.rc
