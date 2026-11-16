@@ -1,0 +1,15 @@
+# Stub for the relative import in /vendor/etc/init/hw/init.project.rc.
+#
+# init.project.rc line 3 reads:
+#
+#     import init.mt6765.usb.rc
+#
+# init resolves a relative import against its working directory, which is
+# the filesystem root, so this looks for /init.mt6765.usb.rc. The real
+# file lives at /vendor/etc/init/hw/init.mt6765.usb.rc and is already
+# imported there by init.mt6765.rc line 4 using the correct absolute path,
+# so nothing is lost here -- the stub exists only to stop init logging a
+# parse error ("cannot open /init.mt6765.usb.rc") for the redundant line.
+#
+# If a future re-extraction ever ships a real /init.mt6765.usb.rc in the
+# ramdisk, delete this file: the ramdisk copy would win.

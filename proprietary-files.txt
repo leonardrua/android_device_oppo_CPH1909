@@ -92,6 +92,26 @@ system/lib64/libaed.so
 system/lib/libmrdump.so
 system/lib64/libmrdump.so
 
+# libprogrambinary.so: the MTK HWUI program-binary cache.
+#
+# libhwuiext.so (the MTK HWUI extension, in vendor/lib and vendor/lib64)
+# has DT_NEEDED libprogrambinary.so. libhwui dlopens libhwuiext into every
+# HWUI-using process, so a missing soname takes down the extension for
+# every app -- not a boot loop, but a hard rendering-feature loss. It is
+# MTK-only and Android 10 has no equivalent; stock ships it in
+# /system/lib[64].
+system/lib/libprogrambinary.so
+system/lib64/libprogrambinary.so
+
+# libsink.so: MTK IMS media sink, 32-bit only (as in stock).
+#
+# Chain: system/bin/vtservice -> libmtk_vt_service.so -> libimsma.so ->
+# libsink.so. vtservice is class main, so it starts on every boot; with
+# libsink.so absent the linker aborts libimsma and vtservice never comes
+# up, killing video calling (VT). MTK-only; no Android 10 equivalent.
+# The 64-bit side does not need it because libimsma.so is 32-bit only.
+system/lib/libsink.so
+
 # Stock IMS (VoLTE) system-side blobs.
 #
 # ImsService is com.mediatek.ims (sharedUserId=android.uid.phone) and
