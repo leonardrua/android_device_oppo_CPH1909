@@ -670,9 +670,14 @@ vendor/etc/init/vendor.mediatek.hardware.mms@1.5-service.rc
 vendor/etc/init/vendor.mediatek.hardware.mtkcodecservice@1.1-service.rc
 vendor/etc/init/vendor.mediatek.hardware.power@1.1-service.rc
 vendor/etc/init/vendor.mediatek.hardware.pq@2.0-service.rc
-vendor/etc/init/vendor.oppo.hardware.biometrics.face@1.0-service.rc
-vendor/etc/init/vendor.oppo.hardware.biometrics.fingerprint@2.1-service.rc
-vendor/etc/init/vendor.oppo.hardware.biometrics.fingerprintpay@1.0-service.rc
+# vendor/etc/init/vendor.oppo.hardware.biometrics.{face@1.0,fingerprint@2.1,
+# fingerprintpay@1.0}-service.rc
+#     Deliberately NOT listed. device.mk installs override copies of all three
+#     from rootdir/etc/init/ (`override` + `disabled`) so the stock ColorOS
+#     biometric services never start and cannot contend with the AOSP
+#     fingerprint stack. A stock rc here would be a second PRODUCT_COPY_FILES
+#     rule for the same destination; build/make/core/Makefile resolves that by
+#     first match, so the winner would silently depend on makefile order.
 vendor/etc/init/vendor.oppo.hardware.cryptoeng@1.0-service.rc
 vendor/etc/init/vendor.silead.hardware.fingerprintext@1.0-service.rc
 vendor/etc/init/vendor.trustonic.soter@1.0-service.rc
@@ -699,8 +704,14 @@ vendor/etc/mddb/MDDB_InfoCustomAppSrcP_MT6765_S00_MOLY_LR12A_R2_TC16_SP_V50_5_P9
 vendor/etc/mddb/mdm_layout_desc_1_ulwctg_n.dat
 vendor/etc/media_codecs.xml
 vendor/etc/media_codecs_ffmpeg.xml
-vendor/etc/media_codecs_google_audio.xml
-vendor/etc/media_codecs_google_video_le.xml
+# vendor/etc/media_codecs_google_audio.xml
+# vendor/etc/media_codecs_google_video_le.xml
+#     Deliberately NOT listed. device.mk installs its own Android-10-correct
+#     versions from configs/media/ (trimmed to the codecs this image actually
+#     builds, with the xaac/AAC rationale documented there). The stock 8.1
+#     files advertise libstagefright_soft_* components that are not in this
+#     image, and a copy here would be a duplicate destination resolved by
+#     first match.
 vendor/etc/media_codecs_mediatek_audio.xml
 vendor/etc/media_codecs_mediatek_video.xml
 vendor/etc/media_codecs_performance.xml
@@ -733,29 +744,27 @@ vendor/etc/ncf_pack.ncf
 vendor/etc/partition_permission.sh
 vendor/etc/pdc.txt
 vendor/etc/permissions/android.hardware.audio.low_latency.xml
-vendor/etc/permissions/android.hardware.bluetooth.xml
-vendor/etc/permissions/android.hardware.bluetooth_le.xml
+# The android.* feature XMLs that frameworks/native/data/etc also provides are
+# deliberately NOT listed -- device.mk installs the AOSP 10 versions:
+#   android.hardware.bluetooth.xml          android.hardware.bluetooth_le.xml
+#   android.hardware.location.gps.xml       android.hardware.opengles.aep.xml
+#   android.hardware.sensor.accelerometer.xml  android.hardware.sensor.compass.xml
+#   android.hardware.sensor.light.xml       android.hardware.sensor.proximity.xml
+#   android.hardware.usb.accessory.xml      android.hardware.wifi.direct.xml
+#   android.hardware.wifi.xml               android.software.midi.xml
+#   handheld_core_hardware.xml
+# A stock copy here is a duplicate destination (first match wins), and the
+# stock 8.1 files predate features the Android 10 framework expects.
 vendor/etc/permissions/android.hardware.camera.xml
-vendor/etc/permissions/android.hardware.location.gps.xml
-vendor/etc/permissions/android.hardware.opengles.aep.xml
-vendor/etc/permissions/android.hardware.sensor.accelerometer.xml
-vendor/etc/permissions/android.hardware.sensor.compass.xml
 vendor/etc/permissions/android.hardware.sensor.gyroscope.xml
-vendor/etc/permissions/android.hardware.sensor.light.xml
-vendor/etc/permissions/android.hardware.sensor.proximity.xml
 vendor/etc/permissions/android.hardware.sensor.stepcounter.xml
 vendor/etc/permissions/android.hardware.sensor.stepdetector.xml
 vendor/etc/permissions/android.hardware.touchscreen.xml
-vendor/etc/permissions/android.hardware.usb.accessory.xml
-vendor/etc/permissions/android.hardware.wifi.direct.xml
-vendor/etc/permissions/android.hardware.wifi.xml
 vendor/etc/permissions/android.software.device_admin.xml
 vendor/etc/permissions/android.software.live_wallpaper.xml
 vendor/etc/permissions/android.software.managed_users.xml
-vendor/etc/permissions/android.software.midi.xml
 vendor/etc/permissions/com.fingerprints.fpmmi.xml
 vendor/etc/permissions/factoryInterface.xml
-vendor/etc/permissions/handheld_core_hardware.xml
 vendor/etc/permissions/pms_sysapp_removable_vendor_list.txt
 vendor/etc/power_whitelist_cfg.xml
 vendor/etc/powercontable.cfg

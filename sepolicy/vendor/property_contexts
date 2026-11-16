@@ -1,0 +1,108 @@
+# Vendor property contexts for the MediaTek / OPPO blobs.
+#
+# Android 10 has no equivalent of the stock 8.1
+# /vendor/etc/selinux/nonplat_property_contexts (the stock image shipped 70
+# rules). Without a vendor file every persist.* key the blobs use falls back to
+# whatever the platform claims, and AOSP's
+#     neverallow { domain -init -vendor_init } default_prop:property_service set;
+# (system/sepolicy/public/domain.te) means no HAL can *write* a default_prop key.
+# Under the current permissive bring-up policy that only logs; on an enforcing
+# build those setprop calls fail and the related feature silently stays off.
+#
+# This file labels only the families AOSP does not already cover. Deliberately
+# NOT re-declared, because AOSP's own rules are already correct and a second,
+# different type for the same prefix would be a conflict:
+#
+#   persist.radio.*        -> radio_prop          (rild may set it)
+#   persist.bluetooth.*    -> bluetooth_prop
+#   persist.debug.*        -> persist_debug_prop
+#   persist.logd.*         -> logd_prop / log_tag_prop
+#   persist.audio.*        -> audio_prop
+#   persist.sys.locale     -> system_prop  (framework-owned)
+#   persist.sys.timezone   -> system_prop  (framework-owned)
+#   persist.sys.usb.config -> system_prop  (framework-owned)
+#   persist.service.bdroid.* -> bluetooth_prop
+#
+# Framework-owned persist.sys.* keys are left alone as well; only the vendor
+# sub-families below are claimed. All of these resolve to mtk_persist_prop,
+# which device.te grants for reading to every domain (get_prop) and for writing
+# to the vendor daemons that own them (set_prop).
+
+# --- MTK exception / dump (aee) ---
+persist.aee.				u:object_r:mtk_persist_prop:s0
+persist.coredump.			u:object_r:mtk_persist_prop:s0
+persist.chiptest.			u:object_r:mtk_persist_prop:s0
+
+# --- modem / RIL (non-radio_prop keys) ---
+persist.ccci.				u:object_r:mtk_persist_prop:s0
+persist.md.				u:object_r:mtk_persist_prop:s0
+persist.ap.				u:object_r:mtk_persist_prop:s0
+persist.atm.				u:object_r:mtk_persist_prop:s0
+persist.data.				u:object_r:mtk_persist_prop:s0
+persist.embms.				u:object_r:mtk_persist_prop:s0
+persist.ims.				u:object_r:mtk_persist_prop:s0
+persist.imstestmode.			u:object_r:mtk_persist_prop:s0
+persist.net.wo.				u:object_r:mtk_persist_prop:s0
+persist.operator.			u:object_r:mtk_persist_prop:s0
+persist.customized.			u:object_r:mtk_persist_prop:s0
+persist.subsidylock.			u:object_r:mtk_persist_prop:s0
+persist.service.atci			u:object_r:mtk_persist_prop:s0
+persist.service.rcs			u:object_r:mtk_persist_prop:s0
+persist.service.tag.rcs			u:object_r:mtk_persist_prop:s0
+
+# --- MTK platform keys (aee, camera, glpm, volte, wfc, venc, wcn) ---
+persist.mtk.				u:object_r:mtk_persist_prop:s0
+
+# --- MTK IMS / VoLTE / VT feature switches (persist.mtk_*) ---
+persist.mtk_				u:object_r:mtk_persist_prop:s0
+persist.mtkcam.				u:object_r:mtk_persist_prop:s0
+persist.ril.				u:object_r:mtk_persist_prop:s0
+
+# --- MTK connectivity (WCN, wifi combo, bluetooth vendor keys) ---
+persist.bt.				u:object_r:mtk_persist_prop:s0
+
+# --- MTK media / codec / video telephony ---
+persist.venc.				u:object_r:mtk_persist_prop:s0
+persist.media.				u:object_r:mtk_persist_prop:s0
+persist.vt.				u:object_r:mtk_persist_prop:s0
+
+# --- camera / PQ / display (vendor sub-families of persist.sys.*) ---
+persist.camera.				u:object_r:mtk_persist_prop:s0
+persist.sys.camera.			u:object_r:mtk_persist_prop:s0
+persist.sys.pq.				u:object_r:mtk_persist_prop:s0
+persist.sys.bluelight.			u:object_r:mtk_persist_prop:s0
+persist.sys.gamma.			u:object_r:mtk_persist_prop:s0
+persist.sys.globalpq.			u:object_r:mtk_persist_prop:s0
+persist.sys.display.			u:object_r:mtk_persist_prop:s0
+persist.sys.isp.			u:object_r:mtk_persist_prop:s0
+persist.sys.exif.			u:object_r:mtk_persist_prop:s0
+persist.sys.oppo			u:object_r:mtk_persist_prop:s0
+persist.sys.mts.			u:object_r:mtk_persist_prop:s0
+persist.sys.mdlog_dumpback		u:object_r:mtk_persist_prop:s0
+persist.sys.aging_nv			u:object_r:mtk_persist_prop:s0
+persist.sys.ata_manual			u:object_r:mtk_persist_prop:s0
+persist.sys.embms.			u:object_r:mtk_persist_prop:s0
+persist.sys.extmddlprogress		u:object_r:mtk_persist_prop:s0
+
+# --- fingerprint / face vendor keys ---
+persist.sys.fp.				u:object_r:mtk_persist_prop:s0
+persist.oppo.				u:object_r:mtk_persist_prop:s0
+
+# --- audio HAL vendor params (persist.af.*; persist.audio.* is AOSP's) ---
+persist.af.				u:object_r:mtk_persist_prop:s0
+persist.rm.				u:object_r:mtk_persist_prop:s0
+
+# --- log / trace helpers not covered by AOSP ---
+persist.logmuch.			u:object_r:mtk_persist_prop:s0
+persist.mtklog.				u:object_r:mtk_persist_prop:s0
+persist.trace.				u:object_r:mtk_persist_prop:s0
+
+# --- misc vendor (gyroscope, wifi-iface tuning, watermark, ss/xcap) ---
+persist.hal3a.				u:object_r:mtk_persist_prop:s0
+persist.ss.				u:object_r:mtk_persist_prop:s0
+persist.wa.				u:object_r:mtk_persist_prop:s0
+persist.watermark.			u:object_r:mtk_persist_prop:s0
+persist.qcom.				u:object_r:mtk_persist_prop:s0
+persist.meta.				u:object_r:mtk_persist_prop:s0
+persist.version.			u:object_r:mtk_persist_prop:s0
+

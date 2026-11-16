@@ -93,6 +93,51 @@ type mtk_hal_dfps_hwservice, hwservice_manager_type;
 type hal_cryptoeng_hwservice, hwservice_manager_type;
 type hal_fingerprintpay_hwservice, hwservice_manager_type;
 
+# Property type for the MediaTek / OPPO persist keys labelled in
+# sepolicy/vendor/property_contexts. AOSP only allows init and vendor_init to
+# set default_prop (public/domain.te), so without a dedicated type no vendor
+# daemon can persist its own settings on an enforcing build.
+#
+# Reads are granted to every domain below so no consumer loses access to a key
+# it already reads; writes go to the daemons that own them.
+type mtk_persist_prop, property_type;
+get_prop(domain, mtk_persist_prop)
+
+# Writers, by the rc service / blob that sets each family:
+#   rild, mtk_ccci, mtk_wod, mtk_stp_dump, mtk_wmt_loader  - radio / modem /
+#       connectivity feature switches and persist.mtk_*
+#   mtk_volte_imcb, mtk_volte_imsm_93, mtk_volte_stack,
+#   mtk_volte_ua, mtk_vtservice                           - IMS / VT keys
+#   mtk_mnld                                              - persist.radio.mnl.prop
+#   mtk_aee, mcd                                          - aee / dumpstate keys
+#   mtk_hal_pq, hal_graphics_composer_default              - display/PQ keys
+#   hal_audio_default                                     - persist.af.*
+#   hal_bluetooth_default                                 - persist.bt.*
+#   hal_camera_default                                    - persist.camera.*
+#   mtk_factory_bin                                       - factory keys
+#   system_app                                            - the IMS APK
+#       (com.mediatek.ims) writes persist.mtk_* through SystemProperties.set
+set_prop(rild, mtk_persist_prop)
+set_prop(mtk_ccci, mtk_persist_prop)
+set_prop(mtk_wod, mtk_persist_prop)
+set_prop(mtk_stp_dump, mtk_persist_prop)
+set_prop(mtk_wmt_loader, mtk_persist_prop)
+set_prop(mtk_volte_imcb, mtk_persist_prop)
+set_prop(mtk_volte_imsm_93, mtk_persist_prop)
+set_prop(mtk_volte_stack, mtk_persist_prop)
+set_prop(mtk_volte_ua, mtk_persist_prop)
+set_prop(mtk_vtservice, mtk_persist_prop)
+set_prop(mtk_mnld, mtk_persist_prop)
+set_prop(mtk_aee, mtk_persist_prop)
+set_prop(mcd, mtk_persist_prop)
+set_prop(mtk_hal_pq, mtk_persist_prop)
+set_prop(hal_graphics_composer_default, mtk_persist_prop)
+set_prop(hal_audio_default, mtk_persist_prop)
+set_prop(hal_bluetooth_default, mtk_persist_prop)
+set_prop(hal_camera_default, mtk_persist_prop)
+set_prop(mtk_factory_bin, mtk_persist_prop)
+set_prop(system_app, mtk_persist_prop)
+
 # --- HAL domains: add/find on their own hwservice type ---
 #
 # Rules for a HAL service type must go through the attribute macros, not raw
