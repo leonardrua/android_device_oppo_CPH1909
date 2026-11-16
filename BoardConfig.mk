@@ -150,6 +150,16 @@ BOARD_ROOT_EXTRA_FOLDERS := opporeserve mnt/cd-rom custom
 # vendor rc is pointed at the real path (/system/lib/modules/fpsgo.ko) where
 # device.mk installs it. See the note in the vendor tree's init.mt6765.rc.
 #
+# /persist is a legacy alias for the `persist` partition, which the fstab
+# mounts at /vendor/persist. The stock 8.1 init.mt6765.rc creates the alias at
+# `on init` (symlink /vendor/persist /persist) and the stock blobs use the
+# /persist/... spelling -- camera calibration (libcamwaist / westalgo),
+# mcRegistry failure records and the silead fingerprint store. Android 10's
+# rootdir does not create /persist, and unlike a directory it cannot be made
+# with BOARD_ROOT_EXTRA_FOLDERS, so the root symlink is declared here. Format
+# is <target>:<link_name>.
+BOARD_ROOT_EXTRA_SYMLINKS := /vendor/persist:persist
+#
 # Encryption: the device ships FDE, backed by the Trustonic Kinibi TEE, not FBE.
 # Android 10 still supports FDE for legacy devices. The fstab uses
 # `encryptable=` (not the stock `forceencrypt=`) so an already-encrypted /data is
