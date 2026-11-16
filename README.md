@@ -1013,8 +1013,14 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   `/dev/silead_fp`) then Egis (`fingerprint.egis.default.so`, API 2.1,
   `vendor.egistec.hardware.fingerprint@4.0.so`/`libRbsFlow.so`, `/dev/esfp0`) —
   the same order the stock service uses, and it records the winner in
-  `persist.sys.fp.vendor`. `Android.mk` installs a
-  `fingerprint.default.so` → `fingerprint.mt6765.so` alias. `device.mk`
+  `persist.sys.fp.vendor`. `ro.hardware` and `ro.board.platform` are both
+  `mt6765` (`androidboot.hardware=mt6765` in `BOARD_KERNEL_CMDLINE`), so
+  `hw_get_module_by_class("fingerprint")` resolves
+  `fingerprint.mt6765.so` on its very first variant key and never probes
+  `fingerprint.default.so` — no `.default` alias is needed, and
+  `hardware/libhardware/modules/fingerprint/` already builds a real
+  `fingerprint.default` into `vendor/lib[64]/hw/`, so aliasing that path
+  would fight the platform module for the same output. `device.mk`
   builds/installs `android.hardware.biometrics.fingerprint@2.1-service` and
   first-wins `PRODUCT_COPY_FILES` overrides (before `CPH1909-vendor.mk`) disable
   the stock ColorOS `fps_hal` / `fpay_hal` init services, which register

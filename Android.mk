@@ -74,21 +74,31 @@ ALL_DEFAULT_INSTALLED_MODULES += $(GATEKEEPER_DEFAULT_SYMLINK)
 
 # Fingerprint module aliases.
 #
-# fingerprint.mt6765 is the AOSP-service shim (biometrics/fingerprint/) that
-# forwards to the detected vendor module (fingerprint.silead.default.so or
-# fingerprint.egis.default.so). fingerprint.default.so is a safety
-# net for the same reason as gatekeeper.default.so: hw_get_module_by_class()
-# commits to the first readable candidate and will not retry .default if the
-# variant module fails at runtime, but it is the last probe when no variant
-# alias exists at all.
-FINGERPRINT_DEFAULT_SYMLINK += $(TARGET_OUT_VENDOR)/lib/hw/fingerprint.default.so
-FINGERPRINT_DEFAULT_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/hw/fingerprint.default.so
-
-$(FINGERPRINT_DEFAULT_SYMLINK):
-	@mkdir -p $(dir $@)
-	$(hide) ln -sf fingerprint.mt6765.so $@
-
-ALL_DEFAULT_INSTALLED_MODULES += $(FINGERPRINT_DEFAULT_SYMLINK)
+# There is deliberately NO fingerprint.default.so alias.
+#
+# hw_get_module_by_class() probes in this order (hardware.c:variant_keys[]):
+#
+#   ro.hardware, ro.product.board, ro.board.platform, ro.arch, then "default"
+#
+# On this device ro.hardware=mt6765 (from androidboot.hardware=mt6765 in
+# BOARD_KERNEL_CMDLINE) and ro.board.platform=mt6765, so the probe finds
+# fingerprint.mt6765.so -- the shim built from biometrics/fingerprint/ and
+# listed in PRODUCT_PACKAGES -- on the very first variant key and never
+# reaches fingerprint.default.so. The alias was unreachable dead weight.
+#
+# It was also actively harmful: hardware/libhardware/modules/fingerprint/
+# builds a real `fingerprint.default` module (cc_library_shared,
+# proprietary: true, relative_install_path: "hw") that installs to the exact
+# same vendor/lib[64]/hw/ path. Defining a second rule for that output made
+# GNU make print
+#     Android.mk:88: warning: overriding commands for target
+#         .../vendor/lib/hw/fingerprint.default.so
+#     build/make/core/base_rules.mk:510: warning: ignoring old commands ...
+# and kept whichever rule it evaluated last instead of the one intended.
+#
+# gatekeeper.default.so below is different and is kept: gatekeeper has no
+# mt6765 variant module, so its .default probe is reachable and the
+# libSoftGatekeeper.so alias is the only thing that answers it.
 
 # Partition mount points inside the vendor partition.
 #
