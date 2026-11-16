@@ -267,3 +267,33 @@
 # The drm@1.2 clearkey service is built by LineageOS (frameworks/av) and has no
 # upstream file_contexts entry; AOSP only labels the 1.0 service and -lazy.
 /(vendor|system/vendor)/bin/hw/android\.hardware\.drm@1\.2-service\.clearkey     u:object_r:hal_drm_default_exec:s0
+
+# Stub for the stock /FWUpgradeInit.rc that init.mt6765.rc imports by absolute
+# path (installed by device.mk into the system image root). It is NOT covered by
+# AOSP's `/init\..*` root rule because the name does not start with "init", so
+# without this line e2fsdroid aborts with
+#   set_selinux_xattr: No such file or directory searching for label "/FWUpgradeInit.rc"
+# while building system.img. rootfs is the correct type for a non-executable file
+# at the root of the system image, matching AOSP's own /fstab\..* and
+# /ueventd\..* entries.
+/FWUpgradeInit\.rc                                                                               u:object_r:rootfs:s0
+
+# Root-level directories that BOARD_ROOT_EXTRA_FOLDERS creates in the system
+# image (rootdir/Android.mk:99-100 does `mkdir -p $(TARGET_ROOT_OUT)/<name>`,
+# and TARGET_ROOT_OUT is merged into system.img). e2fsdroid labels every entry
+# in the image, so an unlabelled directory fails the same way an unlabelled file
+# does -- selabel_lookup returns -1/ENOENT and the build stops:
+#   set_selinux_xattr: No such file or directory searching for label "/custom"
+#
+# /custom: ColorOS's carrier-config directory. init.mt6765.rc does `mkdir /custom`
+# in `on init`; pre-creating it in the image is what lets that command succeed on
+# a read-only root. No AOSP rule covers it.
+# /mnt/cd-rom: mount point for the MTK "driver CD" (init.mt6765.rc does
+# `mount iso9660 loop@/vendor/etc/DRIVER.ISO /mnt/cd-rom ro`). AOSP labels /mnt
+# itself tmpfs but has no rule for /mnt/cd-rom.
+#
+# Both are plain root-level directories with no policy meaning of their own, so
+# rootfs matches how AOSP labels comparable entries (/charger, /bugreports,
+# /config, /lost+found).
+/custom                                                                                         u:object_r:rootfs:s0
+/mnt/cd-rom                                                                                     u:object_r:rootfs:s0
