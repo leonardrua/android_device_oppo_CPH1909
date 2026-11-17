@@ -226,6 +226,50 @@ DEVICE_MATRIX_FILE := $(DEVICE_PATH)/compatibility_matrix.xml
 USE_XML_AUDIO_POLICY_CONF := 1
 AUDIOSERVER_MULTILIB := 32
 
+# WiFi
+#
+# wpa_supplicant, hostapd and libwifi-hal.so are NOT built from source: the
+# vendor tree already ships vendor/bin/hw/wpa_supplicant, vendor/bin/hostapd
+# and vendor/lib64/libwifi-hal.so (the stock 8.1 binaries, built against the
+# MTK driver). BOARD_WPA_SUPPLICANT_PRIVATE_LIB and BOARD_HOSTAPD_PRIVATE_LIB
+# are left unset because their usual MTK value, lib_driver_cmd_mt66xx, has no
+# source in this tree -- LineageOS's mt6735 device carries one as a prebuilt
+# .a, this tree does not -- so naming it would point the supplicant build at
+# a module that cannot be built.
+#
+# BOARD_WLAN_DEVICE is deliberately NOT set to MediaTek, which is what an MTK
+# device would normally use. frameworks/opt/net/wifi/libwifi_hal/Android.mk:99
+# turns that value into LIB_WIFI_HAL := libwifi-hal-mt66xx (line 101), and that
+# static library has no source or prebuilt in this tree, so vendorimage died
+# with
+#   ninja: 'STATIC_LIBRARIES/libwifi-hal-mt66xx_intermediates/export_includes',
+#   needed by '.../SHARED_LIBRARIES/libwifi-hal_intermediates/export_includes',
+#   missing and no known rule to make it
+#
+# Leaving it unset selects LIB_WIFI_HAL := libwifi-hal-fallback (Android.mk:88),
+# whose init_wifi_vendor_hal_func_table returns WIFI_ERROR_NOT_SUPPORTED
+# (wifi_hal_fallback.cpp). That costs nothing here: the platform's libwifi-hal
+# is only built if something depends on it, and nothing in this product does --
+# the MTK combo is driven by the stock android.hardware.wifi@1.0-service, which
+# resolves libwifi-hal.so by SONAME at runtime and gets the vendor blob
+# (vendor/lib64/libwifi-hal.so), the one that exports
+# android::wifi_system::HalTool::InitFunctionTable.
+#
+# The MTK combo chip is still driven through the WIFI_DRIVER_* values below and
+# /dev/wmtWifi. None of those, nor WPA_SUPPLICANT_VERSION, nor
+# WIFI_HIDL_FEATURE_DUAL_INTERFACE, is gated on BOARD_WLAN_DEVICE -- the only
+# readers of that variable in this tree are the libwifi_hal switch and the
+# qcom/bcm/wpa_supplicant blocks, none of which apply.
+WPA_SUPPLICANT_VERSION := VER_0_8_X
+WIFI_DRIVER_FW_PATH_PARAM := "/dev/wmtWifi"
+WIFI_DRIVER_FW_PATH_STA := STA
+WIFI_DRIVER_FW_PATH_AP := AP
+WIFI_DRIVER_FW_PATH_P2P := P2P
+WIFI_DRIVER_STATE_CTRL_PARAM := "/dev/wmtWifi"
+WIFI_DRIVER_STATE_ON := "1"
+WIFI_DRIVER_STATE_OFF := "0"
+WIFI_HIDL_FEATURE_DUAL_INTERFACE := true
+
 # Bluetooth
 BOARD_HAVE_BLUETOOTH_MTK := true
 BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := $(DEVICE_PATH)/bluetooth
