@@ -50,8 +50,7 @@ init_daemon_domain(mtk_hal_soter)
 # O-MR1 vendor policy (hal_soter_trustonic / hal_soter_hwservice), including
 # both binder directions for the HIDL callback objects.
 type hal_soter_hwservice, hwservice_manager_type;
-allow mtk_hal_soter hal_soter_hwservice:hwservice_manager { add find };
-allow mtk_hal_soter hidl_base_hwservice:hwservice_manager add;
+add_hwservice(mtk_hal_soter, hal_soter_hwservice)
 allow mtk_hal_soter mobicore_device:chr_file { ioctl read write open };
 allow system_app hal_soter_hwservice:hwservice_manager find;
 allow system_app mtk_hal_soter:binder { call transfer };
@@ -161,20 +160,22 @@ set_prop(system_app, mtk_persist_prop)
 # is declared -- see the GNSS section.
 
 # MediaTek daemons with device-private hwservice types. Those types are
-# declared in this file, not in AOSP, so there is no platform neverallow to
-# satisfy and a plain allow is correct.
-allow mtk_hal_dfps mtk_hal_dfps_hwservice:hwservice_manager { add find };
-allow mtk_hal_keyattestation mtk_hal_keyattestation_hwservice:hwservice_manager { add find };
-allow mtk_hal_mms mtk_hal_mms_hwservice:hwservice_manager { add find };
-allow mtk_hal_mtkcodecservice hal_mtkcodecservice_hwservice:hwservice_manager { add find };
-allow mtk_hal_pq mtk_hal_pq_hwservice:hwservice_manager { add find };
-allow mtk_lbs mtk_hal_lbs_hwservice:hwservice_manager { add find };
-allow mtk_netdagent mtk_hal_netdagent_hwservice:hwservice_manager { add find };
-allow mtk_nvram_daemon nvram_agent_binder_hwservice:hwservice_manager { add find };
-allow mtk_volte_imcb volte_uce_ua_hwservice:hwservice_manager { add find };
-allow mtk_volte_ua volte_rcs_ua_hwservice:hwservice_manager { add find };
-allow mtk_vtservice mtk_hal_videotelephony_hwservice:hwservice_manager { add find };
-allow mtk_hal_cryptoeng hal_cryptoeng_hwservice:hwservice_manager { add find };
+# declared in this file, not in AOSP, so there is no platform neverallow naming
+# the type itself and a plain allow would satisfy checkpolicy -- but that is
+# exactly why add_hwservice() is used instead. Its second line,
+# `allow $1 hidl_base_hwservice:hwservice_manager add`, is not optional: a
+# domain registering a service through hwservicemanager needs add on the base
+# descriptor, and public/domain.te:521 neverallows `find` on
+# hidl_base_hwservice, leaving `add` as the only permitted verb. AOSP grants it
+# in every add_hwservice() call, so all twelve of these servers had their
+# service type covered while missing the base-descriptor grant. The macro also
+# adds the neverallow { domain -$1 } that keeps other domains from registering
+# the same type.
+add_hwservice(mtk_hal_dfps, mtk_hal_dfps_hwservice)
+add_hwservice(mtk_hal_keyattestation, mtk_hal_keyattestation_hwservice)
+add_hwservice(mtk_hal_mms, mtk_hal_mms_hwservice)
+add_hwservice(mtk_hal_mtkcodecservice, hal_mtkcodecservice_hwservice)
+add_hwservice(mtk_hal_pq, mtk_hal_pq_hwservice)
 
 # --- Client find rules ---
 #
@@ -240,6 +241,7 @@ init_daemon_domain(mtk_md_ctrl)
 type mtk_volte_imcb, domain;
 type mtk_volte_imcb_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_volte_imcb)
+add_hwservice(mtk_volte_imcb, volte_uce_ua_hwservice)
 
 type mtk_volte_imsm_93, domain;
 type mtk_volte_imsm_93_exec, exec_type, vendor_file_type, file_type;
@@ -252,6 +254,7 @@ init_daemon_domain(mtk_volte_stack)
 type mtk_volte_ua, domain;
 type mtk_volte_ua_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_volte_ua)
+add_hwservice(mtk_volte_ua, volte_rcs_ua_hwservice)
 
 # vtservice_hidl (vendor/bin/hw/vtservice_hidl, init.vtservice.rc): MTK's
 # VoLTE video-telephony service, class hal. /system/bin/vtservice is the
@@ -262,6 +265,7 @@ init_daemon_domain(mtk_volte_ua)
 type mtk_vtservice, domain;
 type mtk_vtservice_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_vtservice)
+add_hwservice(mtk_vtservice, mtk_hal_videotelephony_hwservice)
 type mtk_vtservice_main, domain, coredomain;
 type mtk_vtservice_main_exec, exec_type, system_file_type, file_type;
 init_daemon_domain(mtk_vtservice_main)
@@ -275,6 +279,7 @@ type mtk_ccci_device, dev_type;
 type mtk_nvram_daemon, domain;
 type mtk_nvram_daemon_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_nvram_daemon)
+add_hwservice(mtk_nvram_daemon, nvram_agent_binder_hwservice)
 
 type mtk_sysenv, domain;
 type mtk_sysenv_exec, exec_type, vendor_file_type, file_type;
@@ -359,6 +364,7 @@ init_daemon_domain(mtk_agpsd)
 type mtk_lbs, domain;
 type mtk_lbs_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_lbs)
+add_hwservice(mtk_lbs, mtk_hal_lbs_hwservice)
 
 ###
 ### WiFi / connectivity
@@ -378,6 +384,7 @@ init_daemon_domain(mtk_ipsec_mon)
 type mtk_netdagent, domain;
 type mtk_netdagent_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_netdagent)
+add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 
 type mtk_stpwmt_device, dev_type;
 type mtk_wmtWifi_device, dev_type;
@@ -606,6 +613,7 @@ permissive mtk_hal_silead;
 type mtk_hal_cryptoeng, domain;
 type mtk_hal_cryptoeng_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_cryptoeng)
+add_hwservice(mtk_hal_cryptoeng, hal_cryptoeng_hwservice)
 permissive mtk_hal_cryptoeng;
 
 # oppoalgo_daemon is declared here rather than with the mtk_* domains above

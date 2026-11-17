@@ -302,33 +302,31 @@ BOARD_SUPPRESS_SECURE_ERASE := true
 # SELinux
 BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
-# BRING-UP ONLY -- remove before shipping. This is the build-time counterpart to
-# the permissive cmdline above: it stops neverallow assertions from failing the
-# build. android_system_sepolicy/Android.mk:85-93 turns it into
-# NEVERALLOW_ARG := -N, which is then passed to every secilc invocation that
-# compiles or validates policy (:535, :578, :628, :864, :979, :1293). secilc's
-# -N is --disable-neverallow, so the assertions are simply not enforced. The
-# same variable also skips the `checkpolicy -M` + `sepolicy-analyze neverallow
-# -w` pair at :375-384, and stops sepolicy_tests and treble_sepolicy_tests_*
-# being added to LOCAL_REQUIRED_MODULES at :242-248, so those CTS checks do not
-# run.
+# LEFT UNSET ON PURPOSE -- this is the diagnostic mode. With the flag absent,
+# checkpolicy -M and `sepolicy-analyze neverallow -w` run (Android.mk:375-384)
+# and each violation is named with the exact rule and line, which is what makes
+# the policy fixable. Setting it to true sets NEVERALLOW_ARG := -N (:85-93) and
+# hands that to every secilc invocation (:535, :578, :628, :864, :979, :1293),
+# so secilc's --disable-neverallow takes over and the assertions are simply not
+# enforced -- the build passes, the violations go unreported, and the resulting
+# policy can carry allow rules AOSP's assertions exist to prevent. It also drops
+# sepolicy_tests and treble_sepolicy_tests_* from LOCAL_REQUIRED_MODULES
+# (:242-248), so those CTS checks stop running too.
+#
+# So the trade is deliberate: unset costs a red build that names every offender,
+# set costs a green build and a policy nobody can audit. Fix the rules the
+# errors point at; only set this if a violation must be shipped temporarily,
+# and then remove it once the rule is corrected.
 #
 # Note there is no Soong path for this on 17.1: core/soong_config.mk does not
 # reference SelinuxIgnoreNeverallows and build/soong has only cil_compat_map.go
 # and filegroup.go. The Makefile is the whole mechanism here.
 #
-# Setting it rather than fixing the offending rules is a trade: it hides the
-# violations instead of resolving them, and the resulting policy can carry
-# allow rules AOSP's assertions exist to prevent -- the classic ones being a
-# vendor domain writing a core property type or a non-hal domain handling a
-# hwservice. Nothing here is a boot fix on its own; the policy still has to be
-# correct for enforcing to work, and the permissive cmdline above is what
-# currently papers over it.
+# Hard error in user builds if ever set (Android.mk:86-88: "$(error ... cannot
+# be used in user builds)"), so a release image cannot carry it even by
+# accident. The CI default variant is userdebug, which would permit it.
 #
-# Hard error in user builds (Android.mk:86-88: "$(error ... cannot be used in
-# user builds)"), so it must not be set when producing a release image. The CI
-# default variant is userdebug, which is why it builds here.
-SELINUX_IGNORE_NEVERALLOWS := true
+# SELINUX_IGNORE_NEVERALLOWS := true
 
 # Double tap to wake
 #
