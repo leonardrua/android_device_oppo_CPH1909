@@ -256,11 +256,21 @@ AUDIOSERVER_MULTILIB := 32
 # android::wifi_system::HalTool::InitFunctionTable.
 #
 # The MTK combo chip is still driven through the WIFI_DRIVER_* values below and
-# /dev/wmtWifi. None of those, nor WPA_SUPPLICANT_VERSION, nor
-# WIFI_HIDL_FEATURE_DUAL_INTERFACE, is gated on BOARD_WLAN_DEVICE -- the only
-# readers of that variable in this tree are the libwifi_hal switch and the
-# qcom/bcm/wpa_supplicant blocks, none of which apply.
-WPA_SUPPLICANT_VERSION := VER_0_8_X
+# /dev/wmtWifi. None of those, nor WIFI_HIDL_FEATURE_DUAL_INTERFACE, is gated on
+# BOARD_WLAN_DEVICE -- the only readers of that variable in this tree are the
+# libwifi_hal switch and the qcom/bcm/wpa_supplicant blocks, none of which apply.
+#
+# WPA_SUPPLICANT_VERSION is deliberately unset as well. Setting it to VER_0_8_X
+# makes external/wpa_supplicant_8/Android.mk:3-9 include
+# wpa_supplicant/Android.mk, which builds a platform supplicant and installs it
+# over the stock /vendor/bin/hw/wpa_supplicant. That build cannot link here:
+# with BOARD_WPA_SUPPLICANT_DRIVER unset there is no CONFIG_DRIVER_NL80211, so
+# src/drivers/drivers.mk:45 never sets NEED_AP_MLME, wpa_supplicant/Android.mk:
+# 928-935 therefore omits src/ap/ieee802_11.c, and the CONFIG_AP/CONFIG_SAE/
+# CONFIG_OWE objects enabled by android.config:473/540/546 reference
+# auth_sae_process_commit, sae_clear_retransmit_timer and owe_assoc_req_process.
+# The stock vendor binary is the one init.connectivity.rc starts and it is built
+# against the MTK driver, so leave this variable unset.
 WIFI_DRIVER_FW_PATH_PARAM := "/dev/wmtWifi"
 WIFI_DRIVER_FW_PATH_STA := STA
 WIFI_DRIVER_FW_PATH_AP := AP
