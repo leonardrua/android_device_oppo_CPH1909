@@ -18,10 +18,19 @@
 ###
 ### MediaTek HAL domains
 ###
+# DFPS is a MediaTek-private HAL (`vendor.mediatek.hardware.dfps`), not part of
+# Android's graphics-composer HAL. The stock 8.1 policy has a dedicated
+# hal_dfps attribute with surfaceflinger, system_server and mtk_hal_power as
+# clients. Reusing hal_graphics_composer here would put mtk_hal_dfps in
+# hal_graphics_composer_server and, through
+# hal_attribute_hwservice(graphics_composer, hal_graphics_composer_hwservice),
+# grant it `add` on the *standard* composer hwservice type.
+hal_attribute(dfps)
+
 type mtk_hal_dfps, domain;
 type mtk_hal_dfps_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_dfps)
-hal_server_domain(mtk_hal_dfps, hal_graphics_composer)
+hal_server_domain(mtk_hal_dfps, hal_dfps)
 
 type mtk_hal_keyattestation, domain;
 type mtk_hal_keyattestation_exec, exec_type, vendor_file_type, file_type;
@@ -153,11 +162,9 @@ set_prop(system_app, mtk_persist_prop)
 #     neverallow { domain -hal_gnss_client -hal_gnss_server } \
 #         hal_gnss_hwservice:hwservice_manager find;
 #
-# A raw `allow mtk_mnld hal_gnss_hwservice:hwservice_manager { add find };`
-# would violate both neverallows, because mtk_mnld is in neither the _client nor
-# the _server attribute. mtk_mnld is granted those attributes with
-# hal_server_domain()/hal_client_domain() further down this file, where its type
-# is declared -- see the GNSS section.
+# Raw `allow ... hal_gnss_hwservice ...` rules for mtk_mnld would violate both
+# neverallows because mnld is neither a hal_gnss client nor server in this port;
+# see the GNSS section for its actual datagram-channel access.
 
 # MediaTek daemons with device-private hwservice types. Those types are
 # declared in this file, not in AOSP, so there is no platform neverallow naming
@@ -171,7 +178,14 @@ set_prop(system_app, mtk_persist_prop)
 # service type covered while missing the base-descriptor grant. The macro also
 # adds the neverallow { domain -$1 } that keeps other domains from registering
 # the same type.
-add_hwservice(mtk_hal_dfps, mtk_hal_dfps_hwservice)
+# DFPS is a device-private HAL interface, so use its own attribute rather than
+# an upstream HAL's attribute. This grants the server add/find on its own
+# hwservice type and gives the stock clients find: surfaceflinger and
+# system_server (fingerprint policy service users) and the MTK power HAL.
+hal_attribute_hwservice(hal_dfps, mtk_hal_dfps_hwservice)
+hal_client_domain(surfaceflinger, hal_dfps)
+hal_client_domain(system_server, hal_dfps)
+hal_client_domain(hal_power_default, hal_dfps)
 add_hwservice(mtk_hal_keyattestation, mtk_hal_keyattestation_hwservice)
 add_hwservice(mtk_hal_mms, mtk_hal_mms_hwservice)
 add_hwservice(mtk_hal_mtkcodecservice, hal_mtkcodecservice_hwservice)
@@ -339,23 +353,15 @@ type mtk_mnld, domain;
 type mtk_mnld_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_mnld)
 
-# mtk_mnld is MTK's GNSS daemon. It registers the platform gnss interface, so
-# it is a hal_gnss server; it is also the only thing that talks to the
-# vendor.mediatek.hardware.gnss@1.1 service, so it is a hal_gnss client.
-#
-# These macros must come after the type declaration above: checkpolicy resolves
-# types at parse time and rejects a typeattribute for an undeclared type.
-# A raw `allow mtk_mnld hal_gnss_hwservice:hwservice_manager { add find };`
-# cannot work -- hal_attribute_hwservice() in system/sepolicy/public/te_macros
-# generates
-#
-#     neverallow { domain -hal_gnss_server } hal_gnss_hwservice:hwservice_manager add;
-#     neverallow { domain -hal_gnss_client -hal_gnss_server } \
-#         hal_gnss_hwservice:hwservice_manager find;
-#
-# and mtk_mnld satisfies neither until it carries the attributes.
-hal_server_domain(mtk_mnld, hal_gnss)
-hal_client_domain(mtk_mnld, hal_gnss)
+# mtk_mnld is MTK's standalone GNSS daemon (/vendor/bin/mnld). It is NOT the
+# HIDL server: manifest.xml declares vendor.mediatek.hardware.gnss@1.1::IMtkGnss
+# and file_contexts labels that service hal_gnss_default_exec, so AOSP's
+# hal_gnss_default is the server. The stock O-MR1 policy likewise lists
+# hal_gnss_default/mtk_hal_gnss in hal_gnss_server/system_server in
+# hal_gnss_client, with mnld outside both; mnld talks to the GNSS HAL over
+# datagram sockets. Do not make mnld a hal_gnss server/client here: that would
+# grant it add/find on the standard hal_gnss_hwservice type it never registers.
+allow mtk_mnld hal_gnss_default:unix_dgram_socket sendto;
 
 type mtk_agpsd, domain;
 type mtk_agpsd_exec, exec_type, vendor_file_type, file_type;
