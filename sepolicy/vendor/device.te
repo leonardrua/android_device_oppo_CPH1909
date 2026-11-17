@@ -394,6 +394,8 @@ add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 
 type mtk_stpwmt_device, dev_type;
 type mtk_wmtWifi_device, dev_type;
+type mtk_fw_log_wifi_device, dev_type;
+type mtk_fw_log_wmt_device, dev_type;
 
 # AEE (AAED): MediaTek's exception/dump daemon pair started at on post-fs by
 # init.aee.rc. One type covers both the 32- and 64-bit binaries.
@@ -411,6 +413,19 @@ init_daemon_domain(mtk_stp_dump)
 type mtk_connsyslogger, domain;
 type mtk_connsyslogger_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_connsyslogger)
+
+# The stock Wi-Fi HAL writes the firmware mode and driver state to
+# /dev/wmtWifi. Stock 8.1 policy grants this to the hal_wifi attribute:
+#   (allow hal_wifi wmtWifi_device (chr_file (write lock append map open)))
+# hal_wifi_default inherits hal_wifi through hal_server_domain(), so this
+# attribute rule also covers the stock 1.0 service. w_file_perms expands to
+# { open append write lock map }, the same permission set as the stock rule.
+allow hal_wifi mtk_wmtWifi_device:chr_file w_file_perms;
+
+# connsyslogger opens the WMT/Wi-Fi firmware log character devices.
+# Stock: (allow connsyslogger fw_log_{wifi,wmt}_device (chr_file (ioctl read write open)))
+allow mtk_connsyslogger mtk_fw_log_wifi_device:chr_file { ioctl read write open };
+allow mtk_connsyslogger mtk_fw_log_wmt_device:chr_file { ioctl read write open };
 
 # wfca: MTK Wi-Fi call forward agent, class core (init.wfca.rc).
 # bip: MTK BIP/SAT-transport daemon, started on mtk.md1.status=ready

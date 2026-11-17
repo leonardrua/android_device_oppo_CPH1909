@@ -160,6 +160,8 @@
 /dev/eemcs.*                                                                                  u:object_r:mtk_ccci_device:s0
 /dev/stpwmt                                                                                   u:object_r:mtk_stpwmt_device:s0
 /dev/wmtWifi                                                                                  u:object_r:mtk_wmtWifi_device:s0
+/dev/fw_log_wifi                                                                              u:object_r:mtk_fw_log_wifi_device:s0
+/dev/fw_log_wmt                                                                               u:object_r:mtk_fw_log_wmt_device:s0
 /dev/wmtdetect                                                                                u:object_r:mtk_stpwmt_device:s0
 /dev/stpbt                                                                                    u:object_r:hci_attach_dev:s0
 /dev/stpgps                                                                                   u:object_r:gps_device:s0
