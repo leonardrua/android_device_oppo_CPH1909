@@ -35,7 +35,7 @@
 
 /dev/block/platform/bootdevice/by-name/cache              /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                   wait,check
 
-/dev/block/platform/bootdevice/by-name/userdata           /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic          latemount,wait,check,quota,formattable,resize,encryptable=/dev/block/platform/bootdevice/by-name/metadata
+/dev/block/platform/bootdevice/by-name/userdata           /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic          latemount,wait,check,quota,formattable,encryptable=/dev/block/platform/bootdevice/by-name/metadata
 
 # MediaTek / OPPO factory data partitions
 /dev/block/platform/bootdevice/by-name/protect1           /vendor/protect_f    ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable
