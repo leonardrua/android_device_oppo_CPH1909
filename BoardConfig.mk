@@ -142,7 +142,7 @@ BOARD_USES_METADATA_PARTITION := true
 # second-stage init has somewhere to mount the extra MediaTek partitions
 # listed in fstab.mt6765 (/opporeserve and friends live at the filesystem root,
 # not under /vendor).
-BOARD_ROOT_EXTRA_FOLDERS := opporeserve mnt/cd-rom custom
+BOARD_ROOT_EXTRA_FOLDERS := opporeserve custom
 
 # The stock MTK init.mt6765.rc loaded the FPSGO companion module from
 # /lib/modules/fpsgo.ko. Android 10's system image root has no /lib, and rather
