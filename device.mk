@@ -88,8 +88,13 @@ PRODUCT_PACKAGES += \
     android.hardware.drm@1.2-service.clearkey \
     android.hardware.health@2.0-service \
     android.hardware.power@1.0-service \
-    android.hardware.usb@1.0-service \
+    android.hardware.usb@1.0-service.basic \
     power.mt6765
+
+# Use the LineageOS "basic" USB HAL (hardware/lineage/interfaces/usb/1.0-basic,
+# adapted from xiaomi-lotus-devs commit 738c188) instead of the AOSP default:
+# both register the init service vendor.usb-hal-1-0, and this device ships no
+# usb.mt6765.so module for the AOSP service to load.
 
 # DRM: build the HIDL 1.0 stack and the software plugins from source (adapted
 # from xiaomi-lotus-devs commit b54eded, same MT6765 tree). Verified in LOS 17.1
