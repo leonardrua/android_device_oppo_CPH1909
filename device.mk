@@ -196,6 +196,45 @@ PRODUCT_COPY_FILES += \
     prebuilts/vndk/v28/arm64/arch-arm-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_VENDOR)/lib/libbase-v28.so \
     prebuilts/vndk/v28/arm64/arch-arm64-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libbase-v28.so
 
+# System-side VNDK: the 8.1 /system MTK blobs were linked when the system
+# namespace still searched /vendor/${LIB}. Android 10's [system] namespace is
+# isolated (search /system/${LIB}, links runtime,resolv), so a /system blob's
+# DT_NEEDED on a vendor-only lib cannot resolve. Ship the vendor-only libs that
+# the system blobs need into /system/${LIB} as well; the /vendor copies stay
+# for the vendor processes. Affected system blobs:
+#   audio:  libbessound_hd_mtk.so, libmtklimiter.so, libmtkshifter.so
+#   DRM:    libdrmmtkutil.so, mtkdrm/libdrmmtkplugin.so       -> libmtk_drvb.so
+#   VT:     libmtk_vt_service.so, libimsma.so, libsink.so,
+#           libsource.so, libmtk_vt_wrapper.so ...             -> libvcodec_cap.so
+# libmtk_drvb.so and the libvcodec_cap closure have only LLNDK deps.
+PRODUCT_COPY_FILES += \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libmtk_drvb.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libmtk_drvb.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libmtk_drvb.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libmtk_drvb.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libbwc.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libbwc.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libbwc.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libbwc.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libion_mtk.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libion_mtk.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libion_mtk.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libion_mtk.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libion_ulit.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libion_ulit.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libion_ulit.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libion_ulit.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libmp4enc_sa.ca7.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libmp4enc_sa.ca7.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libpowerhalwrap.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libpowerhalwrap.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libpowerhalwrap.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libpowerhalwrap.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvc1dec_sa.ca7.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvc1dec_sa.ca7.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvcodec_cap.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_cap.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libvcodec_cap.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_cap.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvcodec_capenc.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_capenc.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libvcodec_capenc.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_capenc.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvcodec_oal.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_oal.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libvcodec_oal.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_oal.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvcodec_utility.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_utility.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libvcodec_utility.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_utility.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvcodecdrv.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodecdrv.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/libvcodecdrv.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodecdrv.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvp8dec_sa.ca7.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvp8dec_sa.ca7.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/libvp8enc_sa.ca7.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvp8enc_sa.ca7.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib/vendor.mediatek.hardware.power@1.1_vendor.so:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.mediatek.hardware.power@1.1_vendor.so \
+    vendor/oppo/CPH1909/proprietary/vendor/lib64/vendor.mediatek.hardware.power@1.1_vendor.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.mediatek.hardware.power@1.1_vendor.so
+
 # Audio: build generic audio modules from source (adapted from
 # xiaomi-lotus-devs commit 8610177, same MT6765 tree). audio.a2dp.default is
 # already enabled above. audio.bluetooth.default is a real LineageOS 17.1
