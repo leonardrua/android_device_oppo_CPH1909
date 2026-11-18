@@ -103,6 +103,15 @@ PRODUCT_PACKAGES += \
     libdrmclearkeyplugin \
     libmockdrmcryptoplugin
 
+# Gatekeeper: build the default HIDL 1.0 service/impl from source (adapted from
+# xiaomi-lotus-devs commit dec7ba5, same MT6765 tree). Verified in LOS 17.1
+# hardware/interfaces/gatekeeper/1.0/default/Android.bp:2,21. The stock
+# gatekeeper.mt6765.so legacy module is kept; the source impl loads it as a
+# passthrough. The vendor copies only produced duplicate-rule warnings.
+PRODUCT_PACKAGES += \
+    android.hardware.gatekeeper@1.0-service \
+    android.hardware.gatekeeper@1.0-impl
+
 # Keymaster: source-build the HIDL 3.0 service instead of copying the stock 8.1
 # blobs (adapted from xiaomi-lotus-devs commit f469325, "lotus: Build keymaster
 # from source", for the same MT6765 / Android 8.1 -> 10 bring-up). The keystore
