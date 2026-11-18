@@ -91,6 +91,18 @@ PRODUCT_PACKAGES += \
     android.hardware.usb@1.0-service \
     power.mt6765
 
+# DRM: build the HIDL 1.0 stack and the software plugins from source (adapted
+# from xiaomi-lotus-devs commit b54eded, same MT6765 tree). Verified in LOS 17.1
+# hardware/interfaces/drm/1.0/default/Android.mk and
+# frameworks/av/drm/mediadrm/plugins/{clearkey,mock}. android.hardware.drm@1.0-
+# service.clearkey from the source commit is not a LOS 17.1 module, so the
+# already-enabled @1.2 clearkey service is kept instead.
+PRODUCT_PACKAGES += \
+    android.hardware.drm@1.0-impl \
+    android.hardware.drm@1.0-service \
+    libdrmclearkeyplugin \
+    libmockdrmcryptoplugin
+
 # Keymaster: source-build the HIDL 3.0 service instead of copying the stock 8.1
 # blobs (adapted from xiaomi-lotus-devs commit f469325, "lotus: Build keymaster
 # from source", for the same MT6765 / Android 8.1 -> 10 bring-up). The keystore

@@ -347,7 +347,6 @@ vendor/bin/hw/android.hardware.audio@2.0-service-mediatek
 vendor/bin/hw/android.hardware.bluetooth@1.0-service-mediatek
 vendor/bin/hw/android.hardware.broadcastradio@1.1-service
 vendor/bin/hw/android.hardware.configstore@1.0-service
-vendor/bin/hw/android.hardware.drm@1.0-service
 vendor/bin/hw/android.hardware.drm@1.0-service.widevine
 vendor/bin/hw/android.hardware.gatekeeper@1.0-service
 vendor/bin/hw/android.hardware.graphics.allocator@2.0-service
@@ -582,7 +581,6 @@ vendor/etc/init/android.hardware.audio@2.0-service-mediatek.rc
 vendor/etc/init/android.hardware.bluetooth@1.0-service-mediatek.rc
 vendor/etc/init/android.hardware.broadcastradio@1.1-service.rc
 vendor/etc/init/android.hardware.configstore@1.0-service.rc
-vendor/etc/init/android.hardware.drm@1.0-service.rc
 vendor/etc/init/android.hardware.drm@1.0-service.widevine.rc
 vendor/etc/init/android.hardware.gatekeeper@1.0-service.rc
 vendor/etc/init/android.hardware.graphics.allocator@2.0-service.rc
@@ -872,7 +870,6 @@ vendor/lib/hw/android.hardware.audio.effect@2.0-impl.so
 vendor/lib/hw/android.hardware.audio@2.0-impl-mediatek.so
 vendor/lib/hw/android.hardware.bluetooth@1.0-impl-mediatek.so
 vendor/lib/hw/android.hardware.camera.provider@2.4-impl-mediatek.so
-vendor/lib/hw/android.hardware.drm@1.0-impl.so
 vendor/lib/hw/android.hardware.gatekeeper@1.0-impl.so
 vendor/lib/hw/android.hardware.graphics.allocator@2.0-impl.so
 vendor/lib/hw/android.hardware.graphics.composer@2.1-impl.so
@@ -1262,8 +1259,6 @@ vendor/lib/libwo.so
 vendor/lib/libwpa_client.so
 vendor/lib/libwvhidl.so
 vendor/lib/mediacas/libclearkeycasplugin.so
-vendor/lib/mediadrm/libdrmclearkeyplugin.so
-vendor/lib/mediadrm/libmockdrmcryptoplugin.so
 vendor/lib/mediadrm/libwvdrmengine.so
 vendor/lib/modules/bt_drv.ko
 vendor/lib/modules/fmradio_drv.ko
@@ -1657,8 +1652,6 @@ vendor/lib64/libwo.so
 vendor/lib64/libwpa_client.so
 vendor/lib64/libwvhidl.so
 vendor/lib64/mediacas/libclearkeycasplugin.so
-vendor/lib64/mediadrm/libdrmclearkeyplugin.so
-vendor/lib64/mediadrm/libmockdrmcryptoplugin.so
 vendor/lib64/mediadrm/libwvdrmengine.so
 vendor/lib64/soter_attk_provision.so
 vendor/lib64/soundfx/libbundlewrapper.so
