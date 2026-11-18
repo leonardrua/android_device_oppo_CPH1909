@@ -136,4 +136,18 @@ $(VENDOR_MOUNT_POINTS):
 
 ALL_DEFAULT_INSTALLED_MODULES += $(VENDOR_MOUNT_POINTS)
 
+# libgui.so symlink into /vendor
+#
+# hwcomposer.mt6765.so and other 8.1 HALs DT_NEEDED libgui.so, which the vendor
+# namespace does not provide. Point /vendor/lib{,64}/libgui.so at the
+# source-built libgui_vendor.so (PRODUCT_PACKAGES in device.mk). Adapted from
+# xiaomi-lotus-devs commit dd5519c.
+LIBGUI_SYMLINK += $(TARGET_OUT_VENDOR)/lib/libgui.so
+LIBGUI_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/libgui.so
+$(LIBGUI_SYMLINK): $(LOCAL_INSTALLED_MODULE)
+	@mkdir -p $(dir $@)
+	@rm -rf $@
+	$(hide) ln -sf libgui_vendor.so $@
+ALL_DEFAULT_INSTALLED_MODULES += $(LIBGUI_SYMLINK)
+
 endif

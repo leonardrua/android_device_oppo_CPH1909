@@ -176,6 +176,16 @@ PRODUCT_PACKAGES += \
     android.hardware.vibrator@1.0-impl \
     android.hardware.vibrator@1.0-service
 
+# Graphics: vendor variant of libgui for 8.1 HALs
+#
+# vendor blobs such as hwcomposer.mt6765.so DT_NEEDED libgui.so, which is not
+# in the vendor namespace. Build the vendor variant and symlink it as
+# /vendor/lib{,64}/libgui.so in the top-level Android.mk. Adapted from
+# xiaomi-lotus-devs commit dd5519c; confirmed in LOS 17.1
+# frameworks/native/libs/gui/Android.bp (libgui_vendor, vendor: true).
+PRODUCT_PACKAGES += \
+    libgui_vendor
+
 # Audio: build generic audio modules from source (adapted from
 # xiaomi-lotus-devs commit 8610177, same MT6765 tree). audio.a2dp.default is
 # already enabled above. audio.bluetooth.default is a real LineageOS 17.1
