@@ -39,6 +39,7 @@ vendor.mediatek.hardware.mms::IMms	u:object_r:mtk_hal_mms_hwservice:s0
 vendor.mediatek.hardware.camera.advcam::IAdvCamControl	u:object_r:hal_camera_hwservice:s0
 vendor.mediatek.hardware.camera.lomoeffect::ILomoEffect	u:object_r:hal_camera_hwservice:s0
 vendor.mediatek.hardware.camera.callbackclient::IMtkCallbackClient	u:object_r:hal_camera_hwservice:s0
+vendor.mediatek.hardware.camera.callbackclient::IMtkBufferCallback	u:object_r:hal_camera_hwservice:s0
 vendor.mediatek.hardware.camera.ccap::ICCAPControl	u:object_r:hal_camera_hwservice:s0
 vendor.mediatek.hardware.wfo::IWifiOffload	u:object_r:mtk_hal_wfo_hwservice:s0
 vendor.mediatek.hardware.keyinstall::IKeyinstall	u:object_r:mtk_hal_keyinstall_hwservice:s0
@@ -48,6 +49,11 @@ vendor.mediatek.hardware.mtkcodecservice::IMtkCodecService	u:object_r:hal_mtkcod
 vendor.mediatek.hardware.netdagent::INetdagent	u:object_r:mtk_hal_netdagent_hwservice:s0
 vendor.mediatek.hardware.rcs::IRcs	u:object_r:volte_rcs_ua_hwservice:s0
 vendor.mediatek.hardware.dfps::IFpsPolicyService	u:object_r:mtk_hal_dfps_hwservice:s0
+vendor.mediatek.hardware.mwis::IMwis	u:object_r:mtk_hal_mwis_hwservice:s0
+
+# Factory-mode services. Stock 8.1 used one hwservice type for both.
+interfaces.factoryAta::IFactoryAta	u:object_r:factory_interface_hwservice:s0
+interfaces.factoryInterface::IFactoryInterface	u:object_r:factory_interface_hwservice:s0
 
 # --- OPPO vendor HALs ---
 

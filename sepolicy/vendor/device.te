@@ -96,6 +96,13 @@ type hal_mtkcodecservice_hwservice, hwservice_manager_type;
 type mtk_hal_netdagent_hwservice, hwservice_manager_type;
 type volte_rcs_ua_hwservice, hwservice_manager_type;
 type mtk_hal_dfps_hwservice, hwservice_manager_type;
+# Stock 8.1 labels interfaces.factory{Ata,Interface} with this type. Both are
+# declared in this tree's manifest and implemented by the factory service.
+type factory_interface_hwservice, hwservice_manager_type;
+# IMwis is declared in the manifest but no HAL implementation ships in this
+# tree; label it explicitly so a future service does not register as
+# default_hwservice. No add_hwservice grant until a server domain exists.
+type mtk_hal_mwis_hwservice, hwservice_manager_type;
 
 # --- OPPO hwservice types ---
 type hal_cryptoeng_hwservice, hwservice_manager_type;
@@ -645,6 +652,9 @@ permissive oppoalgo_daemon;
 type mtk_hal_factory, domain;
 type mtk_hal_factory_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_factory)
+# The stock 8.1 policy grants factory_services add/find on this hwservice;
+# mtk_hal_factory is the bring-up domain for those binaries.
+add_hwservice(mtk_hal_factory, factory_interface_hwservice)
 permissive mtk_hal_factory;
 
 type mtk_factory_bin, domain;
