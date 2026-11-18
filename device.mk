@@ -108,6 +108,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     libsensorndkbridge
 
+# Vibrator: build the HIDL 1.0 HAL from source instead of copying the stock 8.1
+# blobs (adapted from xiaomi-lotus-devs commit 5181c28, same MT6765 tree). The
+# vendor copies only produced duplicate-rule warnings and shadowed the source
+# target.
+PRODUCT_PACKAGES += \
+    android.hardware.vibrator@1.0-impl \
+    android.hardware.vibrator@1.0-service
+
 # Biometrics / fingerprint
 #
 # The CPH1909 uses a Silead sensor behind /dev/silead_fp (CONFIG_SILEAD_FP=y in
