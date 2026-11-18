@@ -10,7 +10,8 @@
 # first_stage_mount entries below.
 #
 # The /vendor copy then serves the second-stage mount_all from the stock
-# init.mt6765.rc and recovery (TARGET_RECOVERY_FSTAB). fs_mgr skips
+# init.mt6765.rc: `on fs` uses --early and `on late-fs` uses --late, so /data
+# is mounted only after early_hal is up in late-fs. fs_mgr skips
 # first_stage_mount entries that are already mounted, so nothing is mounted
 # twice.
 #
@@ -34,7 +35,7 @@
 
 /dev/block/platform/bootdevice/by-name/cache              /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                   wait,check
 
-/dev/block/platform/bootdevice/by-name/userdata           /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic          wait,check,quota,formattable,resize,encryptable=/dev/block/platform/bootdevice/by-name/metadata
+/dev/block/platform/bootdevice/by-name/userdata           /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard,errors=panic          latemount,wait,check,quota,formattable,resize,encryptable=/dev/block/platform/bootdevice/by-name/metadata
 
 # MediaTek / OPPO factory data partitions
 /dev/block/platform/bootdevice/by-name/protect1           /vendor/protect_f    ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                wait,check,formattable
