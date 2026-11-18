@@ -200,27 +200,23 @@ DEVICE_MATRIX_FILE := $(DEVICE_PATH)/compatibility_matrix.xml
 
 # VNDK
 #
-# BOARD_VNDK_VERSION is deliberately left UNSET. PRODUCT_SHIPPING_API_LEVEL is
-# 27, so PRODUCT_USE_VNDK stays false and the build does not default the
-# variable to "current" (core/config.mk only does that for API 28+). This is
-# the legacy-Treble VNDK-lite configuration, not VNDK enforcement.
+# Full VNDK, matching xiaomi-lotus-devs commit a53267f. Lotus is also mt6765
+# and also 8.1-launched (inherits product/product_launched_with_o_mr1.mk, same
+# as lineage_CPH1909.mk), so the old "8.1 means VNDK-lite" assumption does not
+# hold: Lotus runs LOS 17.1 with BOARD_VNDK_VERSION := current.
 #
-# Setting BOARD_VNDK_VERSION would impose VNDK linkage rules on every vendor
-# module built from source and is not needed for the prebuilt O-MR1 blobs.
+# The 8.1 blobs' non-VNDK dependencies are covered by LLNDK, which the vendor
+# namespace can always load: libsync and libnativewindow are llndk_library in
+# LOS 17.1, and libui/libgui are vndk-enabled. Vendor-local libraries stay in
+# /vendor/${LIB}.
 #
-# With the variable unset the build sets ro.vndk.lite=true and the linker uses
-# ld.config.vndk_lite.txt. Its vendor namespace includes /system/${LIB} itself
-# in addition to the vndk and vndk-sp subdirectories, so the 8.1 blobs resolve
-# libhidltransport, libhwbinder, libgui, libpower, libmedia_helper and friends
-# against the Android 10 system libraries. Those are VNDK forward-compatible
-# with the API 27 libraries the blobs were linked against, which is exactly the
-# guarantee the VNDK exists to provide.
-#
-# PRODUCT_EXTRA_VNDK_VERSIONS is not used: the v27 snapshot phony
-# (vndk_snapshot_package) is only defined when BOARD_VNDK_VERSION is set
-# (build/make/target/product/gsi/Android.mk), so declaring the extra version on
-# this VNDK-lite build would install nothing. The vndk-lite namespace already
-# exposes the current system libraries to the 8.1 blobs.
+# Residual risk to confirm on a booted image: the vendor namespace only searches
+# /odm/${LIB} and /vendor/${LIB} plus the VNDK/LLNDK sets (ld.config.txt
+# [vendor] section), so any blob needing a /system library that is neither
+# LLNDK nor VNDK will fail to load. Check with:
+#   adb shell cat /linkerconfig/ld.config.txt | sed -n '/\[vendor\]/,/^\[/p'
+#   adb logcat -b all | grep -i 'linker\|library .* not found'
+BOARD_VNDK_VERSION := current
 
 # Audio
 USE_XML_AUDIO_POLICY_CONF := 1
