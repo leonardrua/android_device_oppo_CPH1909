@@ -8,6 +8,10 @@
      Arrays: 7 from stock, 1 Android 10 arrays kept from the overlay;
      stock-only cluster1 and old cpu.core_* arrays dropped.
      Names absent from stock and the overlay keep the LOS17 default.
+
+     wifi.controller.voltage is deliberately NOT the stock 0: the field is in
+     mV and the A5s Wi-Fi controller runs at ~3.3 V, so 3300 restores the
+     unit-correct BatteryStats value (the previous 3.3 was 1000x too small).
 -->
 <device name="Android">
     <item name="screen.on">72</item>
@@ -29,7 +33,7 @@
     <item name="wifi.controller.idle">0</item>
     <item name="wifi.controller.rx">0</item>
     <item name="wifi.controller.tx">0</item>
-    <item name="wifi.controller.voltage">0</item>
+    <item name="wifi.controller.voltage">3300</item>
     <item name="modem.controller.sleep">1</item>
     <item name="modem.controller.idle">0</item>
     <item name="modem.controller.rx">0</item>
