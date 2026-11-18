@@ -6,6 +6,11 @@
 
 DEVICE_PATH := device/oppo/CPH1909
 
+# Soong namespaces: let Soong resolve the Android.bp modules in this device
+# tree (biometrics/, interfaces/, etc.). Adapted from xiaomi-lotus-devs
+# commit 3ac3eb8; Android.bp in this directory declares soong_namespace {}.
+PRODUCT_SOONG_NAMESPACES += $(LOCAL_PATH)
+
 # Screen density: 720x1520 panel
 PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xhdpi
