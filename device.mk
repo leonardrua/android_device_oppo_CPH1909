@@ -118,10 +118,11 @@ PRODUCT_PACKAGES += \
 
 # Audio: build generic audio modules from source (adapted from
 # xiaomi-lotus-devs commit 8610177, same MT6765 tree). audio.a2dp.default is
-# already enabled above; audio.bluetooth.default from the source commit is not
-# a LineageOS 17.1 module and was omitted. The vendor copies of these targets
-# only produced duplicate-rule warnings and shadowed the source modules.
+# already enabled above. audio.bluetooth.default is a real LineageOS 17.1
+# module (system/bt/audio_bluetooth_hw/Android.bp). The vendor copies of these
+# targets only produced duplicate-rule warnings and shadowed the source modules.
 PRODUCT_PACKAGES += \
+    audio.bluetooth.default \
     audio.usb.default \
     audio.r_submix.default \
     audio_policy.stub \
