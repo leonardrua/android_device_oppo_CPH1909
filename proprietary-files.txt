@@ -62,15 +62,9 @@ system/lib64/vendor.qti.hardware.soter@1.0.so
 #       libmediatek_exceptionlog.so. The dynamic linker aborts them with
 #       "library \"libstdc++.so\" not found" before main().
 #
-#   libkeymaster_staging.so
-#       The stock 8.1 android.hardware.keymaster@3.0-impl.so (32- and 64-bit)
-#       links the 8.1 keymaster staging library. Android 10 replaced it with
-#       libkeymaster3device, which the 8.1 passthrough implementation cannot
-#       use. Without this file the keymaster@3.0 service fails its passthrough
-#       load ("Could not get passthrough implementation"), taking down
-#       keystore and, with FDE /data, decryption.
-system/lib/libkeymaster_staging.so
-system/lib64/libkeymaster_staging.so
+#   libkeymaster_staging.so is no longer copied: the keymaster@3.0 service and
+#   passthrough impl are built from source, so the stock 8.1 staging library has
+#   no consumers on this device.
 system/lib/libstdc++.so
 system/lib64/libstdc++.so
 
@@ -358,7 +352,6 @@ vendor/bin/hw/android.hardware.drm@1.0-service.widevine
 vendor/bin/hw/android.hardware.gatekeeper@1.0-service
 vendor/bin/hw/android.hardware.graphics.allocator@2.0-service
 vendor/bin/hw/android.hardware.graphics.composer@2.1-service
-vendor/bin/hw/android.hardware.keymaster@3.0-service
 vendor/bin/hw/android.hardware.light@2.0-service-mediatek
 vendor/bin/hw/android.hardware.media.omx@1.0-service
 vendor/bin/hw/android.hardware.memtrack@1.0-service
@@ -596,7 +589,6 @@ vendor/etc/init/android.hardware.drm@1.0-service.widevine.rc
 vendor/etc/init/android.hardware.gatekeeper@1.0-service.rc
 vendor/etc/init/android.hardware.graphics.allocator@2.0-service.rc
 vendor/etc/init/android.hardware.graphics.composer@2.1-service.rc
-vendor/etc/init/android.hardware.keymaster@3.0-service.rc
 vendor/etc/init/android.hardware.light@2.0-service-mediatek.rc
 vendor/etc/init/android.hardware.media.omx@1.0-service.rc
 vendor/etc/init/android.hardware.memtrack@1.0-service.rc
@@ -889,7 +881,6 @@ vendor/lib/hw/android.hardware.gatekeeper@1.0-impl.so
 vendor/lib/hw/android.hardware.graphics.allocator@2.0-impl.so
 vendor/lib/hw/android.hardware.graphics.composer@2.1-impl.so
 vendor/lib/hw/android.hardware.graphics.mapper@2.0-impl.so
-vendor/lib/hw/android.hardware.keymaster@3.0-impl.so
 vendor/lib/hw/android.hardware.light@2.0-impl-mediatek.so
 vendor/lib/hw/android.hardware.memtrack@1.0-impl.so
 vendor/lib/hw/android.hardware.renderscript@1.0-impl.so
@@ -1345,7 +1336,6 @@ vendor/lib64/hw/android.hardware.gatekeeper@1.0-impl.so
 vendor/lib64/hw/android.hardware.graphics.allocator@2.0-impl.so
 vendor/lib64/hw/android.hardware.graphics.composer@2.1-impl.so
 vendor/lib64/hw/android.hardware.graphics.mapper@2.0-impl.so
-vendor/lib64/hw/android.hardware.keymaster@3.0-impl.so
 vendor/lib64/hw/android.hardware.light@2.0-impl-mediatek.so
 vendor/lib64/hw/android.hardware.memtrack@1.0-impl.so
 vendor/lib64/hw/android.hardware.renderscript@1.0-impl.so
@@ -1576,8 +1566,6 @@ vendor/lib64/libion_mtk.so
 vendor/lib64/libion_ulit.so
 vendor/lib64/libipsec_ims_shr.so
 vendor/lib64/libjpeg-alpha.so
-vendor/lib64/libkeystore-engine-wifi-hidl.so
-vendor/lib64/libkeystore-wifi-hidl.so
 vendor/lib64/libksensor.so
 vendor/lib64/libmegface.so
 vendor/lib64/libmegsegment.so

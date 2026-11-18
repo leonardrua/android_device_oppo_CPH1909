@@ -91,6 +91,16 @@ PRODUCT_PACKAGES += \
     android.hardware.usb@1.0-service \
     power.mt6765
 
+# Keymaster: source-build the HIDL 3.0 service instead of copying the stock 8.1
+# blobs (adapted from xiaomi-lotus-devs commit f469325, "lotus: Build keymaster
+# from source", for the same MT6765 / Android 8.1 -> 10 bring-up). The keystore
+# Wi-Fi HIDL libraries are consumers of the source-built keymaster service.
+PRODUCT_PACKAGES += \
+    android.hardware.keymaster@3.0-service \
+    android.hardware.keymaster@3.0-impl \
+    libkeystore-engine-wifi-hidl \
+    libkeystore-wifi-hidl
+
 # Biometrics / fingerprint
 #
 # The CPH1909 uses a Silead sensor behind /dev/silead_fp (CONFIG_SILEAD_FP=y in
