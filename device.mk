@@ -186,6 +186,16 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     libgui_vendor
 
+# VNDK
+#
+# 8.1 vendor blobs were linked against the v28 libbase ABI. Copy the v28
+# vndk-sp libbase into /vendor and the blob_fixup above rewrites their
+# DT_NEEDED to libbase-v28.so. Paths verified in AOSP 10
+# (prebuilts/vndk/v28/...). Adapted from xiaomi-lotus-devs commit 5e805fb.
+PRODUCT_COPY_FILES += \
+    prebuilts/vndk/v28/arm64/arch-arm-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_VENDOR)/lib/libbase-v28.so \
+    prebuilts/vndk/v28/arm64/arch-arm64-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libbase-v28.so
+
 # Audio: build generic audio modules from source (adapted from
 # xiaomi-lotus-devs commit 8610177, same MT6765 tree). audio.a2dp.default is
 # already enabled above. audio.bluetooth.default is a real LineageOS 17.1

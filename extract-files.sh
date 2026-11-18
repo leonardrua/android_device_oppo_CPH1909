@@ -53,6 +53,41 @@ if [ -z "${SRC}" ]; then
     SRC="adb"
 fi
 
+function blob_fixup() {
+    case "${1}" in
+        vendor/lib*/hw/gralloc.mt6765.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/hw/hwcomposer.mt6765.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libsrv_um.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libion_ulit.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libmtkcam_stdutils.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/hw/android.hardware.sensors@1.0-impl-mediatek.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/lib*/libnvram.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/lib*/libsysenv.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/bin/hw/android.hardware.drm@1.0-service.widevine)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/bin/hw/android.hardware.wifi@1.0-service)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+    esac
+}
+
 # Initialize the helper
 setup_vendor "${DEVICE}" "${VENDOR}" "${ANDROID_ROOT}" false "${CLEAN_VENDOR}"
 
