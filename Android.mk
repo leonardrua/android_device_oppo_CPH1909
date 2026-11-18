@@ -100,6 +100,22 @@ ALL_DEFAULT_INSTALLED_MODULES += $(GATEKEEPER_DEFAULT_SYMLINK)
 # mt6765 variant module, so its .default probe is reachable and the
 # libSoftGatekeeper.so alias is the only thing that answers it.
 
+include $(CLEAR_VARS)
+
+# First-stage ramdisk fstab.
+#
+# The kernel DT no longer carries firmware/android/fstab, so Android 10 first
+# stage init uses GetFstabPath(), which probes /odm/etc/fstab.<hw>,
+# /vendor/etc/fstab.<hw> and /fstab.<hw>. Neither /odm nor /vendor is mounted
+# that early, so the file has to live in the boot ramdisk at /fstab.mt6765.
+# Adapted from xiaomi-lotus-devs commit dd70e2e ("lotus: Switch to 2SI").
+LOCAL_MODULE := fstab.mt6765_ramdisk
+LOCAL_MODULE_STEM := fstab.mt6765
+LOCAL_SRC_FILES := rootdir/etc/fstab.mt6765
+LOCAL_MODULE_CLASS := ETC
+LOCAL_MODULE_PATH := $(TARGET_RAMDISK_OUT)
+include $(BUILD_PREBUILT)
+
 # Partition mount points inside the vendor partition.
 #
 # fstab.mt6765 mounts protect1, protect2, nvdata, nvcfg and persist on

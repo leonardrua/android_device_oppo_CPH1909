@@ -100,6 +100,18 @@ PRODUCT_PACKAGES += \
     android.hardware.usb@1.0-service.basic \
     power.mt6765
 
+# First-stage ramdisk fstab.
+#
+# The kernel DT no longer carries firmware/android/fstab (kernel commit 8e24bd2,
+# "ARM64: dts: Switch mt6765 to 2-stage-init"), so first-stage init falls back
+# to GetFstabPath() and needs /fstab.mt6765 in the boot ramdisk. The module is
+# defined in the top-level Android.mk because this tree has no rootdir/Android.mk
+# and the build only includes the device's top-level makefile (confirmed in the
+# CI log: the only "including device/oppo/CPH1909/Android.mk" line is the
+# top-level one).
+PRODUCT_PACKAGES += \
+    fstab.mt6765_ramdisk
+
 # Use the LineageOS "basic" USB HAL (hardware/lineage/interfaces/usb/1.0-basic,
 # adapted from xiaomi-lotus-devs commit 738c188) instead of the AOSP default:
 # both register the init service vendor.usb-hal-1-0, and this device ships no
@@ -232,12 +244,17 @@ PRODUCT_PACKAGES += \
 
 # Configs
 #
-# Only the /vendor copy is installed. On this non-system-as-root device the
-# kernel DT fstab (mt6765.dts) is authoritative for first-stage mount: init
-# mounts /system from it, pivots the root to /system, then mounts /vendor from
-# the new root, all before this file is ever parsed. The same file then serves
-# the second-stage mount_all from the stock init.mt6765.rc and recovery
-# (TARGET_RECOVERY_FSTAB).
+# Two copies of the fstab. The ramdisk copy (fstab.mt6765_ramdisk, defined in
+# the top-level Android.mk) is what first-stage init reads from /fstab.mt6765
+# now that the kernel DT no longer carries a firmware/android/fstab node: Q's
+# GetFstabPath() probes /odm/etc/fstab.<hw>, /vendor/etc/fstab.<hw> and
+# /fstab.<hw>, so the ramdisk root is the only one reachable before /system and
+# /vendor are mounted. The entries used there carry first_stage_mount, so init
+# mounts /system, pivots to it, then mounts /vendor.
+#
+# This /vendor copy serves the second-stage mount_all from the stock
+# init.mt6765.rc and recovery (TARGET_RECOVERY_FSTAB). fs_mgr skips entries that
+# already carry first_stage_mount and are mounted, so nothing is mounted twice.
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/fstab.mt6765:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6765
 

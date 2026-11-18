@@ -1,21 +1,18 @@
 # Android fstab for OPPO A5s (CPH1909, MT6765) - LineageOS 17.1
 #
-# This is the second-stage/recovery fstab, installed as
-# /vendor/etc/fstab.mt6765. The stock init.mt6765.rc runs
-#     mount_all /vendor/etc/fstab.mt6765
-# from its `on fs` block, and TARGET_RECOVERY_FSTAB installs the same file for
-# recovery.
+# Installed twice: as /fstab.mt6765 in the boot ramdisk (module
+# fstab.mt6765_ramdisk) and as /vendor/etc/fstab.mt6765. This is the 2-stage
+# init (2SI) layout: the kernel DT no longer carries a firmware/android/fstab
+# node, so first-stage init resolves the fstab through GetFstabPath()
+# (/odm/etc/fstab.<hw>, /vendor/etc/fstab.<hw>, /fstab.<hw>) and finds only
+# the ramdisk copy. It mounts /system, pivots to it (TrySwitchSystemAsRoot ->
+# SwitchRoot) and then mounts /vendor from the new root, all using the
+# first_stage_mount entries below.
 #
-# This device is A-only, non-system-as-root and legacy Treble (O-MR1 vendor):
-# the boot image carries a ramdisk, and first-stage init does NOT read this
-# file. The kernel device tree (arch/arm64/boot/dts/mediatek/mt6765.dts)
-# contains a firmware/android/fstab node with /system and /vendor, and
-# first-stage init prefers it (ReadFirstStageFstab -> ReadFstabFromDt). It
-# mounts /system, pivots the root to it (TrySwitchSystemAsRoot -> SwitchRoot),
-# then mounts /vendor from the new root. The stock `wait,recoveryonly` flags
-# below are therefore correct: normal-boot mounting has already happened by
-# the time this file is parsed, and `recoveryonly` keeps those entries out of
-# the second-stage mount_all while still letting recovery mount them.
+# The /vendor copy then serves the second-stage mount_all from the stock
+# init.mt6765.rc and recovery (TARGET_RECOVERY_FSTAB). fs_mgr skips
+# first_stage_mount entries that are already mounted, so nothing is mounted
+# twice.
 #
 # /odm is listed because the scatter defines a 256 MiB odm partition, but the
 # factory image leaves it zeroed (no ext4 superblock). recoveryonly matches
@@ -31,8 +28,8 @@
 #
 # <src>                                                  <mnt_point>          <type>  <mnt_flags and options>                                              <fs_mgr_flags>
 
-/dev/block/platform/bootdevice/by-name/system             /system              ext4    ro                                                                   wait,recoveryonly
-/dev/block/platform/bootdevice/by-name/vendor             /vendor              ext4    ro                                                                   wait,recoveryonly
+/dev/block/platform/bootdevice/by-name/system             /system              ext4    ro                                                                   wait,first_stage_mount
+/dev/block/platform/bootdevice/by-name/vendor             /vendor              ext4    ro                                                                   wait,first_stage_mount
 /dev/block/platform/bootdevice/by-name/odm                /odm                 ext4    ro                                                                   wait,recoveryonly
 
 /dev/block/platform/bootdevice/by-name/cache              /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                   wait,check
