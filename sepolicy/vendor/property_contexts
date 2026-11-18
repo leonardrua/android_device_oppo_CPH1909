@@ -91,6 +91,10 @@ persist.oppo.				u:object_r:mtk_persist_prop:s0
 # --- audio HAL vendor params (persist.af.*; persist.audio.* is AOSP's) ---
 persist.af.				u:object_r:mtk_persist_prop:s0
 persist.rm.				u:object_r:mtk_persist_prop:s0
+# Dirac: these are build-time defaults in vendor.prop read by the audio stack.
+# No Dirac daemon is shipped in this tree, so no set_prop grant is needed;
+# labelling the family keeps reads on mtk_persist_prop instead of default_prop.
+persist.dirac.				u:object_r:mtk_persist_prop:s0
 
 # --- log / trace helpers not covered by AOSP ---
 persist.logmuch.			u:object_r:mtk_persist_prop:s0
