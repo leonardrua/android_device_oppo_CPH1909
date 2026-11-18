@@ -99,6 +99,9 @@ type mtk_hal_dfps_hwservice, hwservice_manager_type;
 # Stock 8.1 labels interfaces.factory{Ata,Interface} with this type. Both are
 # declared in this tree's manifest and implemented by the factory service.
 type factory_interface_hwservice, hwservice_manager_type;
+# IMwis is declared in the device manifest as on stock. No server binary ships
+# in this tree, so there is deliberately no add_hwservice grant yet.
+type mtk_hal_mwis_hwservice, hwservice_manager_type;
 
 # --- OPPO hwservice types ---
 type hal_cryptoeng_hwservice, hwservice_manager_type;
