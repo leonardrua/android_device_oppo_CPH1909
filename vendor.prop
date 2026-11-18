@@ -5,8 +5,9 @@
 # default.prop, keeping the properties that the prebuilt MediaTek / OPPO vendor
 # blobs and their rc files actually read and dropping the ones that only
 # mattered to the ColorOS framework (ro.com.google.gmsversion, ro.setupwizard.*,
-# pm.dexopt.*, the per-tag persist.log.tag.* block, and the ro.mtk_* feature
-# switches no blobs consult).
+# pm.dexopt.* and the per-tag persist.log.tag.* block). A stock-confirmed
+# subset of MTK ro.mtk_* feature switches is appended at the end for parity
+# with the stock vendor image and the MT6765 LineageOS reference tree.
 #
 # Naming: the stock 8.1 blobs read the unprefixed ro.mtk_* names that the stock
 # vendor build.prop set. Android-10-era MTK trees use ro.vendor.mtk_* because
@@ -208,3 +209,81 @@ persist.service.acm.enable=0
 # Power-off charging / boot
 sys.ipo.disable=1
 sys.ipo.pwrdncap=2
+
+# Additional MTK properties from the stock CPH1909 /vendor/build.prop.
+# These are the MTK-generic entries from the lineage-17.1 MT6765 reference
+# vendor.prop that this device also ships. Values are the stock CPH1909
+# values, not the reference device values; Xiaomi-only keys are omitted.
+
+# Audio
+ro.mtk_audio_alac_support=1
+ro.mtk_audio_ape_support=1
+
+# Camera
+ro.mtk_cam_mfb_support=3
+ro.mtk_cam_stereo_camera_support=1
+ro.mtk_slow_motion_support=1
+ro.mtk_zsdhdr_support=1
+
+# Display
+ro.mtk_blulight_def_support=1
+
+# DRAM
+ro.mtk_config_max_dram_size=0x800000000
+
+# DRM
+ro.mtk_cta_drm_support=1
+ro.mtk_oma_drm_support=1
+
+# Media
+ro.have_aacencode_feature=1
+ro.mtk_pq_color_mode=1
+
+# GPS
+ro.mtk_log_hide_gps=0
+
+# Radio
+bgw.current3gband=0
+ro.mtk_data_config=1
+ro.mtk_eap_sim_aka=1
+ro.mtk_embms_support=1
+ro.mtk_external_sim_only_slots=0
+ro.mtk_external_sim_support=1
+ro.mtk_md_world_mode_support=1
+ro.mtk_modem_monitor_support=1
+ro.mtk_rild_read_imsi=1
+ro.mtk_world_phone_policy=0
+ro.sim_me_lock_mode=0
+ro.sim_refresh_reset_by_modem=1
+
+# IMS
+persist.mtk_ims_support=1
+ro.md_auto_setup_ims=1
+
+# WFD
+ro.mtk_wfd_support=1
+wfd.dummy.enable=1
+wfd.iframesize.level=0
+
+# WiFi
+ro.ap_info_monitor=0
+ro.mtk_wappush_support=1
+
+# Other
+persist.meta.dumpdata=0
+ro.com.android.mobiledata=true
+ro.email_support_ucs2=0
+ro.ksc5601_write=0
+ro.mtk_afw_support=1
+ro.mtk_bip_scws=1
+ro.mtk_cta_set=1
+ro.mtk_deinterlace_support=1
+ro.mtk_enable_md1=1
+ro.mtk_pow_perf_support=1
+ro.mtk_rebootmeta_support=0
+ro.mtk_search_db_support=1
+ro.mtk_send_rr_support=1
+ro.mtk_single_bin_modem_support=1
+ro.opa.eligible_device=true
+ro.ussd_ksc5601=0
+service.wcn.driver.ready=no
