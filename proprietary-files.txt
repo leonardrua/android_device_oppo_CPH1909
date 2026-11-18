@@ -883,15 +883,10 @@ vendor/lib/hw/android.hardware.light@2.0-impl-mediatek.so
 vendor/lib/hw/android.hardware.memtrack@1.0-impl.so
 vendor/lib/hw/android.hardware.renderscript@1.0-impl.so
 vendor/lib/hw/android.hardware.sensors@1.0-impl-mediatek.so
-vendor/lib/hw/android.hardware.soundtrigger@2.0-impl.so
 vendor/lib/hw/android.hardware.thermal@1.0-impl.so
-vendor/lib/hw/audio.primary.default.so
 vendor/lib/hw/audio.primary.mt6765.so
-vendor/lib/hw/audio.r_submix.default.so
 vendor/lib/hw/audio.r_submix.mt6765.so
-vendor/lib/hw/audio.usb.default.so
 vendor/lib/hw/audio.usb.mt6765.so
-vendor/lib/hw/audio_policy.stub.so
 vendor/lib/hw/dfps.mt6765.so
 vendor/lib/hw/fingerprint.silead.default.so
 vendor/lib/hw/flp.mt6765.so
@@ -1237,8 +1232,6 @@ vendor/lib/libstrongswan.so
 vendor/lib/libsysenv.so
 vendor/lib/libthermalalgo.so
 vendor/lib/libthha.so
-vendor/lib/libtinycompress.so
-vendor/lib/libtinyxml.so
 vendor/lib/libudf.so
 vendor/lib/libufwriter.so
 vendor/lib/libui_ext.so
@@ -1283,7 +1276,6 @@ vendor/lib/modules/wlan_drv_gen4m.ko
 vendor/lib/modules/wmt_chrdev_wifi.ko
 vendor/lib/modules/wmt_drv.ko
 vendor/lib/soter_attk_provision.so
-vendor/lib/soundfx/libaudiopreprocessing.so
 vendor/lib/soundfx/libbundlewrapper.so
 vendor/lib/soundfx/libdownmix.so
 vendor/lib/soundfx/libeffectproxy.so
@@ -1336,13 +1328,9 @@ vendor/lib64/hw/android.hardware.memtrack@1.0-impl.so
 vendor/lib64/hw/android.hardware.renderscript@1.0-impl.so
 vendor/lib64/hw/android.hardware.sensors@1.0-impl-mediatek.so
 vendor/lib64/hw/android.hardware.thermal@1.0-impl.so
-vendor/lib64/hw/audio.primary.default.so
 vendor/lib64/hw/audio.primary.mt6765.so
-vendor/lib64/hw/audio.r_submix.default.so
 vendor/lib64/hw/audio.r_submix.mt6765.so
-vendor/lib64/hw/audio.usb.default.so
 vendor/lib64/hw/audio.usb.mt6765.so
-vendor/lib64/hw/audio_policy.stub.so
 vendor/lib64/hw/dfps.mt6765.so
 vendor/lib64/hw/fingerprint.egis.default.so
 vendor/lib64/hw/fingerprint.silead.default.so
@@ -1647,8 +1635,6 @@ vendor/lib64/libstface_seg_ocl.so
 vendor/lib64/libstrongswan.so
 vendor/lib64/libsysenv.so
 vendor/lib64/libthha.so
-vendor/lib64/libtinycompress.so
-vendor/lib64/libtinyxml.so
 vendor/lib64/libudf.so
 vendor/lib64/libufwriter.so
 vendor/lib64/libui_ext.so
@@ -1679,7 +1665,6 @@ vendor/lib64/mediadrm/libdrmclearkeyplugin.so
 vendor/lib64/mediadrm/libmockdrmcryptoplugin.so
 vendor/lib64/mediadrm/libwvdrmengine.so
 vendor/lib64/soter_attk_provision.so
-vendor/lib64/soundfx/libaudiopreprocessing.so
 vendor/lib64/soundfx/libbundlewrapper.so
 vendor/lib64/soundfx/libdownmix.so
 vendor/lib64/soundfx/libeffectproxy.so

@@ -116,6 +116,20 @@ PRODUCT_PACKAGES += \
     android.hardware.vibrator@1.0-impl \
     android.hardware.vibrator@1.0-service
 
+# Audio: build generic audio modules from source (adapted from
+# xiaomi-lotus-devs commit 8610177, same MT6765 tree). audio.a2dp.default is
+# already enabled above; audio.bluetooth.default from the source commit is not
+# a LineageOS 17.1 module and was omitted. The vendor copies of these targets
+# only produced duplicate-rule warnings and shadowed the source modules.
+PRODUCT_PACKAGES += \
+    audio.usb.default \
+    audio.r_submix.default \
+    audio_policy.stub \
+    android.hardware.soundtrigger@2.0 \
+    libaudiopreprocessing \
+    libtinycompress \
+    libtinyxml
+
 # Biometrics / fingerprint
 #
 # The CPH1909 uses a Silead sensor behind /dev/silead_fp (CONFIG_SILEAD_FP=y in
