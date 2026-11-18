@@ -185,7 +185,7 @@
   <array name="wifi.controller.tx_levels"> <!-- mA -->
   </array>
   <!-- Operating volatage for wifi radio in mV. 0 by default-->
-   <item name="wifi.controller.voltage">3.3</item>
+   <item name="wifi.controller.voltage">3300</item>
 
   <array name="wifi.batchedscan"> <!-- mA -->
     <value>.0002</value> <!-- 1-8/hr -->
