@@ -99,14 +99,30 @@ type mtk_hal_dfps_hwservice, hwservice_manager_type;
 # Stock 8.1 labels interfaces.factory{Ata,Interface} with this type. Both are
 # declared in this tree's manifest and implemented by the factory service.
 type factory_interface_hwservice, hwservice_manager_type;
-# IMwis is declared in the manifest but no HAL implementation ships in this
-# tree; label it explicitly so a future service does not register as
-# default_hwservice. No add_hwservice grant until a server domain exists.
-type mtk_hal_mwis_hwservice, hwservice_manager_type;
 
 # --- OPPO hwservice types ---
 type hal_cryptoeng_hwservice, hwservice_manager_type;
 type hal_fingerprintpay_hwservice, hwservice_manager_type;
+
+# add_hwservice() only grants hwservice_manager { add find } on the interface
+# plus add on hidl_base_hwservice. The server still needs binder access to
+# hwservicemanager to actually make that call; Q provides it via hwbinder_use().
+# Stock 8.1 granted the same binder access to every daemon listed here.
+hwbinder_use(mtk_hal_soter)
+hwbinder_use(mtk_hal_dfps)
+hwbinder_use(mtk_hal_keyattestation)
+hwbinder_use(mtk_hal_mms)
+hwbinder_use(mtk_hal_mtkcodecservice)
+hwbinder_use(mtk_hal_pq)
+hwbinder_use(mtk_hal_cryptoeng)
+hwbinder_use(mtk_hal_factory)
+hwbinder_use(mtk_volte_imcb)
+hwbinder_use(mtk_volte_ua)
+hwbinder_use(mtk_vtservice)
+hwbinder_use(mtk_nvram_daemon)
+hwbinder_use(mtk_lbs)
+hwbinder_use(mtk_netdagent)
+hwbinder_use(mtk_mnld)
 
 # Property type for the MediaTek / OPPO persist keys labelled in
 # sepolicy/vendor/property_contexts. AOSP only allows init and vendor_init to

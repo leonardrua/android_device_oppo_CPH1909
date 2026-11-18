@@ -364,16 +364,6 @@
         <fqname>@4.0::IBiometricsFingerprintRbs/default</fqname>
     </hal>
     <hal format="hidl">
-        <name>vendor.mediatek.hardware.camera.advcam</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IAdvCamControl</name>
-            <instance>internal/0</instance>
-        </interface>
-        <fqname>@1.0::IAdvCamControl/internal/0</fqname>
-    </hal>
-    <hal format="hidl">
         <name>vendor.mediatek.hardware.camera.callbackclient</name>
         <transport>hwbinder</transport>
         <version>1.0</version>
@@ -397,16 +387,6 @@
             <instance>internal/0</instance>
         </interface>
         <fqname>@1.0::ICCAPControl/internal/0</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>vendor.mediatek.hardware.camera.lomoeffect</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>ILomoEffect</name>
-            <instance>internal/0</instance>
-        </interface>
-        <fqname>@1.0::ILomoEffect/internal/0</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.dfps</name>
@@ -437,16 +417,6 @@
             <instance>imsa</instance>
         </interface>
         <fqname>@1.0::IImsa/imsa</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>vendor.mediatek.hardware.keyinstall</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IKeyinstall</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@1.0::IKeyinstall/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.keymaster_attestation</name>
@@ -547,16 +517,6 @@
         <fqname>@1.1::IMtkCodecService/default</fqname>
     </hal>
     <hal format="hidl">
-        <name>vendor.mediatek.hardware.mwis</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IMwis</name>
-            <instance>hidl-mwis</instance>
-        </interface>
-        <fqname>@1.0::IMwis/hidl-mwis</fqname>
-    </hal>
-    <hal format="hidl">
         <name>vendor.mediatek.hardware.netdagent</name>
         <transport>hwbinder</transport>
         <version>1.0</version>
@@ -595,16 +555,6 @@
             <instance>default</instance>
         </interface>
         <fqname>@2.0::IPictureQuality/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>vendor.mediatek.hardware.presence</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IPresence</name>
-            <instance>presence_hal_service</instance>
-        </interface>
-        <fqname>@1.0::IPresence/presence_hal_service</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.radio</name>
@@ -693,16 +643,6 @@
         <fqname>@1.1::IOemHook/slot2</fqname>
     </hal>
     <hal format="hidl">
-        <name>vendor.mediatek.hardware.rcs</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IRcs</name>
-            <instance>rcs_hal_service</instance>
-        </interface>
-        <fqname>@1.0::IRcs/rcs_hal_service</fqname>
-    </hal>
-    <hal format="hidl">
         <name>vendor.mediatek.hardware.videotelephony</name>
         <transport>hwbinder</transport>
         <version>1.0</version>
@@ -711,16 +651,6 @@
             <instance>default</instance>
         </interface>
         <fqname>@1.0::IVideoTelephony/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>vendor.mediatek.hardware.wfo</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IWifiOffload</name>
-            <instance>wfo_hidl_service</instance>
-        </interface>
-        <fqname>@1.0::IWifiOffload/wfo_hidl_service</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.wifi.hostapd</name>
@@ -781,6 +711,29 @@
             <instance>default</instance>
         </interface>
         <fqname>@1.0::ISileadFingerprint/default</fqname>
+    </hal>
+    <!-- Retained: mtk_volte_imcb/mtk_volte_ua are granted add on the stock
+         volte_uce_ua/volte_rcs_ua hwservice types, so these two interfaces
+         are still plausibly registered by those daemons. -->
+    <hal format="hidl">
+        <name>vendor.mediatek.hardware.presence</name>
+        <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IPresence</name>
+            <instance>presence_hal_service</instance>
+        </interface>
+        <fqname>@1.0::IPresence/presence_hal_service</fqname>
+    </hal>
+    <hal format="hidl">
+        <name>vendor.mediatek.hardware.rcs</name>
+        <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IRcs</name>
+            <instance>rcs_hal_service</instance>
+        </interface>
+        <fqname>@1.0::IRcs/rcs_hal_service</fqname>
     </hal>
     <sepolicy>
         <version>27.0</version>
