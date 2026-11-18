@@ -238,6 +238,16 @@ PRODUCT_PACKAGES += \
     libhwbinder \
     libhwbinder.vendor
 
+# libstdc++ for the 8.1 vendor blobs
+#
+# 126 vendor ELFs DT_NEEDED libstdc++.so (camera stack, IMS/modem daemons,
+# libhwuiext, libmediatek_exceptionlog, ...). Under full VNDK the vendor
+# namespace no longer searches /system/${LIB}, so request the Soong vendor
+# variant of bionic's libstdc++ (vendor_available: true in
+# bionic/libc/Android.bp) to install /vendor/lib{,64}/libstdc++.so.
+PRODUCT_PACKAGES += \
+    libstdc++.vendor
+
 # Bluetooth A2DP audio HAL
 PRODUCT_PACKAGES += \
     audio.a2dp.default
