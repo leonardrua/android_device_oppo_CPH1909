@@ -107,10 +107,8 @@ ro.radio.simcount=2
 ro.telephony.default_network=9,9
 ro.telephony.sim.count=2
 ro.mtk_ril_mode=c6m_1rild
-ro.mtk_ims_support=1
 ro.mtk_lte_support=1
 persist.mtk.volte.enable=1
-persist.mtk.ims_support=1
 persist.mtk_mims_support=2
 persist.mtk_ussi_support=1
 persist.mtk_vilte_support=1
@@ -257,6 +255,8 @@ ro.sim_me_lock_mode=0
 ro.sim_refresh_reset_by_modem=1
 
 # IMS
+# IMS feature gate. The stock vendor build.prop uses the underscore spelling;
+# the dotted/ro variants from the reference tree were duplicates and removed.
 persist.mtk_ims_support=1
 ro.md_auto_setup_ims=1
 
