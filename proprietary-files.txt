@@ -1222,7 +1222,6 @@ vendor/lib/librilutilsmtk.so
 vendor/lib/librrc.so
 vendor/lib/libsec_mem.so
 vendor/lib/libsensor_custom.so
-vendor/lib/libsensorndkbridge.so
 vendor/lib/libsimaka.so
 vendor/lib/libsl_fp_impl.so
 vendor/lib/libspeech_enh_lib.so
@@ -1643,7 +1642,6 @@ vendor/lib64/librilutilsmtk.so
 vendor/lib64/libsec_mem.so
 vendor/lib64/libselinux_vendor.so
 vendor/lib64/libsensor_custom.so
-vendor/lib64/libsensorndkbridge.so
 vendor/lib64/libsimaka.so
 vendor/lib64/libsl_fp_impl.so
 vendor/lib64/libspeech_enh_lib.so

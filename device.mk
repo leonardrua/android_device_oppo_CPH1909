@@ -101,6 +101,13 @@ PRODUCT_PACKAGES += \
     libkeystore-engine-wifi-hidl \
     libkeystore-wifi-hidl
 
+# Sensors: build libsensorndkbridge from source instead of copying the stock 8.1
+# blobs (adapted from xiaomi-lotus-devs commit ac058b0, same MT6765 tree). The
+# Platform build already defines the target; the vendor copies only caused
+# duplicate-rule warnings and shadowed it.
+PRODUCT_PACKAGES += \
+    libsensorndkbridge
+
 # Biometrics / fingerprint
 #
 # The CPH1909 uses a Silead sensor behind /dev/silead_fp (CONFIG_SILEAD_FP=y in
