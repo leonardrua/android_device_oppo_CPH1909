@@ -171,17 +171,18 @@ system/etc/permissions/com.coloros.libraries.xml
 
 # Additional stock MediaTek/OPPO system/bin helpers referenced by the vendor
 # init scripts and their direct dependency closure. Keep these at their stock
-# system paths. The binaries are factory/meta/modem/logging helpers rather than
-# replacements for AOSP-built system services.
+# system paths. The binaries are modem/logging helpers rather than
+# replacements for AOSP-built system services. (system/bin/factory and
+# system/bin/meta_tst were removed: their only references are the dead
+# factory_init.rc / meta_init.rc and the ATM-gated meta_tst service in
+# init.mt6765.rc, none of which run on a normal boot.)
 system/bin/autochmod.sh
 system/bin/emdlogger1
 system/bin/emdlogger2
 system/bin/emdlogger5
-system/bin/factory
 system/bin/iwpriv
 system/bin/kpoc_charger
 system/bin/mdlogger
-system/bin/meta_tst
 system/lib/libmdloggerrecycle.so
 system/lib/libmemoryDumpEncoder.so
 system/lib64/libaudiocustparam.so
@@ -600,9 +601,6 @@ vendor/etc/init/fuelgauged_init.rc
 vendor/etc/init/fuelgauged_nvram_init.rc
 vendor/etc/init/gsm0710muxd.rc
 vendor/etc/init/hostapd.android.rc
-vendor/etc/init/hw/factory_init.connectivity.rc
-vendor/etc/init/hw/factory_init.project.rc
-vendor/etc/init/hw/factory_init.rc
 vendor/etc/init/hw/init.aee.rc
 vendor/etc/init/hw/init.connectivity.rc
 vendor/etc/init/hw/init.modem.rc
@@ -614,11 +612,6 @@ vendor/etc/init/hw/init.project.rc
 vendor/etc/init/hw/init.sensor_1_0.rc
 vendor/etc/init/hw/init.volte.rc
 vendor/etc/init/hw/init.mal.rc
-vendor/etc/init/hw/meta_init.connectivity.rc
-vendor/etc/init/hw/meta_init.modem.rc
-vendor/etc/init/hw/meta_init.project.rc
-vendor/etc/init/hw/meta_init.rc
-vendor/etc/init/hw/multi_init.rc
 vendor/etc/init/init.bip.rc
 vendor/etc/init/init.bt_drv.rc
 vendor/etc/init/init.cccifsd.rc
