@@ -108,6 +108,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     libsensorndkbridge
 
+# Thermal: build the HIDL 1.0 HAL from source (adapted from xiaomi-lotus-devs
+# commit bc8ad0a, same MT6765 tree). Confirmed in LOS 17.1
+# hardware/interfaces/thermal/1.0/default/Android.bp. The vendor copies only
+# produced duplicate-rule warnings and shadowed the source target.
+PRODUCT_PACKAGES += \
+    android.hardware.thermal@1.0-impl \
+    android.hardware.thermal@1.0-service
+
 # Vibrator: build the HIDL 1.0 HAL from source instead of copying the stock 8.1
 # blobs (adapted from xiaomi-lotus-devs commit 5181c28, same MT6765 tree). The
 # vendor copies only produced duplicate-rule warnings and shadowed the source
