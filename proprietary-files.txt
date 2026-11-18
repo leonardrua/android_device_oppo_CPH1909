@@ -97,6 +97,16 @@ system/lib64/libmrdump.so
 system/lib/libprogrambinary.so
 system/lib64/libprogrambinary.so
 
+# libskia.so: the stock 8.1 shared Skia library.
+#
+# LOS 17.1 builds libskia as cc_library_static (no .so), but the 8.1 vendor
+# blob libhwuiext.so DT_NEEDEDs libskia.so. The stock 8.1 shared lib is the
+# only option; its vendor-only deps (libmhalImageCodec, libdpframework,
+# libion_mtk, libjpeg-alpha) are already in /vendor. Android.mk copies
+# /system/lib{,64}/libskia.so into /vendor/lib{,64} so libhwuiext resolves.
+system/lib/libskia.so
+system/lib64/libskia.so
+
 # libsink.so: MTK IMS media sink, 32-bit only (as in stock).
 #
 # Chain: system/bin/vtservice -> libmtk_vt_service.so -> libimsma.so ->

@@ -150,4 +150,87 @@ $(LIBGUI_SYMLINK): $(LOCAL_INSTALLED_MODULE)
 	$(hide) ln -sf libgui_vendor.so $@
 ALL_DEFAULT_INSTALLED_MODULES += $(LIBGUI_SYMLINK)
 
+# Vendor-side core-only libs
+#
+# Several 8.1 vendor blobs DT_NEEDED core-only libs that LOS 17.1 builds
+# into /system/lib{,64} (no vendor_available/vndk). The Android 10 vendor
+# namespace (isolated, search /odm/${LIB}:/vendor/${LIB}, links
+# %LLNDK_LIBRARIES% + %VNDK_*) cannot load them from /system. Ship copies
+# in /vendor/lib{,64} so the vendor blobs resolve.
+#
+# These are all cc_library_shared in LOS 17.1 with no vendor_available,
+# vndk.enabled, or vendor: true, and no _vendor variant. Affected blobs:
+#   libmedia.so           <- audio.usb.mt6765.so, sound_trigger.primary.mt6765.so, libabfadp.so
+#   libcamera_client.so   <- libCustomFeature.so, libcam.hal3a.cctsvr.so, libmtkcam_cct.so
+#   libaudioclient.so     <- sound_trigger.primary.mt6765.so
+#   libnetd_client.so     <- bin/volte_stack
+#   liblogwrap.so         <- bin/ipsec_mon, libmtk-ril.so
+#   libsensor.so          <- libFactoryHALSensor.so
+#   libhwui.so            <- libhwuiext.so
+#   libpixelflinger.so    <- libccap.so
+#   libandroid_runtime.so <- libapplypatch_jni.so, libcoloros_sau_applypatch.so, libem_camera_jni.so
+#   libandroid_net.so     <- bin/mtk_agpsd
+#   libkeystore_binder.so <- bin/hw/vendor.oppo.hardware.biometrics.face@1.0-service, libwapi.so
+#   libnativehelper.so    <- libem_camera_jni.so, libwapi_cert.so
+#   libprogrambinary.so   <- libhwuiext.so (MTK HWUI program-binary cache)
+#   libaed.so             <- libhwuiext.so (MTK exception debug)
+#   vendor.mediatek.hardware.camera.device@1.1.so <- libmtkcam_cct.so
+#   vendor.qti.hardware.soter@1.0.so <- vendor.trustonic.soter@1.0-service
+#
+# libskia is NOT in this list: LOS 17.1 builds it as cc_library_static
+# (no .so), so the stock 8.1 libskia.so is shipped separately below.
+VENDOR_CORE_LIBS := \
+	libmedia.so \
+	libcamera_client.so \
+	libaudioclient.so \
+	libnetd_client.so \
+	liblogwrap.so \
+	libsensor.so \
+	libhwui.so \
+	libpixelflinger.so \
+	libandroid_runtime.so \
+	libandroid_net.so \
+	libkeystore_binder.so \
+	libnativehelper.so \
+	libprogrambinary.so \
+	libaed.so \
+	vendor.mediatek.hardware.camera.device@1.1.so \
+	vendor.qti.hardware.soter@1.0.so
+
+VENDOR_CORE_LIB_COPIES :=
+$(foreach lib,$(VENDOR_CORE_LIBS),\
+	$(eval VENDOR_CORE_LIB_COPIES += \
+		$(TARGET_OUT_VENDOR)/lib/$(lib) \
+		$(TARGET_OUT_VENDOR)/lib64/$(lib)))
+
+# Generate explicit copy rules: each /vendor/lib{,64}/<lib> depends on
+# /system/lib{,64}/<lib> (built by Soong as part of the LOS 17.1 build).
+$(foreach lib,$(VENDOR_CORE_LIBS),\
+	$(eval $(TARGET_OUT_VENDOR)/lib/$(lib): $(TARGET_OUT_SYSTEM)/lib/$(lib) \
+		@mkdir -p $(dir $@) \
+		$(hide) cp -f $$< $$@) \
+	$(eval $(TARGET_OUT_VENDOR)/lib64/$(lib): $(TARGET_OUT_SYSTEM)/lib64/$(lib) \
+		@mkdir -p $(dir $@) \
+		$(hide) cp -f $$< $$@))
+
+ALL_DEFAULT_INSTALLED_MODULES += $(VENDOR_CORE_LIB_COPIES)
+
+# libskia.so: LOS 17.1 builds libskia as cc_library_static (no .so), but
+# the 8.1 vendor blob libhwuiext.so DT_NEEDEDs libskia.so. The stock 8.1
+# shared lib is shipped into /system/lib{,64} (proprietary-files.txt) and
+# copied into /vendor/lib{,64} here so libhwuiext resolves.
+SKIA_VENDOR_COPIES := \
+	$(TARGET_OUT_VENDOR)/lib/libskia.so \
+	$(TARGET_OUT_VENDOR)/lib64/libskia.so
+
+$(TARGET_OUT_VENDOR)/lib/libskia.so: $(TARGET_OUT_SYSTEM)/lib/libskia.so
+	@mkdir -p $(dir $@)
+	$(hide) cp -f $< $@
+
+$(TARGET_OUT_VENDOR)/lib64/libskia.so: $(TARGET_OUT_SYSTEM)/lib64/libskia.so
+	@mkdir -p $(dir $@)
+	$(hide) cp -f $< $@
+
+ALL_DEFAULT_INSTALLED_MODULES += $(SKIA_VENDOR_COPIES)
+
 endif
