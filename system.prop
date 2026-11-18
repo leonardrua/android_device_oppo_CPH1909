@@ -9,6 +9,9 @@
 # Display
 ro.sf.lcd_density=320
 
+# Brand
+Build.BRAND=MTK
+
 # Radio
 #
 # The MTK RIL blobs are loaded by name through the generic rild shim, so the
