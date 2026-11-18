@@ -85,6 +85,48 @@ function blob_fixup() {
         vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
+        vendor/lib*/libavservices_minijail_vendor.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/lib*/hw/vendor.mediatek.hardware.nvram@1.0-impl.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/bin/hw/android.hardware.media.omx@1.0-service)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/bin/hw/android.hardware.broadcastradio@1.1-service)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/lib*/libFactoryHALCommon.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/lib*/libhwminijail.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/lib*/libwifi-hal.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        vendor/lib*/libmtkcam_sysutils.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libmtk-ril.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libcam.camadapter.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libcam1_utils.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libmtkcam_device3.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/lib*/libaudiocomponentengine_vendor.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
+        vendor/bin/mnld)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
     esac
 }
 
