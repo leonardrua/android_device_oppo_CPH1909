@@ -159,11 +159,14 @@ system/lib/libgralloc_extra_sys.so
 system/lib/libion_mtk_sys.so
 system/lib/libion_ulit_sys.so
 system/lib/libpq_prot_mtk.so
+system/lib/libshowlogo.so
 system/lib/libsignal.so
+system/lib/libsysenv_system.so
 system/lib/libvt_avsync.so
 system/lib/vendor.mediatek.hardware.videotelephony@1.0.so
 system/lib/vendor.mediatek.hardware.pq@2.0.so
 system/lib/vendor.mediatek.hardware.power@1.1.so
+system/etc/init/kpoc_charger.rc
 system/etc/permissions/com.coloros.libraries.xml
 
 # Additional stock MediaTek/OPPO system/bin helpers referenced by the vendor
@@ -176,6 +179,7 @@ system/bin/emdlogger2
 system/bin/emdlogger5
 system/bin/factory
 system/bin/iwpriv
+system/bin/kpoc_charger
 system/bin/mdlogger
 system/bin/meta_tst
 system/lib/libmdloggerrecycle.so
