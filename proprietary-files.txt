@@ -442,7 +442,7 @@ vendor/etc/.tp/.thermal_policy_05
 vendor/etc/.tp/thermal.conf
 vendor/etc/.tp/thermal.off.conf
 vendor/etc/Charming.cng
-vendor/etc/DRIVER.ISO
+
 vendor/etc/DSM.xml
 vendor/etc/DSM_config.xml
 vendor/etc/MMIGroupIQC.json

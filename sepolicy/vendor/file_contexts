@@ -301,12 +301,8 @@
 # /custom: ColorOS's carrier-config directory. init.mt6765.rc does `mkdir /custom`
 # in `on init`; pre-creating it in the image is what lets that command succeed on
 # a read-only root. No AOSP rule covers it.
-# /mnt/cd-rom: mount point for the MTK "driver CD" (init.mt6765.rc does
-# `mount iso9660 loop@/vendor/etc/DRIVER.ISO /mnt/cd-rom ro`). AOSP labels /mnt
-# itself tmpfs but has no rule for /mnt/cd-rom.
 #
-# Both are plain root-level directories with no policy meaning of their own, so
-# rootfs matches how AOSP labels comparable entries (/charger, /bugreports,
+# It is a plain root-level directory with no policy meaning of its own, so rootfs
+# matches how AOSP labels comparable entries (/charger, /bugreports,
 # /config, /lost+found).
 /custom                                                                                         u:object_r:rootfs:s0
-/mnt/cd-rom                                                                                     u:object_r:rootfs:s0
