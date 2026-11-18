@@ -17,8 +17,7 @@
 */
 -->
 <!--
-     Only the physical panel corner radius is overridden. The stock 8.1 and
-     ColorOS 11 SystemUI/framework APKs on this device do not contain a
+     Only the physical panel corner radius is overridden. The stock 8.1 SystemUI/framework APKs on this device do not contain a
      rounded_corner_content_padding resource (verified with `aapt2 dump
      resources`), so this value is not extractable from stock; 34px is the
      corner radius of the sibling MT6765 720x1520 OPPO A12/A11k panel and
