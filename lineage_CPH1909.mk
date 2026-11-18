@@ -8,7 +8,7 @@
 # by LineageOS 17.1 trees of other devices that launched with 8.1 stock
 # (product_launched_with_o_mr1.mk sets PRODUCT_SHIPPING_API_LEVEL := 27).
 $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
-$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/product_launched_with_o_mr1.mk)
 
 # Inherit some common LineageOS stuff
