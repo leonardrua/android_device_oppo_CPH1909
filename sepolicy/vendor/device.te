@@ -124,6 +124,16 @@ hwbinder_use(mtk_lbs)
 hwbinder_use(mtk_netdagent)
 hwbinder_use(mtk_mnld)
 
+# Stock 8.1 grants add/find on these hwservice types to the standard HAL
+# domains that register them. Without these, hwservicemanager denies the
+# registration on an enforcing build even though the interfaces are labelled
+# in hwservice_contexts. (D-03)
+add_hwservice(hal_bluetooth_default, mtk_hal_bluetooth_hwservice)
+add_hwservice(rild, mtk_hal_rild_hwservice)
+add_hwservice(hal_power_default, mtk_hal_power_hwservice)
+add_hwservice(hal_wifi_hostapd_default, mtk_hal_wifi_hostapd_hwservice)
+add_hwservice(hal_fingerprint_default, hal_fingerprintpay_hwservice)
+
 # Property type for the MediaTek / OPPO persist keys labelled in
 # sepolicy/vendor/property_contexts. AOSP only allows init and vendor_init to
 # set default_prop (public/domain.te), so without a dedicated type no vendor
