@@ -70,6 +70,11 @@ function blob_fixup() {
         vendor/lib*/libmtkcam_stdutils.so)
             patchelf --add-needed "libutilscallstack.so" "${2}"
             ;;
+        vendor/lib*/libmtkcam_debugutils.so)
+            # DT_NEEDED android::CallStack ctor/dtor (moved out of libutils
+            # into libutilscallstack in Android 10); blob only NEEDs libutils.
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
         vendor/lib*/hw/android.hardware.sensors@1.0-impl-mediatek.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
