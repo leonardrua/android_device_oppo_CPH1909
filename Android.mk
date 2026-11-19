@@ -205,13 +205,19 @@ $(foreach lib,$(VENDOR_CORE_LIBS),\
 
 # Generate explicit copy rules: each /vendor/lib{,64}/<lib> depends on
 # /system/lib{,64}/<lib> (built by Soong as part of the LOS 17.1 build).
-$(foreach lib,$(VENDOR_CORE_LIBS),\
-	$(eval $(TARGET_OUT_VENDOR)/lib/$(lib): $(TARGET_OUT_SYSTEM)/lib/$(lib) \
-		@mkdir -p $(dir $@) \
-		$(hide) cp -f $$< $$@) \
-	$(eval $(TARGET_OUT_VENDOR)/lib64/$(lib): $(TARGET_OUT_SYSTEM)/lib64/$(lib) \
-		@mkdir -p $(dir $@) \
-		$(hide) cp -f $$< $$@))
+# Use a define with real newlines: backslash continuations inside $(eval)
+# collapse to spaces and would merge the recipe into the dependency line
+# (making @mkdir a PHONY prerequisite).
+define copy-vendor-core-lib
+$(TARGET_OUT_VENDOR)/lib/$(1): $(TARGET_OUT_SYSTEM)/lib/$(1)
+	@mkdir -p $$(dir $$@)
+	$$(hide) cp -f $$< $$@
+$(TARGET_OUT_VENDOR)/lib64/$(1): $(TARGET_OUT_SYSTEM)/lib64/$(1)
+	@mkdir -p $$(dir $$@)
+	$$(hide) cp -f $$< $$@
+endef
+
+$(foreach lib,$(VENDOR_CORE_LIBS),$(eval $(call copy-vendor-core-lib,$(lib))))
 
 ALL_DEFAULT_INSTALLED_MODULES += $(VENDOR_CORE_LIB_COPIES)
 
