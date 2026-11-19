@@ -1,0 +1,2 @@
+# Local build artifacts (kernel/ramdisk from manual builds) - never commit.
+/out/
