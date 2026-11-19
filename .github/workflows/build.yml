@@ -69,7 +69,7 @@ on:
         description: 'Delete the old out directory before building'
         required: true
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
