@@ -18,8 +18,7 @@
 // boundary to the OPPO backend. OppoFaceHal forwards to the reconstructed
 // vendor.oppo.hardware.biometrics.face@1.0 interface (built from
 // interfaces/vendor/hardware/biometrics/face/1.0/, see OppoFaceHal.h). The
-// stock vendor backend service is disabled in this build, so the proxy
-// registers but reports OPERATION_NOT_SUPPORTED until it is enabled.
+// stock vendor backend service is enabled, so the proxy forwards to it.
 //
 cc_binary {
     name: "android.hardware.biometrics.face@1.0-service",

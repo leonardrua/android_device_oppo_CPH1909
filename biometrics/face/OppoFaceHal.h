@@ -25,7 +25,7 @@
  * vendor interface, mirroring how biometrics/fingerprint/ is the only place
  * that knows about the Silead module.
  *
- * STATUS: FORWARDING IMPLEMENTED, BACKEND DISABLED.
+ * STATUS: FORWARDING IMPLEMENTED, BACKEND ENABLED.
  * ------------------------------------------------
  * The vendor interface is reconstructed under
  * interfaces/vendor/hardware/biometrics/face/1.0/ and built as the
@@ -35,13 +35,14 @@
  * vendor IBiometricsFaceClientCallback back to the AOSP one.
  *
  * The stock vendor face service (vendor.oppo.hardware.biometrics.face@1.0-
- * service) is still deliberately *disabled* in this build (it DT_NEEDEDs the
- * ColorOS system-side lib android.frameworks.faceservice@1.0.so, whose
- * IFaceHalService handshake is an OPPO framework extension absent from
- * LineageOS). So initialize() finds no backend at runtime, and every method
- * below falls back to Status::OPERATION_NOT_SUPPORTED. The forwarding code is
- * present and compiles; it simply has nothing to talk to yet. This does not
- * claim face unlock works.
+ * service) is enabled: its init rc no longer marks it disabled, and the two
+ * interface libraries it DT_NEEDEDs are available -- android.frameworks.
+ * faceservice@1.0.so is shipped into /vendor/lib{,64} (LineageOS 17.1 does not
+ * build that ColorOS-specific interface), and vendor.oppo.hardware.biometrics.
+ * face@1.0.so is built from source here. initialize() uses the blocking
+ * getService("default", true) because the backend is class late_start and the
+ * proxy (class hal) starts first. The forwarding is reverse-engineered and
+ * UNVERIFIED; no device logs confirm face unlock works.
  *
  * The vendor method mapping is reverse-engineered and UNVERIFIED (the vendor
  * .hal is a reconstruction, and there are no device logs). Each method's doc
@@ -86,9 +87,9 @@ class OppoFaceHal {
     OppoFaceHal();
     ~OppoFaceHal();
 
-    /* Connects to the vendor service. Returns true once the backend is usable.
-     * With the stock vendor service disabled in this build this returns false
-     * and every operation below reports OPERATION_NOT_SUPPORTED. */
+    /* Connects to the vendor service (blocking getService with retry, since
+     * the backend is class late_start). Returns false only if the backend never
+     * registers, in which case operations report OPERATION_NOT_SUPPORTED. */
     bool initialize();
 
     /* AOSP setCallback()             -> vendor setNotify() */
@@ -135,8 +136,8 @@ class OppoFaceHal {
     Status resetLockout(const hidl_vec<uint8_t>& hat);
 
   private:
-    /* Connection to the stock vendor face service. Null until initialize()
-     * succeeds (and null in this build, since the backend is disabled). */
+    /* Connection to the stock vendor face service. Null only if initialize()
+     * could not find the backend (getService retries until it registers). */
     sp<vface::IBiometricsFace> mBackend;
 
     /* Adapter that relays the vendor IBiometricsFaceClientCallback to the AOSP

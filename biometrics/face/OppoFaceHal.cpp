@@ -271,16 +271,17 @@ OppoFaceHal::OppoFaceHal() : mUserId(-1) {}
 OppoFaceHal::~OppoFaceHal() = default;
 
 bool OppoFaceHal::initialize() {
-    /* tryGetService() is non-blocking: the stock vendor service is disabled in
-     * this build, so this returns null immediately and every operation falls
-     * back to OPERATION_NOT_SUPPORTED. If the backend is ever enabled, switch
-     * to the blocking getService() (or retry, as the Realme/OPPO fingerprint
-     * adapters do, since face_hal is a late_start service). */
-    mBackend = vface::IBiometricsFace::tryGetService();
+    /* The stock vendor face backend is class late_start, while this AOSP
+     * face@1.0 service is class hal -- it starts first. A one-shot
+     * tryGetService() would return null before the backend registers and leave
+     * every operation permanently OPERATION_NOT_SUPPORTED. getService("default",
+     * true) retries until the HIDL service is registered, so the proxy connects
+     * once the backend comes up. */
+    mBackend = vface::IBiometricsFace::getService("default", true);
     if (mBackend == nullptr) {
         ALOGW("OPPO vendor face service (%s) is not available; registering the "
               "AOSP face@1.0 interface with no backend "
-              "(OPERATION_NOT_SUPPORTED until it is enabled)",
+              "(OPERATION_NOT_SUPPORTED)",
               kOppoFaceServiceName);
         return false;
     }

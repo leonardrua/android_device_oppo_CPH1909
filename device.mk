@@ -279,9 +279,10 @@ PRODUCT_PACKAGES += \
 # stack binds to, and forwards to the OPPO backend through OppoFaceHal. The
 # vendor interface is rebuilt from a reconstruction of the stock library
 # (interfaces/vendor/hardware/biometrics/face/1.0/). The stock face_hal service
-# stays disabled (it also needs the ColorOS android.frameworks.faceservice@1.0
-# handshake), so the proxy registers but every operation reports
-# OPERATION_NOT_SUPPORTED until that backend is enabled; see
+# is enabled (its rc no longer marks it disabled) and the ColorOS-only
+# android.frameworks.faceservice@1.0.so it needs is shipped into /vendor/lib{,64};
+# OppoFaceHal connects to the late_start backend with a blocking getService.
+# The forwarding is reverse-engineered and UNVERIFIED; see
 # biometrics/face/OppoFaceHal.h. This does not claim face unlock works.
 PRODUCT_PACKAGES += \
     android.hardware.biometrics.face@1.0-service \

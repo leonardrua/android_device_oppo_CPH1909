@@ -383,6 +383,14 @@ vendor/bin/hw/vendor.mediatek.hardware.mtkcodecservice@1.1-service
 vendor/bin/hw/vendor.mediatek.hardware.power@1.1-service
 vendor/bin/hw/vendor.mediatek.hardware.pq@2.0-service
 vendor/bin/hw/vendor.oppo.hardware.biometrics.face@1.0-service
+
+# android.frameworks.faceservice@1.0.so: OPPO framework HIDL interface lib
+# DT_NEEDED by the stock face backend service above. LineageOS 17.1 does not
+# build this interface (only the AIDL IFaceService), so ship the stock lib into
+# /vendor/lib{,64} so the backend can load. Its deps are all LLNDK/VNDK.
+vendor/lib/android.frameworks.faceservice@1.0.so
+vendor/lib64/android.frameworks.faceservice@1.0.so
+
 vendor/bin/hw/vendor.oppo.hardware.biometrics.fingerprint@2.1-service
 vendor/bin/hw/vendor.oppo.hardware.biometrics.fingerprintpay@1.0-service
 vendor/bin/hw/vendor.oppo.hardware.cryptoeng@1.0-service

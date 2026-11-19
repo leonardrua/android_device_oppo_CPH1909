@@ -6,8 +6,7 @@
  * android.hardware.biometrics.face@1.0 implementation for the OPPO CPH1909.
  *
  * Face is a pure pass-through onto OppoFaceHal, which owns the forwarding to
- * the OPPO vendor face backend. See OppoFaceHal.h; the stock backend is
- * disabled in this build, so operations report OPERATION_NOT_SUPPORTED.
+ * the OPPO vendor face backend. See OppoFaceHal.h; that backend is enabled.
  */
 
 #ifndef ANDROID_HARDWARE_BIOMETRICS_FACE_V1_0_FACE_H
