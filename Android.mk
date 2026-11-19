@@ -209,10 +209,10 @@ $(foreach lib,$(VENDOR_CORE_LIBS),\
 # collapse to spaces and would merge the recipe into the dependency line
 # (making @mkdir a PHONY prerequisite).
 define copy-vendor-core-lib
-$(TARGET_OUT_VENDOR)/lib/$(1): $(TARGET_OUT_SYSTEM)/lib/$(1)
+$(TARGET_OUT_VENDOR)/lib/$(1): $(TARGET_OUT)/lib/$(1)
 	@mkdir -p $$(dir $$@)
 	$$(hide) cp -f $$< $$@
-$(TARGET_OUT_VENDOR)/lib64/$(1): $(TARGET_OUT_SYSTEM)/lib64/$(1)
+$(TARGET_OUT_VENDOR)/lib64/$(1): $(TARGET_OUT)/lib64/$(1)
 	@mkdir -p $$(dir $$@)
 	$$(hide) cp -f $$< $$@
 endef
@@ -229,11 +229,11 @@ SKIA_VENDOR_COPIES := \
 	$(TARGET_OUT_VENDOR)/lib/libskia.so \
 	$(TARGET_OUT_VENDOR)/lib64/libskia.so
 
-$(TARGET_OUT_VENDOR)/lib/libskia.so: $(TARGET_OUT_SYSTEM)/lib/libskia.so
+$(TARGET_OUT_VENDOR)/lib/libskia.so: $(TARGET_OUT)/lib/libskia.so
 	@mkdir -p $(dir $@)
 	$(hide) cp -f $< $@
 
-$(TARGET_OUT_VENDOR)/lib64/libskia.so: $(TARGET_OUT_SYSTEM)/lib64/libskia.so
+$(TARGET_OUT_VENDOR)/lib64/libskia.so: $(TARGET_OUT)/lib64/libskia.so
 	@mkdir -p $(dir $@)
 	$(hide) cp -f $< $@
 
