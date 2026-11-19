@@ -53,20 +53,18 @@ system/lib64/vendor.qti.hardware.soter@1.0.so
 # locations so the VNDK-lite vendor namespace resolves them (its default
 # namespace searches /system/${LIB} before /vendor/${LIB}).
 #
-#   libstdc++.so
-#       Android 10 dropped the GNU libstdc++ from the platform (libc++ is the
-#       only C++ runtime). 126 vendor ELFs still DT_NEEDED it: the MTK camera
-#       stack (camerahalserver -> camera.provider@2.4-impl-mediatek ->
-#       libcam.*), the IMS/modem daemons (volte_*, bip, wfca, epdg_wod,
-#       starter, charon, stroke), and libs such as libhwuiext.so and
-#       libmediatek_exceptionlog.so. The dynamic linker aborts them with
-#       "library \"libstdc++.so\" not found" before main().
+#   libstdc++.so (system copies removed)
+#       Android 10 ships its own /system/lib{,64}/libstdc++.so (base_system.mk:
+#       libstdc++), which provides the same LIBC_O symbols (_Znwj, _ZdlPv,
+#       __cxa_guard_*) the few remaining system-side 8.1 blobs need. Copying the
+#       8.1 version there only produced a duplicate install rule, so those two
+#       entries were dropped. The 126 vendor ELFs that DT_NEEDED libstdc++.so
+#       are served by the source-built libstdc++.vendor in /vendor/lib{,64}
+#       (see device.mk).
 #
 #   libkeymaster_staging.so is no longer copied: the keymaster@3.0 service and
 #   passthrough impl are built from source, so the stock 8.1 staging library has
 #   no consumers on this device.
-system/lib/libstdc++.so
-system/lib64/libstdc++.so
 
 # AED (MTK exception debug) + its dependency libmrdump.
 #
@@ -261,7 +259,6 @@ system/lib64/libnvram_sec_mtk.so
 system/lib64/libpq_prot_mtk.so
 system/lib64/libstagefright_wfd_mtk.so
 system/lib64/libwifitest_mtk.so
-system/lib64/libclang_rt.ubsan_standalone-aarch64-android.so
 system/lib64/mtkdrm/libdrmmtkplugin.so
 system/lib64/vendor.mediatek.hardware.audio@2.1.so
 system/lib64/vendor.mediatek.hardware.camera.device@1.1.so
@@ -354,7 +351,6 @@ vendor/bin/epdg_wod
 vendor/bin/factoryAta
 vendor/bin/fuelgauged
 vendor/bin/fuelgauged_nvram
-vendor/bin/grep
 vendor/bin/gsm0710muxd
 vendor/bin/hostapd
 vendor/bin/hostapd_cli
@@ -421,7 +417,6 @@ vendor/bin/rda
 vendor/bin/rs2spir
 vendor/bin/rttv
 vendor/bin/self-init
-vendor/bin/sh
 vendor/bin/spir2cl
 vendor/bin/starter
 vendor/bin/stp_dump3
@@ -430,9 +425,6 @@ vendor/bin/sysenv_daemon
 vendor/bin/thermal
 vendor/bin/thermal_manager
 vendor/bin/thermalloadalgod
-vendor/bin/toybox_vendor
-vendor/bin/vndservice
-vendor/bin/vndservicemanager
 vendor/bin/volte_imcb
 vendor/bin/volte_imsm_93
 vendor/bin/volte_stack
@@ -680,7 +672,6 @@ vendor/etc/init/vendor.mediatek.hardware.pq@2.0-service.rc
 vendor/etc/init/vendor.oppo.hardware.cryptoeng@1.0-service.rc
 vendor/etc/init/vendor.silead.hardware.fingerprintext@1.0-service.rc
 vendor/etc/init/vendor.trustonic.soter@1.0-service.rc
-vendor/etc/init/vndservicemanager.rc
 vendor/etc/init/wifi2agps.rc
 vendor/etc/ipsec/ipsec.conf
 vendor/etc/ipsec/ipsec.d/cacerts/Entrust.net_Certification_Authority_2048.cer
@@ -897,7 +888,6 @@ vendor/lib/hw/dfps.mt6765.so
 vendor/lib/hw/fingerprint.silead.default.so
 vendor/lib/hw/flp.mt6765.so
 vendor/lib/hw/gps.mt6765.so
-vendor/lib/hw/gralloc.default.so
 vendor/lib/hw/gralloc.mt6765.so
 vendor/lib/hw/hwcomposer.mt6765.so
 vendor/lib/hw/kmsetkey.trustonic.so
@@ -1096,7 +1086,6 @@ vendor/lib/libdirect-coredump.so
 vendor/lib/libdpframework.so
 vendor/lib/libdrm.so
 vendor/lib/libeffecthal.base.so
-vendor/lib/libeffects.so
 vendor/lib/libem_camera_jni.so
 vendor/lib/libfeature.face.so
 vendor/lib/libfeature.stereo.provider.so
@@ -1270,7 +1259,6 @@ vendor/lib/libwebrtc_audio_preprocessing.so
 vendor/lib/libwo.so
 vendor/lib/libwpa_client.so
 vendor/lib/libwvhidl.so
-vendor/lib/mediacas/libclearkeycasplugin.so
 vendor/lib/mediadrm/libwvdrmengine.so
 vendor/lib/modules/bt_drv.ko
 vendor/lib/modules/fmradio_drv.ko
@@ -1280,12 +1268,6 @@ vendor/lib/modules/wlan_drv_gen4m.ko
 vendor/lib/modules/wmt_chrdev_wifi.ko
 vendor/lib/modules/wmt_drv.ko
 vendor/lib/soter_attk_provision.so
-vendor/lib/soundfx/libbundlewrapper.so
-vendor/lib/soundfx/libdownmix.so
-vendor/lib/soundfx/libeffectproxy.so
-vendor/lib/soundfx/libldnhncr.so
-vendor/lib/soundfx/libreverbwrapper.so
-vendor/lib/soundfx/libvisualizer.so
 vendor/lib/vendor.egistec.hardware.fingerprint@4.0.so
 vendor/lib/vendor.mediatek.hardware.audio@2.1_vendor.so
 vendor/lib/vendor.mediatek.hardware.camera.callbackclient@1.0_vendor.so
@@ -1338,7 +1320,6 @@ vendor/lib64/hw/fingerprint.egis.default.so
 vendor/lib64/hw/fingerprint.silead.default.so
 vendor/lib64/hw/flp.mt6765.so
 vendor/lib64/hw/gps.mt6765.so
-vendor/lib64/hw/gralloc.default.so
 vendor/lib64/hw/gralloc.mt6765.so
 vendor/lib64/hw/hwcomposer.mt6765.so
 vendor/lib64/hw/interfaces.factoryAta@1.0-impl.so
@@ -1511,7 +1492,6 @@ vendor/lib64/libdirect-coredump.so
 vendor/lib64/libdpframework.so
 vendor/lib64/libdrm.so
 vendor/lib64/libeffecthal.base.so
-vendor/lib64/libeffects.so
 vendor/lib64/libem_camera_jni.so
 vendor/lib64/libfactoryfmjni.so
 vendor/lib64/libfeature.face.so
@@ -1662,15 +1642,8 @@ vendor/lib64/libwifi-hal.so
 vendor/lib64/libwo.so
 vendor/lib64/libwpa_client.so
 vendor/lib64/libwvhidl.so
-vendor/lib64/mediacas/libclearkeycasplugin.so
 vendor/lib64/mediadrm/libwvdrmengine.so
 vendor/lib64/soter_attk_provision.so
-vendor/lib64/soundfx/libbundlewrapper.so
-vendor/lib64/soundfx/libdownmix.so
-vendor/lib64/soundfx/libeffectproxy.so
-vendor/lib64/soundfx/libldnhncr.so
-vendor/lib64/soundfx/libreverbwrapper.so
-vendor/lib64/soundfx/libvisualizer.so
 vendor/lib64/vendor.egistec.hardware.fingerprint@4.0.so
 vendor/lib64/vendor.mediatek.hardware.audio@2.1_vendor.so
 vendor/lib64/vendor.mediatek.hardware.camera.callbackclient@1.0_vendor.so
