@@ -225,15 +225,43 @@ ALL_DEFAULT_INSTALLED_MODULES += $(VENDOR_CORE_LIB_COPIES)
 # the 8.1 vendor blob libhwuiext.so DT_NEEDEDs libskia.so. The stock 8.1
 # shared lib is shipped into /system/lib{,64} (proprietary-files.txt) and
 # copied into /vendor/lib{,64} here so libhwuiext resolves.
+#
+# libskia.so in turn DT_NEEDEDs two MTK-only libraries that AOSP 10 does not
+# build -- libMMListParser.so (reads /system/etc/Multimedia_Daemon_List.xml)
+# and libgraphics2d_ext.so (mtkTransformExt / needMtkTransformExt). Without
+# them libhwuiext.so fails to dlopen in every HWUI process, so they are
+# shipped beside libskia in BOTH namespaces: /system/lib{,64} for the
+# /system-side libskia, and /vendor/lib{,64} for the vendor-side copy that
+# libhwuiext actually loads.
 SKIA_VENDOR_COPIES := \
 	$(TARGET_OUT_VENDOR)/lib/libskia.so \
-	$(TARGET_OUT_VENDOR)/lib64/libskia.so
+	$(TARGET_OUT_VENDOR)/lib64/libskia.so \
+	$(TARGET_OUT_VENDOR)/lib/libMMListParser.so \
+	$(TARGET_OUT_VENDOR)/lib64/libMMListParser.so \
+	$(TARGET_OUT_VENDOR)/lib/libgraphics2d_ext.so \
+	$(TARGET_OUT_VENDOR)/lib64/libgraphics2d_ext.so
 
 $(TARGET_OUT_VENDOR)/lib/libskia.so: $(TARGET_OUT)/lib/libskia.so
 	@mkdir -p $(dir $@)
 	$(hide) cp -f $< $@
 
 $(TARGET_OUT_VENDOR)/lib64/libskia.so: $(TARGET_OUT)/lib64/libskia.so
+	@mkdir -p $(dir $@)
+	$(hide) cp -f $< $@
+
+$(TARGET_OUT_VENDOR)/lib/libMMListParser.so: $(TARGET_OUT)/lib/libMMListParser.so
+	@mkdir -p $(dir $@)
+	$(hide) cp -f $< $@
+
+$(TARGET_OUT_VENDOR)/lib64/libMMListParser.so: $(TARGET_OUT)/lib64/libMMListParser.so
+	@mkdir -p $(dir $@)
+	$(hide) cp -f $< $@
+
+$(TARGET_OUT_VENDOR)/lib/libgraphics2d_ext.so: $(TARGET_OUT)/lib/libgraphics2d_ext.so
+	@mkdir -p $(dir $@)
+	$(hide) cp -f $< $@
+
+$(TARGET_OUT_VENDOR)/lib64/libgraphics2d_ext.so: $(TARGET_OUT)/lib64/libgraphics2d_ext.so
 	@mkdir -p $(dir $@)
 	$(hide) cp -f $< $@
 

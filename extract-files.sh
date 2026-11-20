@@ -76,6 +76,14 @@ function blob_fixup() {
         vendor/lib*/libion_ulit.so)
             patchelf --add-needed "libutilscallstack.so" "${2}"
             ;;
+        # /system-side copies of the same MTK ION util library. These are not
+        # reached by the vendor-side injection above, and unlike the MTK camera
+        # libraries they have no dependency in their closure that pulls
+        # libutilscallstack.so in, so they fail dlopen with
+        # "cannot locate symbol _ZN7android9CallStackC1EPKci" without this.
+        system/lib*/libion_ulit_sys.so)
+            patchelf --add-needed "libutilscallstack.so" "${2}"
+            ;;
         vendor/lib*/libmtkcam_stdutils.so)
             patchelf --add-needed "libutilscallstack.so" "${2}"
             ;;
@@ -91,6 +99,23 @@ function blob_fixup() {
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
         vendor/lib*/libsysenv.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        # /system-side blobs that import the 8.1 android::base ABI.
+        # Android 9 added a `const char* tag` parameter to LogMessage's
+        # constructor and Android 10 dropped the 5-argument overload entirely
+        # (base/include/android-base/logging.h:434), so pointing these at
+        # AOSP 10's libbase.so makes them fail BIND_NOW with
+        # "cannot locate symbol _ZN7android4base10LogMessageC1EPKcjNS0_5LogIdENS0_11LogSeverityEi".
+        # libbase-v28.so (prebuilts/vndk/v28, copied to both /vendor and
+        # /system by device.mk) still exports that 5-arg form.
+        system/lib*/libnvram_mtk.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        system/lib*/libshowlogo.so)
+            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        system/lib*/libsysenv_system.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
         vendor/bin/hw/android.hardware.drm@1.0-service.widevine)
@@ -119,6 +144,13 @@ function blob_fixup() {
             ;;
         vendor/lib*/libwifi-hal.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            ;;
+        # These four were linked with an NDK toolchain whose RUNPATH/RPATH points
+        # at the build machine (/opt/ndk17/..., /data/Project_Code/...). bionic
+        # ignores DT_RPATH/DT_RUNPATH so it is harmless, but it embeds the
+        # builder's filesystem in the image; strip it.
+        vendor/lib*/libmegsegment.so | vendor/lib*/libwa_common_wt98607.so)
+            patchelf --remove-rpath "${2}"
             ;;
         vendor/lib*/libmtkcam_sysutils.so)
             patchelf --add-needed "libutilscallstack.so" "${2}"
