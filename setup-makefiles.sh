@@ -19,9 +19,18 @@ if [[ ! -d "${MY_DIR}" ]]; then MY_DIR="${PWD}"; fi
 
 ANDROID_ROOT="${MY_DIR}/../../.."
 
-HELPER="${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh"
+# LineageOS 17.1 ships the helper as vendor/lineage/build/tools/extract_utils.sh;
+# LineageOS 18.1+ moved it to the standalone tools/extract-utils project. Try
+# both so this tree works on a 17.1 checkout (its target) without breaking on a
+# newer one.
+HELPER="${ANDROID_ROOT}/vendor/lineage/build/tools/extract_utils.sh"
 if [ ! -f "${HELPER}" ]; then
-    echo "Unable to find helper script at ${HELPER}"
+    HELPER="${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh"
+fi
+if [ ! -f "${HELPER}" ]; then
+    echo "Unable to find extract_utils.sh in either:"
+    echo "  ${ANDROID_ROOT}/vendor/lineage/build/tools/extract_utils.sh   (LineageOS 17.1)"
+    echo "  ${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh          (LineageOS 18.1+)"
     exit 1
 fi
 source "${HELPER}"

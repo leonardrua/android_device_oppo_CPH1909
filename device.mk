@@ -9,7 +9,11 @@ DEVICE_PATH := device/oppo/CPH1909
 # Soong namespaces: let Soong resolve the Android.bp modules in this device
 # tree (biometrics/, interfaces/, etc.). Adapted from xiaomi-lotus-devs
 # commit 3ac3eb8; Android.bp in this directory declares soong_namespace {}.
-PRODUCT_SOONG_NAMESPACES += $(LOCAL_PATH)
+#
+# Use DEVICE_PATH, not LOCAL_PATH: LOCAL_PATH is only defined while an
+# Android.mk is being parsed, so in a product makefile it expands to nothing
+# (and any stale value left by another makefile would point somewhere else).
+PRODUCT_SOONG_NAMESPACES += $(DEVICE_PATH)
 
 # Screen density: 720x1520 panel
 PRODUCT_AAPT_CONFIG := normal
@@ -438,11 +442,20 @@ PRODUCT_COPY_FILES += \
 # build AOSP's libxaac-backed OMX decoder (SoftXAAC plus external/libxaac) and
 # the platform soft-OMX plugin that hosts it.
 #
-# The 8.1 vendor OMX service is 32-bit and resolves these libraries from
-# /system/lib through the VNDK-lite vendor namespace: that namespace has no
-# separate sphal section, so android_load_sphal_library() falls back to the
-# process' default namespace, which includes /system/lib. The soft codec
-# inherits compile_multilib: "32" from libstagefright_softomx-defaults, and
+# Linker note: this is a full VNDK build (BOARD_VNDK_VERSION := current), so the
+# 8.1 vendor OMX service does NOT see /system/lib. OMXMaster loads the plugin
+# into the isolated "sphal" namespace, whose search paths are only
+# /odm/${LIB}, /vendor/${LIB} and /vendor/${LIB}/hw; SoftOMXPlugin then
+# dlopen()s the codec in that same namespace. The plugin is vendor_available and
+# therefore already present in /vendor/lib, but libstagefright_soft_xaacdec is
+# not, so the top-level Android.mk copies the 32-bit codec into /vendor/lib as
+# well. (The previous VNDK-lite reasoning -- "no sphal namespace, falls back to
+# the default namespace which includes /system/lib" -- no longer applies; both
+# ld.config.txt and ld.config.vndk_lite.txt in Android 10 define sphal, and it
+# never includes /system/lib.)
+#
+# The soft codec inherits compile_multilib: "32" from
+# libstagefright_softomx-defaults, matching the 32-bit vendor OMX service, and
 # libxaacdec is linked statically into libstagefright_soft_xaacdec.
 PRODUCT_PACKAGES += \
     libstagefright_softomx \

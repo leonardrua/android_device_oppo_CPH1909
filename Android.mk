@@ -239,6 +239,34 @@ $(TARGET_OUT_VENDOR)/lib64/libskia.so: $(TARGET_OUT)/lib64/libskia.so
 
 ALL_DEFAULT_INSTALLED_MODULES += $(SKIA_VENDOR_COPIES)
 
+# xHE-AAC decoder for the vendor OMX service
+#
+# Android 10 loads the platform soft-OMX plugin with
+# android_load_sphal_library(), i.e. into the isolated "sphal" linker
+# namespace (OMXMaster::addPlugin(), OMXMaster.cpp:70), and SoftOMXPlugin then
+# dlopen()s the per-codec library from that same namespace
+# (SoftOMXPlugin.cpp:117). Under a full VNDK build -- this tree sets
+# BOARD_VNDK_VERSION := current -- the sphal namespace searches only
+# /odm/${LIB}, /vendor/${LIB} and /vendor/${LIB}/hw, never /system/lib
+# (verified against android-10.0.0_r47 rootdir/etc/ld.config.txt:242-248).
+#
+# libstagefright_softomx and libstagefright_softomx_plugin are vendor_available,
+# so Soong already installs their vendor variants into /vendor/lib. But
+# libstagefright_soft_xaacdec is not vendor_available and is installed only to
+# /system/lib, where the 32-bit vendor OMX service cannot reach it. Copy the
+# 32-bit codec next to the plugin so the dlopen() resolves.
+#
+# The codec is 32-bit only (compile_multilib: "32" inherited from
+# libstagefright_softomx-defaults), matching the 32-bit 8.1 vendor OMX service
+# (/vendor/bin/hw/android.hardware.media.omx@1.0-service).
+XAAC_VENDOR_COPY := $(TARGET_OUT_VENDOR)/lib/libstagefright_soft_xaacdec.so
+
+$(XAAC_VENDOR_COPY): $(TARGET_OUT)/lib/libstagefright_soft_xaacdec.so
+	@mkdir -p $(dir $@)
+	$(hide) cp -f $< $@
+
+ALL_DEFAULT_INSTALLED_MODULES += $(XAAC_VENDOR_COPY)
+
 # Subdirectory module makefiles -- currently power/Android.mk.
 #
 # This include is load-bearing and its absence silently dropped the power HAL

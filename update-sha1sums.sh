@@ -14,26 +14,84 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#
+# Refresh (or add) the SHA-1 pins in proprietary-files.txt.
+#
+#   ./update-sha1sums.sh          refresh existing "path|sha1" pins
+#   ./update-sha1sums.sh --add    also pin every entry that has no sha1 yet
+#
+# A pin is optional: extract_utils.sh strips "|sha1" before using the path, so
+# an unpinned list still extracts normally. Pins only add an early failure when
+# a blob is stale or corrupted.
+#
+# Paths are read line by line and quoted, so entries containing spaces work.
+# Comments, blank lines and (unless --add) unpinned entries are preserved
+# verbatim. The file is rewritten atomically.
 
-filename="proprietary-files.txt"
-filelines="$(cat $filename)"
-vendor="../../../vendor/oppo/CPH1909/proprietary"
+set -e
 
-for line in $filelines ; do
-    if [[ $line == *"|"* ]]; then
+MY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FILENAME="${MY_DIR}/proprietary-files.txt"
+VENDOR="${MY_DIR}/../../../vendor/oppo/CPH1909/proprietary"
 
-        # Get the name of the blob and remove '-'
-        # when it is the first character
-        blob=$(echo $line | cut -f1 -d'|' | sed 's/^-//g')
+ADD_PINS=false
+case "${1:-}" in
+    --add|-a) ADD_PINS=true ;;
+    "")       ;;
+    *)        echo "usage: $0 [--add]" >&2; exit 2 ;;
+esac
 
-        # Get the old sha1sum
-        oldSHA1=$(echo $line | cut -f2 -d'|')
+if [ ! -f "${FILENAME}" ]; then
+    echo "error: ${FILENAME} not found" >&2
+    exit 1
+fi
 
-        # Get the new sha1sum from vendor path
-        newSHA1=$(sha1sum $vendor/$blob | awk '{print $1}')
+tmp="$(mktemp)"
+trap 'rm -f "${tmp}"' EXIT
 
-        # Replace oldSHA1 with newSHA1
-        sed -i "s/$oldSHA1/$newSHA1/g" "$filename"
-
+while IFS= read -r line || [ -n "${line}" ]; do
+    # Preserve comments and blank lines exactly as they are.
+    if [[ "${line}" =~ ^[[:space:]]*# ]] || [[ -z "${line//[[:space:]]/}" ]]; then
+        printf '%s\n' "${line}"
+        continue
     fi
-done
+
+    has_pin=false
+    if [[ "${line}" == *"|"* ]]; then
+        has_pin=true
+    fi
+
+    if ! ${has_pin} && ! ${ADD_PINS}; then
+        printf '%s\n' "${line}"
+        continue
+    fi
+
+    blob="${line%%|*}"
+    prefix="${blob}"          # keep the optional leading '-' marker
+    blob="${blob#-}"
+
+    if [ ! -f "${VENDOR}/${blob}" ]; then
+        echo "warning: ${VENDOR}/${blob} not found; keeping line unchanged" >&2
+        printf '%s\n' "${line}"
+        continue
+    fi
+
+    sha="$(sha1sum -- "${VENDOR}/${blob}" | cut -d' ' -f1)"
+    printf '%s|%s\n' "${prefix}" "${sha}"
+done < "${FILENAME}" > "${tmp}"
+
+# Only replace the list when something actually changed.
+if cmp -s "${FILENAME}" "${tmp}"; then
+    if ${ADD_PINS}; then
+        echo "No changes: every entry is already pinned."
+    else
+        echo "No SHA-1 pins to refresh (use --add to pin every entry)."
+    fi
+    rm -f "${tmp}"
+    trap - EXIT
+    exit 0
+fi
+
+mv -- "${tmp}" "${FILENAME}"
+trap - EXIT
+echo "Updated ${FILENAME}."

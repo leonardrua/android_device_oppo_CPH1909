@@ -15,6 +15,14 @@ FILES = [Path(file) for file in [
 
 setlocale(LC_ALL, "C")
 
+def strip_optional_dash(value: str) -> str:
+    """Remove a leading '-' (the extract-utils optional-blob marker).
+
+    str.removeprefix() only exists from Python 3.9, and LineageOS 17.1-era
+    build hosts still ship 3.6/3.8, so keep this explicit.
+    """
+    return value[1:] if value.startswith("-") else value
+
 def strcoll_extract_utils(string1: str, string2: str) -> int:
     # Skip logic if one of the string if empty
     if not string1 or not string2:
@@ -22,8 +30,8 @@ def strcoll_extract_utils(string1: str, string2: str) -> int:
 
     # Remove '-' from strings if there,
     # it is used to indicate a build target
-    string1 = string1.removeprefix('-')
-    string2 = string2.removeprefix('-')
+    string1 = strip_optional_dash(string1)
+    string2 = strip_optional_dash(string2)
 
     # If no directories, compare normally
     if not "/" in string1 and not "/" in string2:

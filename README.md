@@ -11,8 +11,9 @@ The device is **A-only**, **non-system-as-root**, and **legacy Treble**:
   `BOARD_BUILD_SYSTEM_ROOT_IMAGE` is unset. Android 10 nevertheless builds
   `system.img` in the system-as-root layout; first-stage init mounts it at
   `/system` and pivots to it.
-* Legacy Treble — the vendor image is O-MR1 (API 27, FCM level 2), so the build
-  uses VNDK-lite and the device manifest declares `target-level="2"`.
+* Legacy Treble — the vendor image is O-MR1 (API 27, FCM level 2), so the device
+  manifest declares `target-level="2"`. The build itself uses full VNDK
+  (`BOARD_VNDK_VERSION := current`, see *Vendor partition and VNDK*).
 
 The hardware values (partition sizes, kernel base and offsets, MT6765 platform,
 fstab partition layout) are carried over unchanged from the stock device tree.
@@ -463,22 +464,35 @@ the fatal init line, which is the fastest way to tell which site above tripped.
 `TARGET_COPY_OUT_VENDOR := vendor` (required by build/make whenever
 `BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE` is set) keeps the separate vendor image.
 
-`BOARD_VNDK_VERSION` is deliberately left unset. Because
-`PRODUCT_SHIPPING_API_LEVEL` is 27, `PRODUCT_USE_VNDK` stays false
-(`core/config.mk` only defaults `BOARD_VNDK_VERSION` to `"current"` for API
-28+), so this is the legacy-Treble VNDK-lite configuration rather than VNDK
-enforcement. With the variable unset the build sets `ro.vndk.lite=true`, so the
-linker uses `ld.config.vndk_lite.txt`: vendor binaries can resolve libraries
-from `/system/lib[64]` directly, not only from the vndk/vndk-sp
-subdirectories. The 8.1 blobs therefore link against the Android 10 system
-libraries, which are VNDK forward-compatible with the API 27 versions the blobs
-were built against.
+`BOARD_VNDK_VERSION := current` in `BoardConfig.mk` selects **full VNDK**,
+matching xiaomi-lotus-devs commit a53267f (lotus is also MT6765 and also
+8.1-launched). Note that `PRODUCT_USE_VNDK` would stay false on its own:
+`core/config.mk` only auto-defaults `BOARD_VNDK_VERSION` to `"current"` when
+`PRODUCT_SHIPPING_API_LEVEL` is 28+, and this device ships at 27 — so the
+variable is set explicitly rather than inferred.
 
-`PRODUCT_EXTRA_VNDK_VERSIONS` is intentionally not used. The
-`vndk_snapshot_package` phony that installs an older snapshot is only defined
-when `BOARD_VNDK_VERSION` is set
-(`build/make/target/product/gsi/Android.mk`), so the variable would silently
-install nothing on this VNDK-lite build.
+The consequence is that the vendor namespace is isolated. `ld.config.txt`
+gives the vendor `default` namespace only `/odm/${LIB}` and `/vendor/${LIB}`
+plus the VNDK/LLNDK sets, so a blob may **not** reach into `/system/lib[64]`
+unless the library is LLNDK or VNDK. The 8.1 blobs' needs are covered by
+shipping the handful of core-only libraries they `DT_NEEDED` into `/vendor`
+(see the `VENDOR_CORE_LIBS` list in `Android.mk`) and by the explicit copies
+into `/system` for the system-side blobs (the *System-side VNDK* block in
+`device.mk`).
+
+Earlier revisions of this tree used VNDK-lite (`BOARD_VNDK_VERSION` unset,
+`ro.vndk.lite=true`, `ld.config.vndk_lite.txt`), where the vendor `default`
+namespace also searched `/system/${LIB}`. The switch to full VNDK left two such
+dependencies behind, both now handled explicitly: the core-only libraries are
+shipped as `/vendor` copies (commit 21f1f5c, `VENDOR_CORE_LIBS`), and the
+xHE-AAC decoder is copied into `/vendor/lib` because `sphal` never searched
+`/system/lib` in the first place (see *xHE-AAC decoder*).
+
+`PRODUCT_EXTRA_VNDK_VERSIONS` is intentionally not used: there is no old VNDK
+snapshot to install for an API 27 vendor, and the `vndk_snapshot_package`
+phony only exists when `BOARD_VNDK_VERSION` is set
+(`build/make/target/product/gsi/Android.mk`), which it is here — but the
+variable would still install nothing without a matching prebuilt snapshot.
 
 ### HIDL transport libraries
 
@@ -809,11 +823,23 @@ PRODUCT_PACKAGES += \
 `frameworks/av/media/libstagefright/codecs/xaacdec`, with `external/libxaac`
 linked in statically. It inherits `compile_multilib: "32"` from
 `libstagefright_softomx-defaults`, matching the 32-bit 8.1 vendor OMX service.
+
 The platform plugin is loaded by `OMXMaster::addPlatformPlugin()` through
-`android_load_sphal_library()`. On this VNDK-lite build the vendor linker
-configuration defines no `sphal` namespace, so the call falls back to the
-process' default namespace, which searches `/system/lib`; the plugin and the
-codec are installed there.
+`android_load_sphal_library()`, i.e. into the isolated `sphal` linker namespace
+(`OMXMaster.cpp:70`), and `SoftOMXPlugin` then `dlopen()`s each codec from that
+same namespace (`SoftOMXPlugin.cpp:117`). On this full-VNDK build
+(`BOARD_VNDK_VERSION := current`) `sphal` searches only `/odm/${LIB}`,
+`/vendor/${LIB}` and `/vendor/${LIB}/hw` — it never searches `/system/lib`
+(`android-10.0.0_r47` `rootdir/etc/ld.config.txt:242-248`). The plugin is
+`vendor_available` and lands in `/vendor/lib` on its own, but
+`libstagefright_soft_xaacdec` is not, so the top-level `Android.mk` copies the
+32-bit codec into `/vendor/lib` next to the plugin.
+
+Note the earlier claim that VNDK-lite has no `sphal` namespace was wrong:
+Android 10's `ld.config.vndk_lite.txt` defines it too, and neither variant ever
+searches `/system/lib` from `sphal`. Under VNDK-lite that only worked by
+accident, via the vendor `default` namespace's `/system/${LIB}` entry; with full
+VNDK it does not, which is why the explicit copy is required.
 
 AOSP's `SoftOMXPlugin.cpp` registers two components for the `audio_decoder.aac`
 role and leaves the selection to the vendor `media_codecs_google_audio.xml`:
@@ -1101,7 +1127,10 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
   variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL
   services still fail to load, check `ro.hardware` / `ro.hardware.egl` and the
-  linker namespace denials first; the build is VNDK-lite, so vendor binaries may
-  resolve libraries from `/system/lib[64]` as described above.
+  linker namespace denials first. This is a full-VNDK build, so a vendor binary
+  may **not** resolve a library from `/system/lib[64]` unless it is LLNDK or
+  VNDK — if a blob fails with "library ... not found", the fix is another entry
+  in `VENDOR_CORE_LIBS` (Android.mk) or the *System-side VNDK* copy block
+  (device.mk), not a linker-config override.
 * Recovery: `TARGET_RECOVERY_FSTAB` points at the same fstab. The TWRP tree for
   this device is a separate branch and is not built from this one.
