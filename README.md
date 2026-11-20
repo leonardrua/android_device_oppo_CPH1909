@@ -43,11 +43,16 @@ Automated CI builds are covered under
 
 This tree **builds the kernel from source** — there is no prebuilt kernel image
 in the repository. `TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909` and
-`TARGET_KERNEL_CONFIG := oppo6765_18511_defconfig` (plus
+`TARGET_KERNEL_CONFIG := a46_defconfig` (plus
 `TARGET_KERNEL_ARCH := arm64` and `BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb`),
-so the build compiles the 4.9 MediaTek/OPPO `VENDOR_EDIT` kernel
-(`oppo6765_18511_defconfig`, `CONFIG_OPPO_KTV_DEV=y`, etc.) and packs
-`Image.gz-dtb` itself.
+so the build compiles the 4.9 MediaTek/OPPO `VENDOR_EDIT` kernel and packs
+`Image.gz-dtb` itself. The config was switched from
+`oppo6765_18511_defconfig` to `a46_defconfig` (commit `7d11630`) to match the
+A.46 firmware baseline carried by the `kernel/oppo/CPH1909` lineageos branch;
+both configs build the same `oppo6765_18511` project
+(`CONFIG_ARCH_MTK_PROJECT="oppo6765_18511"`,
+`CONFIG_BUILD_ARM64_DTB_OVERLAY_IMAGE_NAMES="mediatek/oppo6765_18511"`), and
+`a46_defconfig` also sets `CONFIG_OPPO_KTV_DEV=y`.
 
 `TARGET_PREBUILT_KERNEL` is deliberately never set: the tree carries no kernel
 image, and LineageOS clears `TARGET_KERNEL_SOURCE` when it is — which would
@@ -176,12 +181,22 @@ Entries that exist on the stock 8.1 vendor partition but must not be copied are
 documented at the top of `proprietary-files.txt` (VINTF data, the 8.1 SELinux
 policy, mkshrc, and the generated `public.libraries.txt` /`fs_config*` files).
 
-Lines in `proprietary-files.txt` of the form `path|sha1` pin the SHA-1 of the
-extracted blob so a stale or corrupted extraction fails the build early.
-`update-sha1sums.sh` refreshes those pins against the current blobs in
-`vendor/oppo/CPH1909/proprietary/` (it rewrites every `path|sha1` line with a
-fresh `sha1sum`), so it can be run after a vendor re-extract instead of editing
-the hashes by hand.
+Pins are optional: lines of the form `path|sha1` additionally record the SHA-1
+of the extracted blob so a stale or corrupted extraction fails the build early.
+The current list carries none — it is generated without `--pin`, and
+`extract_utils.sh` strips any `|sha1` suffix before resolving the path, so an
+unpinned list extracts identically. `update-sha1sums.sh` can add or refresh
+them against the blobs in `vendor/oppo/CPH1909/proprietary/`:
+
+```sh
+./update-sha1sums.sh          # refresh existing pins
+./update-sha1sums.sh --add    # pin every entry
+```
+
+It reads `proprietary-files.txt` line by line (paths with spaces are safe),
+leaves comments, blank lines and unpinned entries untouched unless `--add` is
+given, warns and preserves any entry whose blob is missing, and rewrites the
+file atomically only when something changed.
 
 ## CI workflows
 
@@ -202,14 +217,19 @@ intermediates. Its main characteristics:
   (`TARGET_KERNEL_SOURCE`/`TARGET_KERNEL_CONFIG`, no prebuilt image in the
   device tree); the tree is additionally
   patched on the fly to keep warnings non-fatal.
-* The AArch64 UAPI header guard step (`Guard AArch64 signal context header
-  for ARM builds`) wraps `struct fpsimd_context` in
+* The `Keep kernel warnings non-fatal` step appends `-Wno-error` to the
+  standard C-flags line in `scripts/Makefile.lib`, so the large MTK kernel
+  (which is full of arch-specific warnings) still builds. It is idempotent and
+  asserts exactly one occurrence of the Kbuild line before patching.
+* The AArch64 UAPI header guard is **not** a workflow step: it is committed in
+  the kernel repository as `9ff77c8aa0b1` ("uapi: guard fpsimd_context in the
+  AArch64 sigcontext header"), which wraps `struct fpsimd_context` in
   `arch/arm64/include/uapi/asm/sigcontext.h` with `#ifdef __aarch64__` so
-  32-bit targets can compile against it. This corresponds to commit
-  `ac03987` in the kernel repository. The step is also responsible for the
-  "keep kernel warnings non-fatal" tweak: `scripts/Makefile.lib` gets
-  `-Wno-error` appended to the standard C-flags line, so the large MTK
-  kernel (which is full of arch-specific warnings) still builds.
+  `headers_install` also works for 32-bit ARM (used by
+  `generated_kernel_includes`). The related fixes `c728eada242c`,
+  `809fe558e875` and `3bdc4c825601` cover the other AArch64-only UAPI
+  declarations. (Earlier revisions of this README described this as a CI step
+  at commit `ac03987`; it is in-tree now, so nothing patches it at build time.)
 * Before the build starts it verifies the Git LFS artifact
   `external/chromium-webview/prebuilt/arm64/webview.apk`. If the file is a
   small LFS pointer (typical: 134 bytes, not the ~260 MB real APK) it runs
@@ -268,26 +288,32 @@ carries a ramdisk (`BOARD_BUILD_SYSTEM_ROOT_IMAGE` is intentionally unset), so
 the kernel starts `init_first_stage` from the ramdisk and the system image is
 mounted later.
 
-First-stage init does not read this tree's `fstab.mt6765`.
-`ReadFirstStageFstab()` first calls `ReadFstabFromDt()`, and the kernel DT
-contains a `firmware/android/fstab` node in
-`arch/arm64/boot/dts/mediatek/mt6765.dts`. That node always lists `/system` and
-`/vendor` (`/odm` is inside `#if 0`); with `CONFIG_MTK_DM_VERITY_OFF=y`, which
-`oppo6765_18511_defconfig` sets, their flags are just `wait` — no `verify`, no
-`avb`, and no `first_stage_mount` requirement. `TrySwitchSystemAsRoot()` sees
-the `/system` entry, mounts it, and calls `SwitchRoot("/system")`; the remaining
-entries (the DT `/vendor` node) are mounted immediately afterwards from the new
-root. From that point on the system image is the root filesystem and
-second-stage `/system/bin/init` runs.
+First-stage init does not use the kernel device tree for the fstab. The kernel
+tree this device builds (`lineageos-no-bakasu-susfs`) carries commit
+`070094089462` ("ARM64: dts: Switch mt6765 to 2-stage-init"), which removed the
+`firmware/android/fstab` node from
+`arch/arm64/boot/dts/mediatek/mt6765.dts` — the same change xiaomi-lotus-devs
+made for MT6765 in kernel commit `8e24bd2`. So `ReadFstabFromDt()` finds
+nothing, `ReadFirstStageFstab()` falls back to `GetFstabPath()`, which probes
+`/odm/etc/fstab.<hw>`, `/vendor/etc/fstab.<hw>` and `/fstab.<hw>`; neither
+`/odm` nor `/vendor` is mounted that early, so only the ramdisk copy is
+reachable.
 
-The fstab in `rootdir/etc/fstab.mt6765` is therefore not the first-stage fstab.
-It is installed only at `/vendor/etc/fstab.mt6765`, where the stock
-`init.mt6765.rc` runs `mount_all` from its `on fs` block, and it is also the
-recovery fstab (`TARGET_RECOVERY_FSTAB`). Its `/system`, `/vendor`, and `/odm`
-lines keep the stock `wait,recoveryonly` flags: `recoveryonly` keeps them out of
-the normal second-stage `mount_all` (they are already mounted or intentionally
-unused) while still letting recovery mount them. There is no `first_stage_mount`
-flag and no ramdisk copy of the file.
+That is why `rootdir/etc/fstab.mt6765` is installed **twice**: as
+`/fstab.mt6765` in the boot ramdisk by the `fstab.mt6765_ramdisk` prebuilt
+(top-level `Android.mk`), and as `/vendor/etc/fstab.mt6765` by
+`PRODUCT_COPY_FILES`. Its `/system` and `/vendor` lines carry
+`wait,first_stage_mount`, so first-stage init mounts `/system`, pivots to it
+(`TrySwitchSystemAsRoot()` → `SwitchRoot("/system")`), then mounts `/vendor`
+from the new root. From that point on the system image is the root filesystem
+and second-stage `/system/bin/init` runs.
+
+The `/vendor` copy then serves the stock `init.mt6765.rc` `mount_all` in its
+`on fs` / `on late-fs` blocks (and is the recovery fstab via
+`TARGET_RECOVERY_FSTAB`). `fs_mgr` skips `first_stage_mount` entries that are
+already mounted, so nothing is mounted twice. Its `/odm` line keeps the stock
+`wait,recoveryonly` flags, which keep it out of the normal second-stage
+`mount_all` while still letting recovery mount it.
 
 There is no `/odm` mount in normal boot. The scatter defines a 256 MiB `odm`
 partition, but the factory image leaves it zeroed (no ext4 superblock);
@@ -411,7 +437,7 @@ The sites init can reach on this device, in boot order:
 | Phase | Site | Fires when |
 | --- | --- | --- |
 | first stage | `first_stage_init.cpp:179` | one of the `CHECKCALL` mounts/mkdirs (`/dev`, `/dev/pts`, `/proc`, `/apex`, ...) failed |
-| first stage | `first_stage_init.cpp:219`, `switch_root.cpp:41-94` | `DoFirstStageMount()` failed: the DT fstab (`firmware/android/fstab` in `mt6765.dts`) `/system`/`/vendor` entry could not be resolved or mounted, or the `/system` pivot failed |
+| first stage | `first_stage_init.cpp:219`, `switch_root.cpp:41-94` | `DoFirstStageMount()` failed: the ramdisk fstab (`/fstab.mt6765`, via `GetFstabPath()`) `/system`/`/vendor` entry could not be resolved or mounted, or the `/system` pivot failed |
 | first stage | `first_stage_init.cpp:244` | `/system/bin/init` missing after the pivot |
 | selinux_setup | `selinux.cpp:428` | `LoadPolicy()` failed — split-policy load: unreadable `/vendor/etc/selinux/plat_sepolicy_vers.txt`, missing `/vendor/etc/selinux/{vendor_sepolicy.cil,plat_pub_versioned.cil}`, missing `/system/etc/selinux/mapping/<vers>.cil`, or `secilc` failed |
 | selinux_setup | `selinux.cpp:435,440` | `security_setenforce()` mismatch, or `/sys/fs/selinux/checkreqprot` not writable |
@@ -426,10 +452,12 @@ The sites init can reach on this device, in boot order:
 
 Reachability notes for this tree:
 
-* First-stage mount uses the DT fstab, not `rootdir/etc/fstab.mt6765`. With
-  `CONFIG_MTK_DM_VERITY_OFF=y` the `/system` and `/vendor` entries are plain
-  `wait`, so there is no verity/AVB check to fail; the realistic trigger is a
-  missing/renamed `by-name` node or an unfinished fastboot flash.
+* First-stage mount uses the ramdisk `/fstab.mt6765`, not the kernel DT (the DT
+  `firmware/android/fstab` node was removed by kernel commit `070094089462`).
+  With `CONFIG_MTK_DM_VERITY_OFF=y` the `/system` and `/vendor` entries carry
+  no `verify`/`avb` flags, so there is no verity check to fail; the realistic
+  trigger is a missing/renamed `by-name` node, an unfinished fastboot flash, or
+  a build that failed to install `fstab.mt6765_ramdisk` into the boot ramdisk.
 * The SELinux fatals are the ones to watch if the vendor policy plumbing
   changes. They should not fire in a normal build: `BOARD_VENDOR_SEPOLICY_DIRS`
   makes the build emit `vendor_sepolicy.cil` and `plat_pub_versioned.cil`
@@ -1081,11 +1109,16 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   first-wins `PRODUCT_COPY_FILES` overrides (before `CPH1909-vendor.mk`) disable
   the stock ColorOS `fps_hal` / `fpay_hal` init services, which register
   `vendor.oppo.hardware.biometrics.fingerprint@2.1` (not the AOSP interface) and
-  would contend for the sensor node (`/dev/silead_fp` or `/dev/esfp0`). A third first-wins override rc disables the
-  stock face service (`face_hal`): its DT_NEEDED system-side interface libraries
-  (`android.frameworks.faceservice@1.0.so` and `vendor.oppo.hardware.biometrics.
-  face@1.0.so`) are deliberately not imported, so it could never start in this
-  build; disabling it stops init from respawning a dead process at every late_start.
+  would contend for the sensor node (`/dev/silead_fp` or `/dev/esfp0`). The
+  stock face service (`face_hal`) is the mirror image: its override rc does
+  **not** set `disabled`, because the source-built AOSP face@1.0 proxy in
+  `biometrics/face/` forwards to it as its backend. Its two DT_NEEDED
+  interface libraries (`android.frameworks.faceservice@1.0.so` and
+  `vendor.oppo.hardware.biometrics.face@1.0.so`) ship in `/vendor/lib{,64}`
+  (the latter is built from the reconstructed source interface, not the blob),
+  so the service can actually start. `device.mk` still installs the override rc
+  because the vendor makefile would otherwise install the stock one, which has
+  `disabled`.
   Vendor SELinux contexts/bring-up
   `permissive hal_fingerprint_default` are in `sepolicy/vendor/`. The
   biometrics policy mirrors the stock 8.1 vendor policy: `silead_fpd_device`
@@ -1113,16 +1146,23 @@ Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
   from the stock interface library and **built** as a `hidl_interface`
   (`interfaces/vendor/hardware/biometrics/face/1.0/`; the exact source bytes are
   not in the dump, so the frozen hash differs — `getService()` matches by name).
-  `OppoFaceHal` implements the forwarding (with a vendor→AOSP callback adapter),
-  but the stock face service stays disabled (it also needs the ColorOS
-  `android.frameworks.faceservice@1.0` handshake), so every operation still
-  reports `OPERATION_NOT_SUPPORTED`; the reverse-engineering checklist is in
-  `biometrics/face/OppoFaceHal.h`. No face feature XML is installed, so Settings
-  does not surface face unlock: the service is wired but inert. Boot-test to
-  confirm shim load,
-  `IBiometricsFingerprint/default` registration, sensor-node access
-  (`/dev/silead_fp` or `/dev/esfp0`), `IBiometricsFace/default` registration,
-  and that stock `fps_hal`/`fpay_hal`/`face_hal` remain disabled.
+  `OppoFaceHal` implements the forwarding (with a vendor→AOSP callback adapter).
+  The stock backend service is enabled and its ColorOS handshake is
+  null-checked (Ghidra decompilation in the vendor tree's `audit/` notes: when
+  `android.frameworks.faceservice@1.0` is absent it logs "service NULL" and
+  still registers its own HAL), so `getService()` does connect. Forwarding is
+  nevertheless **unverified on hardware**: the vendor `.hal` is a
+  reconstruction, so the frozen interface hash differs from the stock library's
+  (`getService()` matches by name, so that alone is not fatal), and operations
+  with no faithful vendor equivalent (`getFeature`, `setFeature`,
+  `userActivity`, `resetLockout`) deliberately still return
+  `OPERATION_NOT_SUPPORTED`; the confidence notes per method are in
+  `biometrics/face/OppoFaceHal.h`. The face feature XML *is* installed
+  (`device.mk`, commit `3426fd4`), so Settings does surface the entry — but
+  enrollment depends on the unverified forwarding above. Boot-test to confirm
+  shim load, `IBiometricsFingerprint/default` and `IBiometricsFace/default`
+  registration, sensor-node access (`/dev/silead_fp` or `/dev/esfp0`), that
+  `fps_hal`/`fpay_hal` remain disabled, and that `face_hal` is running.
 * The 8.1 vendor blobs are the highest-risk part of the port. The HIDL
   transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
   variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL
