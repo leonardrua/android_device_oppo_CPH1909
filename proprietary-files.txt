@@ -292,8 +292,6 @@ system/framework/vendor.oppo.hardware.biometrics.face-V1.0-java.jar
 system/etc/permissions/org.ifaa.android.manager.permissions.xml
 
 -vendor/app/EmCamera/EmCamera.apk
-vendor/app/EmCamera/oat/arm64/EmCamera.odex
-vendor/app/EmCamera/oat/arm64/EmCamera.vdex
 -vendor/app/LPPeService/LPPeService.apk
 -vendor/app/LocationEM2/LocationEM2.apk
 -vendor/app/MMIGroup/MMIGroup.apk
@@ -561,6 +559,13 @@ vendor/etc/audio_policy_volumes.xml
 vendor/etc/aurisys_config.xml
 vendor/etc/aurisys_param/FV-SAM-MTK2.dat
 vendor/etc/aurisys_param/Speech_AudioParam.xml
+# libopenshort.so: factory CTP (capacitive touch panel) open/short test library.
+# MMIGroup's MMIGroup.apk reads /vendor/etc/mmigroup/factoryInterfaceConfig.json,
+# whose "libopenshort_file" keys point at /vendor/lib{,64}/libopenshort.so. The
+# stock image had these in /system/lib{,64}; they are installed to /vendor here
+# so the config path resolves unchanged. Pulled from the stock system partition.
+vendor/lib/libopenshort.so
+vendor/lib64/libopenshort.so
 vendor/etc/cdma_ecc_list.xml
 vendor/etc/cdma_ecc_list_OP01.xml
 vendor/etc/cdma_ecc_list_OP09.xml
