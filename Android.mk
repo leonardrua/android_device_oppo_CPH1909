@@ -239,4 +239,31 @@ $(TARGET_OUT_VENDOR)/lib64/libskia.so: $(TARGET_OUT)/lib64/libskia.so
 
 ALL_DEFAULT_INSTALLED_MODULES += $(SKIA_VENDOR_COPIES)
 
+# Subdirectory module makefiles -- currently power/Android.mk.
+#
+# This include is load-bearing and its absence silently dropped the power HAL
+# from every build. Soong's module finder uses FindFirstNamedAt(), which stops
+# descending as soon as it finds an Android.mk in a directory:
+#
+#     func (f *Finder) FindFirstNamedAt(...) {
+#         ...
+#         if len(matches) > 0 { return []string{}, matches }   // stop descending
+#         return entries.DirNames, matches
+#     }
+#
+# Because this top-level Android.mk exists, power/Android.mk was never added to
+# out/.module_paths/Android.mk.list and the build system never parsed it. The
+# `power.mt6765` module stayed undefined, `PRODUCT_PACKAGES += power.mt6765` in
+# device.mk therefore resolved to nothing, and the image shipped AOSP's
+# power.default.so, whose power_module_t has no setFeature member at all.
+# android.hardware.power@1.0's Power::setFeature() is guarded by
+# `if (mModule->setFeature)`, so IPower::setFeature(DOUBLE_TAP_TO_WAKE) became a
+# silent no-op and double-tap-to-wake never worked.
+#
+# The build system only warns about an unresolved PRODUCT_PACKAGES entry in
+# TARGET_BUILD_APPS (sdk) builds, so nothing flagged it on a normal ROM build.
+# Hence all-makefiles-under: any future subdirectory module is picked up
+# automatically instead of being dropped the same way.
+include $(call all-makefiles-under,$(LOCAL_PATH))
+
 endif

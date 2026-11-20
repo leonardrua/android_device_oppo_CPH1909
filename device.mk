@@ -106,6 +106,15 @@ PRODUCT_PACKAGES += \
     android.hardware.usb@1.0-service.basic \
     power.mt6765
 
+# power.mt6765 is defined in power/Android.mk. That subdirectory makefile is
+# only reachable through the all-makefiles-under() include at the end of the
+# top-level Android.mk: Soong's finder stops descending once it finds an
+# Android.mk in a directory, so without that include this module was never
+# parsed, PRODUCT_PACKAGES silently resolved to nothing, and the image shipped
+# AOSP's power.default.so (whose power_module_t has no setFeature member) --
+# making IPower::setFeature(DOUBLE_TAP_TO_WAKE) a no-op. Verify after a build:
+#   ls out/target/product/CPH1909/vendor/lib{,64}/hw/power.mt6765.so
+
 # First-stage ramdisk fstab.
 #
 # The kernel DT no longer carries firmware/android/fstab (kernel commit 8e24bd2,
@@ -467,14 +476,18 @@ PRODUCT_COPY_FILES += \
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
     ro.mtkrc.path=/vendor/etc/init/hw/
 
-# Disable the stock ColorOS biometric HIDL services that the blob vendor makefile
-# also installs. PRODUCT_COPY_FILES keeps the first entry for a destination, so
-# these overrides must stay before the CPH1909-vendor.mk inherit below. They stop
-# the stock vendor.oppo face (face_hal), fingerprint (fps_hal) and fingerprintpay
+# Disable the stock ColorOS fingerprint HIDL services that the blob vendor
+# makefile also installs. PRODUCT_COPY_FILES keeps the first entry for a
+# destination, so these overrides must stay before the CPH1909-vendor.mk inherit
+# below. They stop the stock vendor.oppo fingerprint (fps_hal) and fingerprintpay
 # (fpay_hal) services from registering interfaces the Lineage framework does not
-# use. face_hal is dead on arrival in this build (its DT_NEEDED system-side
-# libs are not imported), and fps_hal/fpay_hal would contend with the AOSP
-# fingerprint@2.1 service for /dev/silead_fp.
+# use; fps_hal/fpay_hal would also contend with the AOSP fingerprint@2.1 service
+# for /dev/silead_fp.
+#
+# The stock face service (face_hal) is NOT disabled: since commit d49bb8e its
+# override rc dropped the `disabled` keyword and its DT_NEEDED interface
+# libraries now ship (see proprietary-files.txt), because the source-built
+# AOSP face@1.0 proxy in biometrics/face/ forwards to it as its backend.
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/init/vendor.oppo.hardware.biometrics.face@1.0-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/vendor.oppo.hardware.biometrics.face@1.0-service.rc \
     $(DEVICE_PATH)/rootdir/etc/init/vendor.oppo.hardware.biometrics.fingerprint@2.1-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/vendor.oppo.hardware.biometrics.fingerprint@2.1-service.rc \

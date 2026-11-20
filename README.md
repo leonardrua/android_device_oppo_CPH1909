@@ -700,8 +700,12 @@ not dependent on the permissive bring-up. The stock legacy
 power HALs (`vendor/lib/hw/power.mt6765.so` and `power.default.so`, both
 32-bit and 64-bit) are deliberately absent from `proprietary-files.txt`: they
 installed to the same vendor path as the shim while having no proc-node writer
-at all (verified: no `/proc` or `/sys` references in the binaries), so they were
-dropped from the vendor image to keep the shim the definitive `power.mt6765.so`.
+at all (verified: no `/proc` or `/sys` references in the binaries), so the stock
+`power.mt6765.so` was dropped from the vendor image to keep the shim the
+definitive one. `power.default.so` is *not* from the stock dump -- it is built
+from AOSP's `hardware/libhardware/modules/power` and installed unconditionally
+by the platform, so it is present in every image; the probe order above makes it
+unreachable whenever `ro.hardware=mt6765` resolves the shim.
 
 Note the AOSP `android.hardware.power@1.0-service` passthrough service supports
 both open()-based and open()-less legacy modules: with `methods->open` present
@@ -714,6 +718,32 @@ MediaTek and RMX2185 modules expose. Both
 stubs); the MTK vendor power interface
 (`vendor.mediatek.hardware.power@1.1-service` / blobs) is separate and
 unchanged. Behavior is panel-variant dependent; build/boot-test on hardware.
+
+`power/Android.mk` is compiled only because the top-level `Android.mk` ends with
+`include $(call all-makefiles-under,$(LOCAL_PATH))`. That include is
+load-bearing: Soong's finder uses `FindFirstNamedAt` for `Android.mk`, which
+**stops descending** once it matches a directory (finder.go:262), so the
+top-level `Android.mk` hides every nested one. Without the include the module
+was never parsed, `PRODUCT_PACKAGES += power.mt6765` resolved to nothing, and
+the image shipped AOSP's `power.default.so` -- whose `power_module_t` has no
+`setFeature` member at all, so `Power::setFeature()`'s `if (mModule->setFeature)`
+guard made `IPower::setFeature(DOUBLE_TAP_TO_WAKE)` a silent no-op and DT2W
+never worked. The build system only warns about an unresolvable
+`PRODUCT_PACKAGES` entry in `TARGET_BUILD_APPS` (sdk) builds, which is why a
+normal ROM build stayed green. `ci.yml` now checks this explicitly.
+
+After a build, confirm the shim is present and picked up:
+
+```sh
+ls out/target/product/CPH1909/vendor/lib{,64}/hw/power.mt6765.so
+adb shell dumpsys power | grep -i double            # setting
+adb shell 'ls -l /proc/touchpanel/double_tap_enable' # node exists
+adb shell dmesg | grep -i MTKPowerHAL               # shim log lines
+```
+
+`hw_get_module()` probes `ro.hardware` first, and `androidboot.hardware=mt6765`
+makes it `mt6765`, so `power.mt6765.so` wins over any `power.default.so` that
+also happens to be installed; the AOSP fallback is harmless.
 
 **Telephony.** `config_num_physical_slots=2` and `config_hotswapCapable=true`
 match the dual-SIM, hot-swap-capable modem (`ro.telephony.sim.count=2`,

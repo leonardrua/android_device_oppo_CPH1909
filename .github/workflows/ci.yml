@@ -42,6 +42,116 @@ jobs:
               sys.exit(1)
           print(f"SUCCESS: All {len(copied)} files in PRODUCT_COPY_FILES exist.")
 
+          print("\n=== Step 1b: Every local PRODUCT_PACKAGES module must be defined ===")
+          # A module named in PRODUCT_PACKAGES whose defining Android.mk is never
+          # parsed is silently dropped: the build system only warns about an
+          # unresolvable PRODUCT_PACKAGES entry in TARGET_BUILD_APPS (sdk) builds,
+          # so a normal ROM build ships green with the module missing. That is how
+          # power.mt6765 was lost -- power/Android.mk sat behind an Android.mk the
+          # Soong finder had already matched (it stops descending on first hit).
+          #
+          # Soong's finder (finder.FindFirstNamedAt) yields exactly one Android.mk
+          # per directory subtree; reproduce that here and require every
+          # PRODUCT_PACKAGES name defined in a LOCAL_MODULE to be reachable from
+          # one of the parsed makefiles, either directly or via all-makefiles-under.
+          def find_first_named_at(root, name):
+              out = []
+              for cur, dirs, files in os.walk(root):
+                  dirs[:] = [d for d in dirs if d not in ('.git', '.repo', 'out')]
+                  if name in files:
+                      out.append(os.path.join(cur, name))
+                      dirs[:] = []          # same stop-descending behaviour
+              return out
+
+          parsed = [p for p in find_first_named_at('.', 'Android.mk')]
+
+          # Expand all-makefiles-under() includes from the parsed makefiles.
+          reachable = set(parsed)
+          changed = True
+          while changed:
+              changed = False
+              for mk in list(reachable):
+                  try:
+                      text = open(mk).read()
+                  except OSError:
+                      continue
+                  for m in re.finditer(r'all-makefiles-under\s*,\s*\$\(LOCAL_PATH\)', text):
+                      base = os.path.dirname(mk)
+                      for sub in sorted(os.listdir(base) if os.path.isdir(base) else []):
+                          cand = os.path.join(base, sub, 'Android.mk')
+                          if os.path.isfile(cand) and cand not in reachable:
+                              reachable.add(cand)
+                              changed = True
+
+          # Module names defined anywhere in the tree.
+          defined = {}
+          for cur, dirs, files in os.walk('.'):
+              dirs[:] = [d for d in dirs if d not in ('.git', 'out')]
+              for f in files:
+                  if not f.endswith(('.mk', '.bp')):
+                      continue
+                  path = os.path.join(cur, f)
+                  try:
+                      text = open(path, errors='replace').read()
+                  except OSError:
+                      continue
+                  for name in re.findall(r'^\s*LOCAL_MODULE\s*:=\s*(\S+)', text, re.M):
+                      defined.setdefault(name, path)
+                  for name in re.findall(r'^\s*name:\s*"([^"]+)"', text, re.M):
+                      defined.setdefault(name, path)
+
+          # PRODUCT_PACKAGES names requested by this product.
+          def parse_product_packages(path):
+              """Line-based: handles '\\'-continued lists; skips $(VAR) refs."""
+              try:
+                  lines = open(path, errors='replace').read().splitlines()
+              except OSError:
+                  return []
+              out, collecting = [], False
+              for raw in lines:
+                  line = raw.strip()
+                  first = re.match(r'^PRODUCT_PACKAGES\s*\+?=', line)
+                  if not collecting and not first:
+                      continue
+                  collecting = True
+                  if first:
+                      line = re.sub(r'^PRODUCT_PACKAGES\s*\+?=\s*', '', line)
+                  cont = line.endswith('\\')
+                  token = line.rstrip('\\').strip()
+                  if token and not token.startswith('#') and '$(' not in token:
+                      out.append(token)
+                  if not cont:
+                      collecting = False
+              return out
+
+          requested = []
+          for mk in ['device.mk', 'lineage_CPH1909.mk']:
+              requested += parse_product_packages(mk)
+
+          # Only Android.mk-defined modules are at risk: Soong discovers
+          # Android.bp with FindNamedAt (which searches every directory), but
+          # Android.mk with FindFirstNamedAt (which stops descending on the
+          # first hit). So scope this check to modules defined in .mk files.
+          all_under = re.search(r'all-makefiles-under\s*,\s*\$\(LOCAL_PATH\)',
+                                open('Android.mk').read())
+          local = sorted({m for m in requested
+                          if m in defined and defined[m].endswith(".mk")})
+          if all_under:
+              # An all-makefiles-under() include picks up every subdirectory
+              # Android.mk, so nothing local can be orphaned.
+              orphan = []
+          else:
+              orphan = [m for m in local if defined[m] != './Android.mk']
+          if orphan:
+              print(f"FAILED: {len(orphan)} local PRODUCT_PACKAGES module(s) are defined in")
+              print("an Android.mk that the build will never parse:")
+              for m in orphan:
+                  print(f"  - {m}  (defined in {defined[m]})")
+              print("Add include $(call all-makefiles-under,$(LOCAL_PATH)) to Android.mk,")
+              print("or reference the subdirectory makefile explicitly.")
+              sys.exit(1)
+          print(f"SUCCESS: All {len(local)} Make-defined PRODUCT_PACKAGES modules are reachable.")
+
           print("\n=== Step 2: Checking kernel configuration ===")
           board = open("BoardConfig.mk").read()
           kconfig = re.search(r"^TARGET_KERNEL_CONFIG := (\S+)", board, re.M)
