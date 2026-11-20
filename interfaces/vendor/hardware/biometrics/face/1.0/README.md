@@ -53,6 +53,51 @@ android.hidl.base@1.0::IBase  bddab6184d7a346da6a07dc0828cf19a696f4caa3611c51f2e
 `getHashChain()` returns `[<this interface hash>, <IBase hash>]`
 (`Interface::typeChain()` + `Interface::emitDigestChain`).
 
+All three values were re-verified as literal 32-byte blobs in the stock
+`system/lib64/vendor.oppo.hardware.biometrics.face@1.0.so` `.rodata`
+(REA/Ghidra byte search, 2026-11-20):
+
+| Hash | `.rodata` address |
+| --- | --- |
+| `IBiometricsFace` | `0x37050` |
+| `android.hidl.base@1.0::IBase` | `0x37070` |
+| `IBiometricsFaceClientCallback` | `0x370a0` |
+
+## What a re-reverse-engineering pass confirmed
+
+An independent REA/Ghidra re-analysis of both the service binary
+(`vendor/bin/hw/vendor.oppo.hardware.biometrics.face@1.0-service`, 32-bit ARM,
+sha256 `32454e8b…78f1`) and the interface library re-confirmed, from the shipped
+machinery rather than from the notes above:
+
+* **Transaction codes 1..22** for `IBiometricsFace` and **1..11** for
+  `IBiometricsFaceClientCallback`, read as the literal constant each
+  `BpHw…::_hidl_<m>` passes to `IInterface::transact()`. Order matches the
+  declarations in the two `.hal` files exactly.
+* **Argument wire types**, from the `Parcel::read*` sequence in each `BnHw…`
+  dispatcher — e.g. `enroll` reads a 69-byte buffer then two `uint32`s, and
+  `authenticate` reads `uint64` then two `uint32`s.
+* **Return wire types**, from the `Parcel::write*` in each `BnHw…` reply:
+  `preEnroll` and `getAuthenticatorId` write `uint64`, `setNotify` writes
+  `uint64`, everything else writes `int32`.
+* **All five enums**, both values and declaration order, by decoding the
+  generated `toString(<Enum>)` bodies and cross-checking the value-name string
+  tables in `.rodata` (`0x372ad`..`0x375ba`).
+* **All three structs**, by reading the field offsets printed by the generated
+  `toString(const T&)`: `RectHal` = four `uint32` at `+0,+4,+8,+0xc`; `Point` =
+  two `float` at `+0,+4`; `FaceInfoWrapper` = five `float` at
+  `+0..+0x10` then `uint32` at `+0x14`.
+* **Enum declaration order**: `RequestStatus` declares **`SYS_UNKNOWN = 1`
+  first, then `SYS_OK = 0`**. The string table proves this ordering, and
+  `FaceError`/`FaceAcquiredInfo` (which happen to be declared in ascending
+  value order) prove the table is emitted in declaration order. `types.hal` was
+  corrected accordingly; get this wrong and the regenerated hash changes even
+  though every numeric value and the wire ABI are identical.
+* **The service's own forwarding** is null-safe: `face_hidl::notifyInitFinished`
+  calls `IFaceHalService::getService("default", true)` and branches on the
+  result, logging `"service  NULL"` and returning when the ColorOS framework
+  service is absent. It does not abort.
+
 ## The hash is SHA-256 of the `.hal` source file
 
 hidl-gen computes an interface's frozen hash as
@@ -63,7 +108,8 @@ hidl-gen computes an interface's frozen hash as
 Consequence: reproducing `fb9438a6...` would require the **exact original
 `.hal` bytes** (comments, whitespace, declaration order), which are not in the
 dump. This reconstruction is an ABI-faithful *reference*, not a byte-exact
-copy, so its regenerated hash will differ.
+copy, so its regenerated hash will differ. Declaration order is now known (see
+above), but comments and whitespace are not recoverable from the binary.
 
 **This does not block the proxy.** `getService()` resolves a service by
 interface *name* (descriptor), not by hash: `getRawServiceInternal()` in

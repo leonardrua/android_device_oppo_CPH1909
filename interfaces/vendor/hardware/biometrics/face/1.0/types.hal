@@ -22,10 +22,19 @@ package vendor.oppo.hardware.biometrics.face@1.0;
 /*
  * Values are negative errno (Linux convention). SYS_UNKNOWN (1) is the only
  * non-errno value observed.
+ *
+ * Declaration order: SYS_UNKNOWN is declared FIRST, before SYS_OK. hidl-gen
+ * emits an enum's value-name string table in declaration order, and the stock
+ * library's .rodata (0x372ad) reads SYS_UNKNOWN, SYS_OK, SYS_ENOENT, ... .
+ * FaceError and FaceAcquiredInfo are both declaration-ordered too (their
+ * tables match ascending value order, which is how those two happen to be
+ * declared). Declaring SYS_OK first would change the emitted table order and
+ * therefore the frozen interface hash, even though every numeric value is
+ * identical and the wire ABI is unaffected.
  */
 enum RequestStatus : int32_t {
-    SYS_OK        = 0,
     SYS_UNKNOWN   = 1,
+    SYS_OK        = 0,
     SYS_ENOENT    = -2,
     SYS_EINTR     = -4,
     SYS_EIO       = -5,
