@@ -1163,6 +1163,7 @@ vendor/lib/libipsec_ims_shr.so
 vendor/lib/libjpeg-alpha.so
 vendor/lib/libjpeg.a
 vendor/lib/libksensor.so
+vendor/lib/liblog-v28.so
 vendor/lib/libmediacodecservice.so
 vendor/lib/libmegface.so
 vendor/lib/libmegsegment.so
@@ -1568,6 +1569,7 @@ vendor/lib64/libion_ulit.so
 vendor/lib64/libipsec_ims_shr.so
 vendor/lib64/libjpeg-alpha.so
 vendor/lib64/libksensor.so
+vendor/lib64/liblog-v28.so
 vendor/lib64/libmegface.so
 vendor/lib64/libmegsegment.so
 vendor/lib64/libmemtrack_GL.so
