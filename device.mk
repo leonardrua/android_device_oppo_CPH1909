@@ -385,16 +385,6 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/FWUpgradeInit.rc:$(TARGET_COPY_OUT_ROOT)/FWUpgradeInit.rc
 
-# Stub for the relative import in /vendor/etc/init/hw/init.project.rc.
-#
-# That file does `import init.mt6765.usb.rc`, which init resolves against its
-# working directory (the filesystem root), so it looks for
-# /init.mt6765.usb.rc. The real file is already loaded by init.mt6765.rc with
-# the correct absolute /vendor/etc/init/hw/init.mt6765.usb.rc path, so this
-# stub only silences the "cannot open" parse error for the redundant line.
-PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/rootdir/init.mt6765.usb.rc:$(TARGET_COPY_OUT_ROOT)/init.mt6765.usb.rc
-
 # Stock ramdisk-only FPSGO kernel module
 #
 # The stock boot ramdisk ships lib/modules/fpsgo.ko, and the stock init.mt6765.rc
