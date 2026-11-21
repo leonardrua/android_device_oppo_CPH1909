@@ -102,18 +102,20 @@ system/lib64/libprogrambinary.so
 # LOS 17.1 builds libskia as cc_library_static (no .so), but the 8.1 vendor
 # blob libhwuiext.so DT_NEEDEDs libskia.so. The stock 8.1 shared lib is the
 # only option; its vendor-only deps (libmhalImageCodec, libdpframework,
-# libion_mtk, libjpeg-alpha) are already in /vendor. Android.mk copies
-# /system/lib{,64}/libskia.so into /vendor/lib{,64} so libhwuiext resolves.
-system/lib/libskia.so
-system/lib64/libskia.so
+# libion_mtk, libjpeg-alpha) are already in /vendor. The "system/...:vendor/..."
+# remap below extracts it from the stock /system/lib{,64} but installs it ONLY
+# into /vendor/lib{,64}; no /system copy is shipped (AOSP libhwui links skia
+# statically, so nothing in /system loads the shared libskia).
+system/lib/libskia.so:vendor/lib/libskia.so
+system/lib64/libskia.so:vendor/lib64/libskia.so
 # libskia.so DT_NEEDEDs two MTK-only libraries that AOSP 10 does not build.
 # Without them libhwuiext.so (loaded by libhwui in every UI process) fails to
 # dlopen. libMMListParser reads /system/etc/Multimedia_Daemon_List.xml;
 # libgraphics2d_ext provides mtkTransformExt / needMtkTransformExt.
-system/lib/libMMListParser.so
-system/lib64/libMMListParser.so
-system/lib/libgraphics2d_ext.so
-system/lib64/libgraphics2d_ext.so
+system/lib/libMMListParser.so:vendor/lib/libMMListParser.so
+system/lib64/libMMListParser.so:vendor/lib64/libMMListParser.so
+system/lib/libgraphics2d_ext.so:vendor/lib/libgraphics2d_ext.so
+system/lib64/libgraphics2d_ext.so:vendor/lib64/libgraphics2d_ext.so
 vendor/lib64/libLLVM.so
 
 # libsink.so: MTK IMS media sink, 32-bit only (as in stock).
