@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Device framework dimensions for the OPPO A5s (CPH1909).
+
+     GENERATED FILE: regenerate with
+     tools/extract-framework-overlay.py.
+
+     status_bar_height -> status_bar_height_portrait = 28dp
+       (stock has a single status_bar_height; LOS 17.1 reads status_bar_height_portrait; LOS 17.1 default 24dp)
+-->
+<resources>
+    <dimen name="status_bar_height_portrait">28dp</dimen>
+
+    <!-- Device capability: match the 82px hardware corner pattern. -->
+    <dimen name="rounded_corner_radius">82px</dimen>
+</resources>

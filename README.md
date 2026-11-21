@@ -672,22 +672,39 @@ makes the loader open the shipped `kmsetkey.trustonic.so` directly.
 
 ### Resource overlay
 
-`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which holds three resource
-overlays:
+`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which is regenerated from the
+stock CPH1909 `framework-res.apk` by `tools/extract-framework-overlay.py` and
+limited to resources that LineageOS 17.1 still defines. `overlay/README.md`
+records the input hashes, the regeneration command and the complete accounting:
+603 stock resources also exist in LOS 17.1, 66 differ, 47 are stock device
+configuration and are emitted, 19 are ROM policy and are excluded with a
+reason, and 537 are identical. Four additional values describe device
+capabilities that the stock framework does not attest; they are listed with
+their evidence in `overlay/README.md`.
 
-* `frameworks/base/core/res/res/xml/power_profile.xml` — the energy-use model
-  BatteryStats needs. AOSP ships only deliberately bogus placeholder values
-  there, so without it every battery statistic is meaningless. It describes the
-  Helio P35's two clusters (4x2.3 GHz and 4x1.8 GHz, matching the clock
-  frequencies in the kernel DT) and the 4230 mAh battery.
-* `frameworks/base/core/res/res/values/config.xml` — the device-specific
-  framework configuration described below. These are framework resources, so
-  they cannot come from the vendor blobs. Every value is the stock CPH1909 one,
-  read from the stock `framework-res.apk`, except where noted; only settings
-  that differ from the AOSP 10 defaults, or that describe a capability the
-  vendor/kernel provide, are listed.
-* `frameworks/base/packages/SystemUI/res/values/dimens.xml` — the SystemUI
-  dimensions described at the end of this section.
+* `frameworks/base/core/res/res/values/config.xml` — device configuration:
+  display and auto-brightness, the waterdrop cutout, navigation bar, ACCDET
+  audio jack, proximity suspend, the MediaTek `networkAttributes` table, MMS
+  user agent, Wi-Fi capabilities and RSSI thresholds, tether regexes, Bluetooth
+  HFP/power values, multi-user, auto power modes and the icon mask. Every entry
+  is the stock 8.1 value except the two capability overrides noted below;
+  resources that exist only in 8.1 are not copied, and 8.1 values that are ROM
+  policy (component names, feature lists, packages this build does not ship)
+  are listed in `overlay/README.md` instead of being silently overlaid.
+* `frameworks/base/core/res/res/values/dimens.xml` — the stock
+  `status_bar_height` (28dp = 56px at 320dpi, clearing the 55px notch) under
+  the LOS 17.1 name `status_bar_height_portrait`, which is the value the
+  framework reads, plus the 82px hardware corner radius.
+* `frameworks/base/packages/SystemUI/res/values/dimens.xml` — the 82px
+  `rounded_corner_content_padding` used as the navigation bar's start/end
+  margin, matching the same kernel corner pattern.
+* `frameworks/base/core/res/res/xml/power_profile.xml` — the stock energy model
+  with the 8.1 CPU keys mapped to the names Android 10 reads
+  (`cpu.speeds.clusterN` → `cpu.core_speeds.clusterN`, `cpu.active.clusterN` →
+  `cpu.core_power.clusterN`; `dsp.audio`/`dsp.video` → `audio`/`video`), both
+  clusters included and the 4230 mAh battery. The old overlay's
+  `cpu.speeds.cluster0`/`cpu.active.cluster0` names were not read by LOS 17.1
+  at all, so battery statistics used the defaults.
 
 The `config.xml` overlay is grouped as follows:
 
@@ -701,11 +718,9 @@ backlight levels (`8, 22, 48, 78, 128, 206, 255`), the stock debounce/sampling
 values and `config_automatic_brightness_available=true`. The vendor side was
 already complete: `lights.mt6765.so` writes
 `/sys/class/leds/lcd-backlight/brightness`, which the MT6765 LEDs driver
-exposes. The stock manual range was too dim for Android 10, so the brightness
-bounds come from the sibling MT6765 / 720x1520 CPH1920 (AX5s) instead: minimum
-`4`, default `140` and dim `4` of `255` (dark/doze stay at the stock `2`).
-Because the slider position scales the auto-brightness curve, the brighter
-default lifts auto-brightness as well. The waterdrop notch cutout
+exposes. The manual range is the stock CPH1909 one: minimum `1`, default `44`
+of `255` (dark/doze `2`). The previous CPH1920-derived `4/140` range has been
+removed because it did not come from this device. The waterdrop notch cutout
 (`M -105,0 L -105,55 L 105,55 L 105,0 Z`) is overridden too;
 `config_mainBuiltInDisplayCutoutRectApproximation` follows the cutout string
 automatically. `config_showNavigationBar=true` because the device has no
@@ -720,7 +735,11 @@ headset insertion; the stock ROM sets it true. The stock ROM also enables
 `config_suspendWhenScreenOffDueToProximity`, so the proximity sensor turns the
 screen off against the ear during a call.
 
-**Double-tap to wake.** `config_supportDoubleTapWake` is enabled. The
+**Double-tap to wake.** The stock 8.1 framework sets
+`config_supportDoubleTapWake=false` (ColorOS handled the setting outside the
+AOSP switch), so this is one of the documented capability overrides: the
+overlay adds `<bool name="config_supportDoubleTapWake">true</bool>`, backed by
+the stock kernel and the power HAL. The
 authoritative 8.1 kernel (`oppo6765_18511.dts`, multi-panel SPI touch `ili_ts@0`
 on `spi3`) exposes `/proc/touchpanel/double_tap_enable` on the Himax summer,
 NT36525B and Ilitek ipio_mmi panel drivers (the NT36xxx non-B path uses
@@ -787,11 +806,14 @@ adb shell dmesg | grep -i MTKPowerHAL               # shim log lines
 makes it `mt6765`, so `power.mt6765.so` wins over any `power.default.so` that
 also happens to be installed; the AOSP fallback is harmless.
 
-**Telephony.** `config_num_physical_slots=2` and `config_hotswapCapable=true`
-match the dual-SIM, hot-swap-capable modem (`ro.telephony.sim.count=2`,
-`ro.radio.simcount=2`, `ro.mtk_sim_hot_swap=1`). The stock
-`networkAttributes`/`radioAttributes` tables are used, including the
-MediaTek-specific WAP, XCAP, RCS, BIP, VSIM and preempt connection types.
+**Telephony.** `config_hotswapCapable=true` and the stock `networkAttributes`
+table (including the MediaTek WAP, XCAP, RCS, BIP, VSIM and preempt connection
+types) match the dual-SIM, hot-swap-capable modem (`ro.telephony.sim.count=2`,
+`ro.radio.simcount=2`, `ro.mtk_sim_hot_swap=1`). `radioAttributes` is identical
+to the AOSP 10 table and is therefore not overlaid. `config_num_physical_slots`
+is a capability override set to `2` from the stock vendor
+`ro.telephony.sim.count=2`; `UiccController` also raises the slot count to the
+number of RIL channels (2 here), so the explicit value and the modem agree.
 
 **Connectivity.** `config_wifi_dual_band_support` and
 `config_wifi_background_scan_support` are set for the MT6765 802.11ac radio,
@@ -805,14 +827,15 @@ stock vendor configuration (`wifi.tethering.interface=ap0`).
 are enabled as in the stock ROM, and `config_unplugTurnsOnScreen=true` restores
 the stock behaviour of waking the screen when power is unplugged.
 
-**SystemUI dimensions.** The A5s uses a panel with physically rounded corners:
-the MT6765 kernel enables round-corner support (`CONFIG_MTK_ROUND_CORNER_SUPPORT`)
-and every LCM driver shipped for this device declares a corner pattern. In
-LineageOS 17.1 SystemUI applies `rounded_corner_content_padding` as the
-start/end margin of the gesture-navigation layout, so the overlay sets it to
-the panel's corner radius (`34.0px`). That value comes from the sibling OPPO
-A12/A11k (OP4BFB), the same Helio P35 with a 720x1520 panel, and matches the
-32px corner constant used by the MT6765 720p LCM drivers in the kernel source.
+**SystemUI dimensions.** `navigation_layout.xml` uses
+`rounded_corner_content_padding` as the start/end margin of the navigation
+bar, and the framework uses `rounded_corner_radius` for its software corner
+masks. Both are `82px`: all eight real 720x1520 LCM drivers in the stock a46
+kernel set `corner_pattern_height`/`corner_pattern_height_bot` to 82 (`82` is
+the actual panel curve, the `virtual_dsi_vdo_default` entry is not a real
+LCM), and `CONFIG_MTK_ROUND_CORNER_SUPPORT=y` enables the hardware mask. The
+previous `34px` value came from a sibling OPPO A12/A11k and has been replaced
+by the value this device's own panel drivers declare.
 
 ### Input key layouts
 

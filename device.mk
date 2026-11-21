@@ -29,11 +29,20 @@ TARGET_SCREEN_WIDTH := 720
 
 # Framework resource overlay
 #
-# power_profile.xml supplies the energy-use model BatteryStats needs to estimate
-# battery drain (per-cluster CPU speeds and power for the 4x2.3 GHz + 4x1.8 GHz
-# Helio P35, plus the 4230 mAh battery). AOSP ships only deliberately bogus
-# placeholder values, so every battery statistic the framework reports is
-# meaningless without a device profile.
+# Generated from the stock CPH1909 framework-res.apk by
+# tools/extract-framework-overlay.py and limited to resources that
+# LineageOS 17.1 still defines:
+#
+#   values/config.xml        device configuration (brightness, display
+#                            cutout, telephony, Wi-Fi, Bluetooth, ...)
+#   values/dimens.xml        stock status_bar_height for the 55px notch
+#   xml/power_profile.xml    energy model for BatteryStats, with the 8.1
+#                            CPU keys mapped to the names Android 10 reads
+#
+# overlay/README.md records the provenance (input hashes), the complete
+# accounting of the 603 stock resources that LineageOS 17.1 also defines,
+# every excluded ROM-policy value with its reason, and the regeneration
+# command. Do not edit the generated files by hand.
 DEVICE_PACKAGE_OVERLAYS += \
     $(DEVICE_PATH)/overlay
 

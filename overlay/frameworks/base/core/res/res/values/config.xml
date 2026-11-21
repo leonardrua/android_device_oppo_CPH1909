@@ -1,50 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-/**
- * Copyright (c) 2009, The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
--->
+     Device framework configuration for the OPPO A5s (CPH1909).
 
-<!--
-     Device-specific framework configuration for the OPPO A5s (CPH1909).
+     GENERATED FILE: do not edit by hand.  Regenerate with
+     tools/extract-framework-overlay.py; see overlay/README.md for the
+     provenance, the full accounting and the list of stock values that
+     are deliberately excluded.
 
-     Values are taken from the stock CPH1909 framework-res.apk (Android 8.1)
-     and are limited to resources that still exist in Android 10. Only the
-     settings that differ from the AOSP 10 defaults (or that describe a
-     capability the vendor blobs provide) are overridden here.
+     The generated sections read the stock ColorOS 8.1
+     framework-res.apk and keep only resources that LineageOS 17.1
+     still defines.  The final section adds device capabilities that
+     the stock framework config does not attest; the README records
+     the evidence for each.  Resources whose 8.1 value is ROM policy
+     rather than device configuration are listed there too.
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
 
-    <!-- ===================================================================
-         Display and brightness
-         =================================================================== -->
-
-    <!-- Auto-brightness control points.
-         AOSP 10 ships these arrays empty, which makes
-         BrightnessMappingStrategy.create() return null: no
-         AutomaticBrightnessController is created, so auto-brightness is
-         unavailable and manual brightness has no device curve. -->
-    <integer-array name="config_autoBrightnessLevels">
-        <item>45</item>
-        <item>1025</item>
-        <item>1480</item>
-        <item>2250</item>
-        <item>3300</item>
-        <item>10000</item>
-    </integer-array>
-
+    <!-- ================================================================
+         Display, brightness and navigation
+         ================================================================ -->
+    <integer name="config_autoBrightnessBrighteningLightDebounce">1000</integer>
+    <integer name="config_autoBrightnessDarkeningLightDebounce">4000</integer>
     <integer-array name="config_autoBrightnessLcdBacklightValues">
         <item>8</item>
         <item>22</item>
@@ -54,111 +30,42 @@
         <item>206</item>
         <item>255</item>
     </integer-array>
-
-    <bool name="config_automatic_brightness_available">true</bool>
-
-    <integer name="config_autoBrightnessBrighteningLightDebounce">1000</integer>
-    <integer name="config_autoBrightnessDarkeningLightDebounce">4000</integer>
+    <integer-array name="config_autoBrightnessLevels">
+        <item>45</item>
+        <item>1025</item>
+        <item>1480</item>
+        <item>2250</item>
+        <item>3300</item>
+        <item>10000</item>
+    </integer-array>
     <integer name="config_autoBrightnessLightSensorRate">500</integer>
-
-    <!-- Backlight range. The stock ROM shipped a very dim manual range
-         (minimum 1, default 44 of 255), which an 8.1 ROM could get away with
-         but reads as almost black on LineageOS 17.1. Use the range from the
-         sibling MT6765 / 720x1520 CPH1920 (AX5s): minimum 4, default 140 and
-         dim 4 of 255. This only bounds the manual slider; auto-brightness
-         still follows the stock control points above, and because the slider
-         position scales the auto curve, the brighter default lifts it too.
-         dark/doze keep the stock 2. -->
-    <integer name="config_screenBrightnessSettingMinimum">4</integer>
-    <integer name="config_screenBrightnessSettingDefault">140</integer>
-    <integer name="config_screenBrightnessDark">2</integer>
-    <integer name="config_screenBrightnessDim">4</integer>
-    <integer name="config_screenBrightnessDoze">2</integer>
-
-    <!-- Waterdrop notch: 210 x 55 px, centred on the 720 x 1520 panel. -->
+    <bool name="config_automatic_brightness_available">true</bool>
+    <string name="config_icon_mask">M50 0C77.6 0 100 22.4 100 50C100 77.6 77.6 100 50 100C22.4 100 0 77.6 0 50C0 22.4 22.4 0 50 0Z</string>
     <string name="config_mainBuiltInDisplayCutout">M -105,0 L -105,55 L 105,55 L 105,0 Z</string>
-
-    <!-- The A5s has no capacitive navigation bar; use the on-screen one. -->
+    <integer name="config_screenBrightnessDark">2</integer>
+    <integer name="config_screenBrightnessDim">2</integer>
+    <integer name="config_screenBrightnessDoze">2</integer>
+    <integer name="config_screenBrightnessSettingDefault">44</integer>
+    <integer name="config_screenBrightnessSettingMinimum">1</integer>
     <bool name="config_showNavigationBar">true</bool>
+    <bool name="config_unplugTurnsOnScreen">true</bool>
+    <bool name="config_useRoundIcon">true</bool>
 
-    <!-- ===================================================================
+
+    <!-- ================================================================
          Input, sensors and audio jack
-         =================================================================== -->
-
-    <!-- Double-tap to wake. The OPPO touchpanel drivers on this multi-panel
-         device (Himax summer / NT36525B / Ilitek ipio_mmi, ili_ts@0 on spi3 in
-         the authoritative 8.1 kernel DTS) expose /proc/touchpanel/double_tap_enable.
-         power.mt6765 (via android.hardware.power@1.0-service) writes it when the
-         framework toggles POWER_FEATURE_DOUBLE_TAP_TO_WAKE. -->
-    <bool name="config_supportDoubleTapWake">true</bool>
-
-    <!-- The stock ROM suspends while the proximity sensor covers the screen
-         during a call, so the sensor HAL handles it as a wake-up source. -->
+         ================================================================ -->
     <bool name="config_suspendWhenScreenOffDueToProximity">true</bool>
-
-    <!-- The MTK ACCDET driver reports SW_HEADPHONE_INSERT /
-         SW_MICROPHONE_INSERT through the Linux input subsystem, not through
-         the legacy /sys/class/switch/h2w uevent path. -->
     <bool name="config_useDevInputEventForAudioJack">true</bool>
 
-    <!-- ===================================================================
-         Telephony
-         =================================================================== -->
 
-    <!-- Dual nano-SIM (ro.telephony.sim.count=2 in the stock vendor props). -->
-    <integer name="config_num_physical_slots">2</integer>
-
-    <!-- SIM hot swap is supported by the MTK modem and enabled by the stock
-         vendor props (ro.mtk_sim_hot_swap=1). -->
+    <!-- ================================================================
+         Telephony and modem
+         ================================================================ -->
     <bool name="config_hotswapCapable">true</bool>
-
-    <!-- ===================================================================
-         Connectivity
-         =================================================================== -->
-
-    <!-- The MT6765 Wi-Fi supports 802.11ac / 5 GHz and background scanning. -->
-    <bool name="config_wifi_dual_band_support">true</bool>
-    <bool name="config_wifi_background_scan_support">true</bool>
-
-    <!-- Tethering interfaces, matching the stock vendor configuration
-         (wifi.tethering.interface=ap0). -->
-    <string-array name="config_tether_wifi_regexs">
-        <item>ap\d</item>
-    </string-array>
-    <string-array name="config_tether_usb_regexs">
-        <item>rndis\d</item>
-    </string-array>
-    <string-array name="config_tether_bluetooth_regexs">
-        <item>bt-pan</item>
-        <item>bt-dun</item>
-    </string-array>
-
-    <!-- ===================================================================
-         Bluetooth
-         =================================================================== -->
-
-    <!-- The MTK Bluetooth controller supports HFP in-band ringing; the
-         remaining values are the stock power model used by BatteryStats. -->
-    <bool name="config_bluetooth_hfp_inband_ringing_support">true</bool>
-    <integer name="config_bluetooth_idle_cur_ma">1</integer>
-    <integer name="config_bluetooth_rx_cur_ma">2</integer>
-    <integer name="config_bluetooth_tx_cur_ma">3</integer>
-    <integer name="config_bluetooth_operating_voltage_mv">3300</integer>
-
-    <!-- ===================================================================
-         UI and power
-         =================================================================== -->
-
-    <bool name="config_enableMultiUserUI">true</bool>
-    <integer name="config_multiuserMaximumUsers">4</integer>
-    <bool name="config_unplugTurnsOnScreen">true</bool>
-
-    <!-- ===================================================================
-         Telephony network attributes
-         =================================================================== -->
-
-    <!-- Connection attributes from the stock ROM, including the MTK-specific
-         WAP, XCAP, RCS, BIP, VSIM and preempt connection types. -->
+    <string name="config_mms_user_agent">Android-Mms/0.1</string>
+    <string name="config_mms_user_agent_profile_url">http://www.google.com/oha/rdf/ua-profile-kila.xml</string>
+    <bool name="config_switch_phone_on_voice_reg_state_change">false</bool>
     <string-array name="networkAttributes">
         <item>wifi,1,1,1,-1,true</item>
         <item>mobile,0,0,0,-1,true</item>
@@ -179,10 +86,67 @@
         <item>mobile_preempt,29,0,9,60000,true</item>
         <item>bluetooth,7,7,2,-1,true</item>
     </string-array>
+    <bool name="skip_restoring_network_selection">true</bool>
 
-    <string-array name="radioAttributes">
-        <item>1,1</item>
-        <item>0,1</item>
+
+    <!-- ================================================================
+         Wi-Fi and connectivity
+         ================================================================ -->
+    <integer name="config_networkAvoidBadWifi">0</integer>
+    <string-array name="config_tether_bluetooth_regexs">
+        <item>bt-pan</item>
+        <item>bt-dun</item>
     </string-array>
+    <string-array name="config_tether_usb_regexs">
+        <item>rndis\\d</item>
+    </string-array>
+    <string-array name="config_tether_wifi_regexs">
+        <item>ap\\d</item>
+    </string-array>
+    <bool name="config_wifi_background_scan_support">true</bool>
+    <bool name="config_wifi_dual_band_support">true</bool>
+    <bool name="config_wifi_framework_enable_associated_network_selection">false</bool>
+    <string name="config_wifi_framework_sap_2G_channel_list">0</string>
+    <integer name="config_wifi_framework_wifi_score_bad_rssi_threshold_24GHz">-85</integer>
+    <integer name="config_wifi_framework_wifi_score_bad_rssi_threshold_5GHz">-82</integer>
+    <integer name="config_wifi_framework_wifi_score_entry_rssi_threshold_24GHz">-85</integer>
+    <integer name="config_wifi_framework_wifi_score_entry_rssi_threshold_5GHz">-82</integer>
+    <string name="config_wifi_random_mac_oui">00-0C-E7</string>
+
+
+    <!-- ================================================================
+         Bluetooth
+         ================================================================ -->
+    <bool name="config_bluetooth_hfp_inband_ringing_support">true</bool>
+    <integer name="config_bluetooth_idle_cur_ma">1</integer>
+    <integer name="config_bluetooth_operating_voltage_mv">3300</integer>
+    <integer name="config_bluetooth_rx_cur_ma">2</integer>
+    <integer name="config_bluetooth_tx_cur_ma">3</integer>
+
+
+    <!-- ================================================================
+         Power and battery
+         ================================================================ -->
+    <bool name="config_enableAutoPowerModes">true</bool>
+    <integer name="config_minimumScreenOffTimeout">5000</integer>
+
+
+    <!-- ================================================================
+         Biometrics
+         ================================================================ -->
+    <integer name="config_faceMaxTemplatesPerUser">5</integer>
+
+
+    <!-- ================================================================
+         Multi-user UI
+         ================================================================ -->
+    <bool name="config_enableMultiUserUI">true</bool>
+    <integer name="config_multiuserMaximumUsers">4</integer>
+
+    <!-- ================================================================
+         Device capabilities that the stock framework config does not attest
+         ================================================================ -->
+    <bool name="config_supportDoubleTapWake">true</bool>
+    <integer name="config_num_physical_slots">2</integer>
 
 </resources>
