@@ -182,6 +182,24 @@ set_prop(hal_camera_default, mtk_persist_prop)
 set_prop(mtk_factory_bin, mtk_persist_prop)
 set_prop(system_app, mtk_persist_prop)
 
+# Additional writers evidenced by the stock 8.1 policy
+# (vendor/etc/selinux/nonplat_sepolicy.cil in the dump), for families that are
+# labelled in property_contexts but were missing a set_prop grant:
+#   hal_fingerprint_default, mtk_hal_silead - vendor.silead.fp.ext.*
+#   mtk_netdagent                           - mtk.netdagent.*
+#   hal_keymaster_default, mtk_hal_soter    - soter.teei.* / GK/KM.server.status
+#   system_server                           - media.wfd.*
+#   platform_app                            - gps.* (mnld props)
+#   shell                                   - mtkcam.*
+set_prop(hal_fingerprint_default, mtk_persist_prop)
+set_prop(mtk_hal_silead, mtk_persist_prop)
+set_prop(mtk_netdagent, mtk_persist_prop)
+set_prop(hal_keymaster_default, mtk_persist_prop)
+set_prop(mtk_hal_soter, mtk_persist_prop)
+set_prop(system_server, mtk_persist_prop)
+set_prop(platform_app, mtk_persist_prop)
+set_prop(shell, mtk_persist_prop)
+
 # --- HAL domains: add/find on their own hwservice type ---
 #
 # Rules for a HAL service type must go through the attribute macros, not raw
@@ -265,6 +283,20 @@ type mcd_data_file, file_type, vendor_file_type;
 init_daemon_domain(mcd)
 
 type mobicore_device, dev_type;
+
+# TBaseDeviceBinding is the Trustonic provisioning helper shipped in
+# /vendor/bin. The stock 8.1 policy lets the shell execute it and transitions
+# the child into the Kinibi daemon domain (`mobicore`, which this port calls
+# mcd), because Trustonic's provisioning flow runs it from a shell/su context.
+# The helper needs no init service: it is a short-lived command, not a daemon.
+type tbase_device_binding_exec, exec_type, vendor_file_type, file_type;
+allow shell tbase_device_binding_exec:file { read getattr execute execute_no_trans open };
+allow shell mcd:process transition;
+allow mcd tbase_device_binding_exec:file entrypoint;
+typetransition shell tbase_device_binding_exec process mcd;
+# Stock grants the shell direct access to /dev/mobicore-user for this flow.
+# /dev/mobicore and /dev/mobicore-user share mobicore_device here.
+allow shell mobicore_device:chr_file { open read write ioctl };
 
 ###
 ### Telephony / modem
@@ -439,6 +471,30 @@ type mtk_aee, domain;
 type mtk_aee_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_aee)
 
+# aee_core_forwarder is the kernel core_pattern helper. init.aee.rc points
+# /proc/sys/kernel/core_pattern at /vendor/bin/aee_core_forwarder, so the
+# kernel usermodehelper execs it outside init; both the init and kernel
+# transitions are declared here, mirroring the stock O-MR1 policy. The core
+# files are written under /data/vendor/core (labelled aee_core_data_file in
+# file_contexts). The domain stays permissive during bring-up like the rest of
+# the AEE stack.
+type mtk_aee_core_forwarder, domain;
+type mtk_aee_core_forwarder_exec, exec_type, vendor_file_type, file_type;
+type aee_core_data_file, file_type, data_file_type;
+allow init mtk_aee_core_forwarder_exec:file { read getattr map execute open };
+allow init mtk_aee_core_forwarder:process transition;
+typetransition init mtk_aee_core_forwarder_exec process mtk_aee_core_forwarder;
+allow kernel mtk_aee_core_forwarder_exec:file { read getattr map execute open };
+allow kernel mtk_aee_core_forwarder:process transition;
+typetransition kernel mtk_aee_core_forwarder_exec process mtk_aee_core_forwarder;
+allow mtk_aee_core_forwarder mtk_aee_core_forwarder_exec:file { read getattr map execute entrypoint open };
+allow mtk_aee_core_forwarder vendor_data_file:dir { create add_name write search };
+allow mtk_aee_core_forwarder aee_core_data_file:dir create_dir_perms;
+allow mtk_aee_core_forwarder aee_core_data_file:file create_file_perms;
+allow mtk_aee_core_forwarder kernel:fd use;
+allow mtk_aee_core_forwarder kernel:fifo_file read;
+allow mtk_aee_core_forwarder mtk_aee:unix_stream_socket connectto;
+
 # stp_dump3: STP coredump dumper for the WCN core (init_connectivity.rc),
 # started when persist.mtk.wcn.coredump.mode is 1 or 2.
 type mtk_stp_dump, domain;
@@ -591,6 +647,7 @@ permissive mtk_fuelgauged;
 permissive mtk_vtservice;
 permissive mtk_vtservice_main;
 permissive mtk_aee;
+permissive mtk_aee_core_forwarder;
 permissive mtk_stp_dump;
 permissive mtk_connsyslogger;
 permissive mtk_wfca;
@@ -621,6 +678,20 @@ permissive mtk_bip;
 type oppoalgo_daemon, domain;
 type oppoalgo_daemon_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(oppoalgo_daemon)
+
+# The daemon registers android.OPPO.IOppoAlgoDaemon with the vendor binder
+# service manager (the binary links libbinder only; the stock policy labels
+# this interface in vndservice_contexts). cameraserver and the MediaTek camera
+# HAL are its clients in the stock policy, so the same binder rules are kept.
+type oppoalgo_service, vndservice_manager_type;
+add_service(oppoalgo_daemon, oppoalgo_service)
+vndbinder_use(oppoalgo_daemon)
+allow hal_camera_default oppoalgo_service:service_manager find;
+allow cameraserver oppoalgo_daemon:binder call;
+allow hal_camera_default oppoalgo_daemon:binder { call transfer };
+allow oppoalgo_daemon hal_camera_default:binder { call transfer };
+allow oppoalgo_daemon hal_graphics_allocator_default:binder call;
+allow oppoalgo_daemon hal_configstore_default:binder call;
 type silead_fpd_device, dev_type;
 type egis_device, dev_type;
 

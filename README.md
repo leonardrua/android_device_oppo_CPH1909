@@ -581,6 +581,32 @@ and `vendor/etc/init/*.rc` (all 201 services in 94 rc files) and against
   `vtservice_hidl` (class hal). Each gets a new `mtk_*` domain in `device.te`,
   permissive like the rest.
 
+A second audit pass covered the remaining runtime edges:
+
+* `aee_core_forwarder` was unlabelled. It is the kernel `core_pattern`
+  helper (`init.aee.rc` writes `/proc/sys/kernel/core_pattern`), so it is
+  exec'd by the kernel usermodehelper rather than by init. It now has
+  `mtk_aee_core_forwarder_exec`, the init and kernel transitions, an
+  `aee_core_data_file` label for `/data/vendor/core`, and a permissive
+  bring-up domain.
+* `TBaseDeviceBinding` (the Trustonic provisioning helper run from a shell)
+  now has `tbase_device_binding_exec` and the stock shell -> `mcd`
+  transition.
+* `oppoalgo_daemon` registers `android.OPPO.IOppoAlgoDaemon` with
+  vndservicemanager; the missing `vndservice_contexts` was added with the
+  `oppoalgo_service` type and the stock `add_service` / `vndbinder_use` /
+  client rules.
+* `property_contexts` now covers all 165 families in the stock
+  `nonplat_property_contexts` (51 were missing), still mapped to
+  `mtk_persist_prop`; the stock-evidenced setters got `set_prop` grants.
+* The stock `seapp_contexts` assigns custom app domains to
+  `com.gd.mobicore.pa`, `com.silead.fingerprint` and
+  `com.mediatek.mtklogger.proxy`. Those domains are not ported: the APKs
+  are re-signed with the platform key and run as `platform_app`.
+  sileadManager talks to the vendor HIDL HAL rather than the device node,
+  and the MTK logger proxy is not boot-critical, so this remains a
+  documented divergence rather than a guessed domain.
+
 Two notes on services deliberately *not* given a domain:
 
 * `init.mt6765.rc` retains the stock `service oae /system/bin/oae_server -s`

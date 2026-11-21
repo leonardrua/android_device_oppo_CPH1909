@@ -110,3 +110,65 @@ persist.qcom.				u:object_r:mtk_persist_prop:s0
 persist.meta.				u:object_r:mtk_persist_prop:s0
 persist.version.			u:object_r:mtk_persist_prop:s0
 
+
+# --- remaining families from the stock 8.1 property contexts ---
+# These are the stock nonplat_property_contexts entries not covered by this
+# file or by AOSP 10. The camera/audio/codec/telephony daemons shipped here
+# reference them (verified with strings(1) on the vendor libraries), and the
+# rc files set several of them. They all map to mtk_persist_prop, matching the
+# single-vendor-property approach used above; the matching set_prop grants are
+# in device.te.
+a2dp.				u:object_r:mtk_persist_prop:s0
+acodec.video.buflogging		u:object_r:mtk_persist_prop:s0
+af.				u:object_r:mtk_persist_prop:s0
+bt.				u:object_r:mtk_persist_prop:s0
+cdma.				u:object_r:mtk_persist_prop:s0
+factory.mmi.			u:object_r:mtk_persist_prop:s0
+ftrace.buffer.log		u:object_r:mtk_persist_prop:s0
+GK.server.status		u:object_r:mtk_persist_prop:s0
+gps.clock.type			u:object_r:mtk_persist_prop:s0
+gps.gps.version			u:object_r:mtk_persist_prop:s0
+KM.server.status		u:object_r:mtk_persist_prop:s0
+mediatek.			u:object_r:mtk_persist_prop:s0
+media.wfd.			u:object_r:mtk_persist_prop:s0
+mtkcam.				u:object_r:mtk_persist_prop:s0
+mtk.client.appmode		u:object_r:mtk_persist_prop:s0
+mtk.client.			u:object_r:mtk_persist_prop:s0
+mtk.md				u:object_r:mtk_persist_prop:s0
+mtk.netdagent.			u:object_r:mtk_persist_prop:s0
+mtk.omx.			u:object_r:mtk_persist_prop:s0
+mtk.omxvdec.mjc.log		u:object_r:mtk_persist_prop:s0
+mtk.vdec.log			u:object_r:mtk_persist_prop:s0
+mtk.vdectlc.log			u:object_r:mtk_persist_prop:s0
+mtk.venc.h264.showlog		u:object_r:mtk_persist_prop:s0
+mtk_wifi.			u:object_r:mtk_persist_prop:s0
+persist.auto_answer		u:object_r:mtk_persist_prop:s0
+persist.bootanim.		u:object_r:mtk_persist_prop:s0
+persist.dm.			u:object_r:mtk_persist_prop:s0
+persist.flight_mode_md_off	u:object_r:mtk_persist_prop:s0
+persist.gba.			u:object_r:mtk_persist_prop:s0
+persist.mal			u:object_r:mtk_persist_prop:s0
+persist.net.auto.tethering	u:object_r:mtk_persist_prop:s0
+persist.net.epdg.		u:object_r:mtk_persist_prop:s0
+persist.previous_slot		u:object_r:mtk_persist_prop:s0
+persist.update_finished		u:object_r:mtk_persist_prop:s0
+persist.update_started		u:object_r:mtk_persist_prop:s0
+persist.vold.			u:object_r:mtk_persist_prop:s0
+ro.mtk_md_mims_support		u:object_r:mtk_persist_prop:s0
+ro.wlan.mtk.wifi.5g		u:object_r:mtk_persist_prop:s0
+sf.postbuffer.prof		u:object_r:mtk_persist_prop:s0
+soter.teei.			u:object_r:mtk_persist_prop:s0
+streamin.			u:object_r:mtk_persist_prop:s0
+streamout.			u:object_r:mtk_persist_prop:s0
+thermal.manager.data		u:object_r:mtk_persist_prop:s0
+volte.emergency.pdn.protocol	u:object_r:mtk_persist_prop:s0
+vendor.silead.fp.ext.		u:object_r:mtk_persist_prop:s0
+# Exact stock keys that have no trailing dot, so the prefix entries above do
+# not cover the bare key.
+logmuch.detect.delay		u:object_r:mtk_persist_prop:s0
+logmuch.detect.value		u:object_r:mtk_persist_prop:s0
+persist.aee			u:object_r:mtk_persist_prop:s0
+persist.appdetection.		u:object_r:mtk_persist_prop:s0
+persist.mtklog			u:object_r:mtk_persist_prop:s0
+persist.ril			u:object_r:mtk_persist_prop:s0
+persist.subsidylock		u:object_r:mtk_persist_prop:s0

@@ -61,6 +61,11 @@
 ### Trustonic Kinibi TEE
 ###
 /(vendor|system/vendor)/bin/mcDriverDaemon                                                    u:object_r:mcd_exec:s0
+# TBaseDeviceBinding is the Trustonic provisioning helper. The stock policy
+# runs it from the shell and transitions it into the Kinibi daemon domain
+# (`typetransition shell TBaseDeviceBinding_exec process mobicore`); the
+# matching shell->mcd transition is declared in device.te.
+/(vendor|system/vendor)/bin/TBaseDeviceBinding                                                u:object_r:tbase_device_binding_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.trustonic\.soter@1\.0-service                          u:object_r:mtk_hal_soter_exec:s0
 /(vendor|system/vendor)/app/mcRegistry(/.*)?                                                  u:object_r:mcd_data_file:s0
 /dev/mobicore                                                                                 u:object_r:mobicore_device:s0
@@ -87,6 +92,12 @@
 # and aee_aedv64 at on post-fs. Both share one type.
 /(vendor|system/vendor)/bin/aee_aedv                                                         u:object_r:mtk_aee_exec:s0
 /(vendor|system/vendor)/bin/aee_aedv64                                                       u:object_r:mtk_aee_exec:s0
+# aee_core_forwarder is the kernel core_pattern helper: init.aee.rc points
+# /proc/sys/kernel/core_pattern at it, so it is exec'd by the kernel's
+# usermodehelper rather than by init and needs its own domain/transition.
+/(vendor|system/vendor)/bin/aee_core_forwarder                                               u:object_r:mtk_aee_core_forwarder_exec:s0
+# Core files written by that helper (the core_pattern argument).
+/data/vendor/core(/.*)?                                                                       u:object_r:aee_core_data_file:s0
 /(vendor|system/vendor)/bin/gsm0710muxd                                                       u:object_r:mtk_muxd_exec:s0
 /(vendor|system/vendor)/bin/muxreport                                                         u:object_r:mtk_muxreport_exec:s0
 /(vendor|system/vendor)/bin/ccci_mdinit                                                       u:object_r:mtk_ccci_exec:s0
