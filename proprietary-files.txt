@@ -473,7 +473,6 @@ vendor/build_18517.prop
 vendor/build_18518.prop
 vendor/build_18519.prop
 vendor/build_18520.prop
-vendor/data/misc/ProjectConfig.mk
 vendor/etc/.tp/.ht120.mtc
 vendor/etc/.tp/.thermal_policy_00
 vendor/etc/.tp/.thermal_policy_03
