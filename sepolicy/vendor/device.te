@@ -484,6 +484,14 @@ type aee_core_data_file, file_type, data_file_type;
 allow init mtk_aee_core_forwarder_exec:file { read getattr map execute open };
 allow init mtk_aee_core_forwarder:process transition;
 type_transition init mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
+# The kernel side of that transition is a full-treble exception: kernel is a
+# coredomain, and public/domain.te's "system components must not execute vendor
+# files" neverallow only whitelists init/shell/system_executes_vendor_violators.
+# A kernel usermodehelper exec'ing a /vendor binary is precisely the case that
+# attribute exists for (kernel.te documents domain_auto_trans() for
+# usermodehelpers), so join it. The general vendor-access neverallow already
+# exempts kernel ("loads /vendor/firmware"); only the execute ban needs this.
+typeattribute kernel system_executes_vendor_violators;
 allow kernel mtk_aee_core_forwarder_exec:file { read getattr map execute open };
 allow kernel mtk_aee_core_forwarder:process transition;
 type_transition kernel mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
