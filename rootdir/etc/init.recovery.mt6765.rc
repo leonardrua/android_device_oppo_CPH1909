@@ -21,6 +21,27 @@ on init
     chown system system /sys/class/leds/lcd-backlight/brightness
     chmod 0644 /sys/class/leds/lcd-backlight/brightness
 
+    # Select the configfs USB gadget. Recovery's own init.rc sets
+    # sys.usb.configfs to 0 in its early-init, which selects the legacy
+    # /sys/class/android_usb gadget, and this kernel does not provide it:
+    # a46_defconfig has CONFIG_USB_CONFIGFS=y and
+    # "# CONFIG_USB_G_ANDROID is not set", so drivers/usb/gadget/android.c --
+    # the only creator of the android_usb class -- is never built and every
+    # write below /sys/class/android_usb fails with ENOENT. Without this,
+    # recovery adb and sideload never enumerate.
+    #
+    # Recovery's init.rc already contains the matching configfs actions
+    # (mount configfs, create /config/usb_gadget/g1, ffs.adb/ffs.fastboot,
+    # bind the UDC), and Android 10's init fills sys.usb.controller itself
+    # from /sys/class/udc (init.cpp, set_usb_controller), so no controller
+    # name is needed here.
+    #
+    # sys.usb.ffs.aio_compat is deliberately not set: this 4.9 kernel's
+    # f_fs.c implements AIO and the stock 8.1 userspace used it (its
+    # init.usb.configfs.rc selects configfs without ever setting the
+    # fallback property), so adbd's default AIO path is the tested one.
+    setprop sys.usb.configfs 1
+
 on fs
     # Trustonic TEE nodes (keymaster/soter). Sideload of a signed package needs
     # them accessible to recovery.
