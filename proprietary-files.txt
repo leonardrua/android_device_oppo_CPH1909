@@ -488,6 +488,7 @@ vendor/etc/a2dp_audio_policy_configuration.xml
 vendor/etc/aee-config
 vendor/etc/agps_profiles_conf2.xml
 vendor/etc/audio_device.xml
+vendor/etc/audio_effects.conf
 vendor/etc/audio_em.xml
 vendor/etc/audio_param/AudioParamOptions.xml
 vendor/etc/audio_param/BtInfo_AudioParam.xml
