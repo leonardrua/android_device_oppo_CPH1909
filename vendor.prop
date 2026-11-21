@@ -1,40 +1,21 @@
 #
 # Vendor properties for OPPO A5s (CPH1909, MT6765).
-#
-# Derived from the stock ColorOS 5.2 /vendor/build.prop and the vendor
-# default.prop, keeping the properties that the prebuilt MediaTek / OPPO vendor
-# blobs and their rc files actually read and dropping the ones that only
-# mattered to the ColorOS framework (ro.com.google.gmsversion, ro.setupwizard.*,
-# pm.dexopt.* and the per-tag persist.log.tag.* block). A stock-confirmed
-# subset of MTK ro.mtk_* feature switches is appended at the end for parity
-# with the stock vendor image and the MT6765 LineageOS reference tree.
-#
-# Naming: the stock 8.1 blobs read the unprefixed ro.mtk_* names that the stock
-# vendor build.prop set. Android-10-era MTK trees use ro.vendor.mtk_* because
-# their HAL blobs are Android 10 builds; those names have no effect with these
-# 8.1 blobs, so this file stays on the stock names.
+# Stock ColorOS 5.2 values for the prebuilt MTK / OPPO 8.1 blobs. The blobs read
+# the stock unprefixed ro.mtk_* names, not the Android-10 ro.vendor.mtk_* ones.
 #
 
 # Audio
 ro.mtk_audio_tuning_tool_ver=V2.2
 ro.audio.usb.period_us=16000
-
-# Skip audio-effects configuration loading entirely. The stock 8.1 MTK effect
-# HAL (android.hardware.audio.effect@2.0-impl.so) + effects framework is a known
-# boot-blocker on this device: when effects loading runs, the vendor audio path
-# can crash in libeffects.so, audioserver never keeps media.audio_policy up,
-# AudioService blocks and the Watchdog restarts system_server ("every app not
-# responding"). This is the AOSP/LineageOS switch read by EffectsFactory.c init()
-# (PROPERTY_IGNORE_EFFECTS, media/libeffects/factory/EffectsFactory.h); when true
-# it never calls EffectLoadXmlEffectConfig. It is the device-build equivalent of
-# the phh-GSI persist.sys.phh.disable_audio_effects workaround, and being ro.* it
-# cannot be overridden by a stale /data/property value. We ship no
-# audio_effects.xml/conf or soundfx libs, so this only disables optional effects.
+ro.mtk_audio_alac_support=1
+ro.mtk_audio_ape_support=1
+ro.mtk_dual_mic_support=0
+# Skip effects config loading: the stock 8.1 effects path can crash in
+# libeffects.so and watchdog-reboot system_server. Read by EffectsFactory
+# init(); ro.* so a stale /data/property value cannot override it.
 ro.audio.ignore_effects=true
 
-# Dirac audio enhancement (the stock vendor image ships the Dirac service,
-# libs and /vendor/etc/dirac tuning blobs; these are the values its daemon and
-# the effect framework read at boot).
+# Dirac (values the stock Dirac daemon / effect framework read at boot)
 ro.dirac.config=192
 ro.dirac.poolsize=2
 ro.dirac.max_active.headset=5
@@ -44,59 +25,56 @@ persist.dirac.afm.mode=global
 persist.dirac.acs.startAtBoot=3
 
 # Camera
-# Stock values from the vendor build.prop / default.prop. The prebuilt MTK
-# camera HAL reads camera.disable_zsl_mode=1 (ZSL disabled as on ColorOS),
-# ro.mtk_fd_support=1 (MTK face-detection pipeline) and the two MDP capture
-# flags.
 ro.mtk_camera_app_version=3
 ro.mtk_fd_support=1
 camera.disable_zsl_mode=1
 camera.mdp.cz.enable=1
 camera.mdp.dre.enable=0
+ro.mtk_cam_mfb_support=3
+ro.mtk_cam_stereo_camera_support=1
+ro.mtk_slow_motion_support=1
+ro.mtk_zsdhdr_support=1
 
 # Display / graphics
-#
-# ro.hardware.egl=mtk is what makes the Android 10 EGL loader look for
-# libEGL_mtk.so / libGLESv2_mtk.so (frameworks/native Loader.cpp appends
-# ro.hardware.egl, then ro.board.platform, to "libEGL_"). The PowerVR blobs on
-# this device are the *_mtk set, so leaving this unset makes the loader fall
-# through to the non-existent libEGL_mt6765 and the UI never starts.
-#
-# The ro.surface_flinger.* entries are Android 10 sysprops read by
-# SurfaceFlingerProperties (verified in lineage-17.1); debug.sf.disable_backpressure
-# and ro.opengles.version / ro.sf.hwrotation are stock vendor values, and
-# debug.sf.latch_unsignaled is read by BufferLayer.cpp in lineage-17.1.
+# ro.hardware.egl=mtk makes the EGL loader pick libEGL_mtk.so (the PowerVR
+# blob set); without it the loader looks for a non-existent libEGL_mt6765.
+ro.hardware.egl=mtk
 ro.surface_flinger.has_wide_color_display=false
 ro.surface_flinger.has_HDR_display=false
-ro.hardware.egl=mtk
 debug.sf.disable_backpressure=1
 debug.sf.latch_unsignaled=1
 ro.opengles.version=196610
 ro.sf.hwrotation=0
+ro.mtk_blulight_def_support=1
+ro.mtk_aal_support=1
+ro.mtk_pq_support=2
+ro.mtk_pq_color_mode=1
 
 # DRM
 drm.service.enabled=true
 ro.mtk_widevine_drm_l3_support=1
+ro.mtk_cta_drm_support=1
+ro.mtk_oma_drm_support=1
 
 # Media
 media.settings.xml=/vendor/etc/media_profiles_V1_0.xml
-# MTK video decoder: hold playback until the first key frame arrives. The
-# stock vendor image set this for the MTK VDEC; the AOSP default streams the
-# first frames too early on this codec.
+# MTK VDEC: hold playback until the first key frame (AOSP plays too early).
 mtk.vdec.waitkeyframeforplay=1
 ro.mtk_wmv_playback_support=1
 ro.mtk_flv_playback_support=1
+ro.have_aacencode_feature=1
+ro.mtk_deinterlace_support=1
 
 # FM radio
-# Enables the MTK FM driver/service; the platform sets ro.mtk_fm_50khz_support
-# in the Platform section below.
 fmradio.driver.enable=1
+ro.mtk_fm_50khz_support=1
 
 # GPS / GNSS
-# Enabling is via ro.mtk_gps_support in the Platform section, as on the stock
-# vendor image.
+ro.mtk_gps_support=1
+ro.mtk_agps_app=1
+ro.mtk_log_hide_gps=0
 
-# Radio / telephony (dual SIM, MTK IMS)
+# Radio / telephony (dual SIM)
 persist.radio.default.sim=0
 persist.radio.fd.counter=150
 persist.radio.fd.off.counter=50
@@ -121,140 +99,8 @@ ro.telephony.default_network=9,9
 ro.telephony.sim.count=2
 ro.mtk_ril_mode=c6m_1rild
 ro.mtk_lte_support=1
-persist.mtk.volte.enable=1
-persist.mtk_mims_support=2
-persist.mtk_ussi_support=1
-persist.mtk_vilte_support=1
-persist.mtk_viwifi_support=1
-persist.mtk_volte_support=1
-persist.mtk_wfc_support=1
-persist.mtk_epdg_support=1
-persist.mtk_ct_volte_support=1
-persist.mtk_dynamic_ims_switch=1
-# Modem / CCCI: the MTK ccci kernel driver and daemons read the protocol
-# count and the C2K (CDMA2000) channel enable before bringing up MD1.
-ro.num_md_protocol=2
-ro.mtk_protocol1_rat_config=Lf/Lt/W/T/G
-mtk.eccci.c2k=enabled
-
-# Wi-Fi / connectivity
-ro.wlan.gen=gen4m
-mediatek.wlan.chip=CONSYS_MT6765
-mediatek.wlan.module.postfix=_consys_mt6765
-persist.mtk.wcn.combo.chipid=-1
-persist.mtk.wcn.coredump.mode=2
-persist.mtk.wcn.dynamic.dump=0
-# WCN firmware patch negotiation and consys power control, read by the
-# connectivity driver through the wmt_loader/stp service.
-persist.mtk.wcn.patch.version=-1
-persist.mtk.connsys.poweron.ctl=0
-# The stock vendor image enables WAPI; keep the stock value.
-ro.mtk_wapi_support=1
-ro.connsys.dedicated.log=1
-# DHCPv6 client support in the MTK Wi-Fi stack.
-ro.mtk_dhcpv6c_wifi=1
-
-# Bluetooth
-# Read by the MTK BT HAL/vendor lib and the AVRCP profile: keep AVRCP on a
-# single active player, matching the stock ROM. The AOSP Bluetooth stack
-# (system/bt and the Bluetooth app) reads
-# persist.bluetooth.a2dp_offload.disabled, so the prefix-less name is the one
-# that actually disables the offload path.
-bt.profiles.avrcp.multiPlayer.enable=0
-persist.bluetooth.a2dp_offload.disabled=true
-
-# Platform identification
-#
-# Several MediaTek blobs (rild, the wifi service, the audio HAL) and their rc
-# files branch on these.
-ro.mediatek.platform=MT6765
-ro.mediatek.chip_ver=S01
-# The stock ROM's alps branch and vendor SDK level. A number of MTK blobs and
-# their rc files compare these before enabling platform-specific paths.
-ro.mediatek.version.branch=alps-mp-o1.mp6.tc16sp
-ro.mediatek.version.sdk=4
-ro.mtk_bsp_package=1
-ro.mtk_bt_support=1
-ro.mtk_emmc_support=1
-ro.mtk_f2fs_enable=0
-ro.mtk_gps_support=1
-ro.mtk_agps_app=1
-ro.mtk_omacp_support=1
-ro.mtk_is_tablet=0
 ro.mtk_sim_hot_swap=1
 ro.mtk_sim_hot_swap_common_slot=1
-ro.mtk_shared_sdcard=1
-ro.mtk_wlan_support=1
-ro.mtk_aal_support=1
-ro.mtk_pq_support=2
-ro.mtk_fm_50khz_support=1
-ro.mtk_dual_mic_support=0
-ro.mtk_tee_gp_support=1
-ro.mtk_trustonic_tee_support=1
-ro.hardware.kmsetkey=trustonic
-
-# Storage / init
-ro.frp.pst=/dev/block/platform/bootdevice/by-name/frp
-ro.mount.fs=EXT4
-ro.sys.sdcardfs=1
-ro.oem_unlock_supported=1
-persist.sys.usb.config=mtp
-
-# Dalvik / ART
-#
-# Heap sizing for this device's 3/4 GB RAM. The stock vendor image set these;
-# the generic AOSP defaults are noticeably smaller, which makes large apps hit
-# the growth limit.
-dalvik.vm.heapgrowthlimit=384m
-dalvik.vm.heapsize=512m
-
-# USB
-ro.sys.usb.bicr=no
-ro.sys.usb.charging.only=yes
-ro.sys.usb.mtp.whql.enable=0
-ro.sys.usb.storage.type=mtp
-# Keep the USB ACM (ttyGS) control channel disabled unless a tool asks for it,
-# as the stock vendor default.prop did.
-persist.service.acm.enable=0
-
-# Power-off charging / boot
-sys.ipo.disable=1
-sys.ipo.pwrdncap=2
-
-# Additional MTK properties from the stock CPH1909 /vendor/build.prop.
-# These are the MTK-generic entries from the lineage-17.1 MT6765 reference
-# vendor.prop that this device also ships. Values are the stock CPH1909
-# values, not the reference device values; Xiaomi-only keys are omitted.
-
-# Audio
-ro.mtk_audio_alac_support=1
-ro.mtk_audio_ape_support=1
-
-# Camera
-ro.mtk_cam_mfb_support=3
-ro.mtk_cam_stereo_camera_support=1
-ro.mtk_slow_motion_support=1
-ro.mtk_zsdhdr_support=1
-
-# Display
-ro.mtk_blulight_def_support=1
-
-# DRAM
-ro.mtk_config_max_dram_size=0x800000000
-
-# DRM
-ro.mtk_cta_drm_support=1
-ro.mtk_oma_drm_support=1
-
-# Media
-ro.have_aacencode_feature=1
-ro.mtk_pq_color_mode=1
-
-# GPS
-ro.mtk_log_hide_gps=0
-
-# Radio
-bgw.current3gband=0
 ro.mtk_data_config=1
 ro.mtk_eap_sim_aka=1
 ro.mtk_embms_support=1
@@ -266,37 +112,106 @@ ro.mtk_rild_read_imsi=1
 ro.mtk_world_phone_policy=0
 ro.sim_me_lock_mode=0
 ro.sim_refresh_reset_by_modem=1
+ro.com.android.mobiledata=true
+bgw.current3gband=0
 
 # IMS
-# IMS feature gate. The stock vendor build.prop uses the underscore spelling;
-# the dotted/ro variants from the reference tree were duplicates and removed.
+persist.mtk.volte.enable=1
 persist.mtk_ims_support=1
+persist.mtk_mims_support=2
+persist.mtk_ussi_support=1
+persist.mtk_vilte_support=1
+persist.mtk_viwifi_support=1
+persist.mtk_volte_support=1
+persist.mtk_wfc_support=1
+persist.mtk_epdg_support=1
+persist.mtk_ct_volte_support=1
+persist.mtk_dynamic_ims_switch=1
 ro.md_auto_setup_ims=1
+
+# Modem / CCCI
+ro.num_md_protocol=2
+ro.mtk_protocol1_rat_config=Lf/Lt/W/T/G
+mtk.eccci.c2k=enabled
+ro.mtk_enable_md1=1
+ro.mtk_single_bin_modem_support=1
+ro.mtk_send_rr_support=1
+ro.mtk_rebootmeta_support=0
+
+# Wi-Fi / connectivity
+ro.mtk_wlan_support=1
+ro.wlan.gen=gen4m
+mediatek.wlan.chip=CONSYS_MT6765
+mediatek.wlan.module.postfix=_consys_mt6765
+persist.mtk.wcn.combo.chipid=-1
+persist.mtk.wcn.coredump.mode=2
+persist.mtk.wcn.dynamic.dump=0
+persist.mtk.wcn.patch.version=-1
+persist.mtk.connsys.poweron.ctl=0
+ro.mtk_wapi_support=1
+ro.connsys.dedicated.log=1
+ro.mtk_dhcpv6c_wifi=1
+ro.ap_info_monitor=0
+ro.mtk_wappush_support=1
+service.wcn.driver.ready=no
+
+# Bluetooth
+ro.mtk_bt_support=1
+bt.profiles.avrcp.multiPlayer.enable=0
+# AOSP system/bt reads the prefix-less name to disable the offload path.
+persist.bluetooth.a2dp_offload.disabled=true
 
 # WFD
 ro.mtk_wfd_support=1
 wfd.dummy.enable=1
 wfd.iframesize.level=0
 
-# WiFi
-ro.ap_info_monitor=0
-ro.mtk_wappush_support=1
+# Platform identification (MTK blobs and rc files branch on these)
+ro.mediatek.platform=MT6765
+ro.mediatek.chip_ver=S01
+ro.mediatek.version.branch=alps-mp-o1.mp6.tc16sp
+ro.mediatek.version.sdk=4
+ro.mtk_bsp_package=1
+ro.mtk_emmc_support=1
+ro.mtk_f2fs_enable=0
+ro.mtk_config_max_dram_size=0x800000000
+ro.mtk_is_tablet=0
+ro.mtk_shared_sdcard=1
+ro.mtk_omacp_support=1
+ro.mtk_tee_gp_support=1
+ro.mtk_trustonic_tee_support=1
+ro.hardware.kmsetkey=trustonic
 
-# Other
+# Storage / init
+ro.frp.pst=/dev/block/platform/bootdevice/by-name/frp
+ro.mount.fs=EXT4
+ro.sys.sdcardfs=1
+ro.oem_unlock_supported=1
+
+# USB
+persist.sys.usb.config=mtp
+ro.sys.usb.bicr=no
+ro.sys.usb.charging.only=yes
+ro.sys.usb.mtp.whql.enable=0
+ro.sys.usb.storage.type=mtp
+persist.service.acm.enable=0
+
+# Dalvik / ART (stock heap sizing for 3/4 GB RAM)
+dalvik.vm.heapgrowthlimit=384m
+dalvik.vm.heapsize=512m
+
+# Power / boot
+sys.ipo.disable=1
+sys.ipo.pwrdncap=2
+ro.mtk_pow_perf_support=1
+
+# Misc
 persist.meta.dumpdata=0
-ro.com.android.mobiledata=true
 ro.email_support_ucs2=0
 ro.ksc5601_write=0
 ro.mtk_afw_support=1
 ro.mtk_bip_scws=1
 ro.mtk_cta_set=1
-ro.mtk_deinterlace_support=1
-ro.mtk_enable_md1=1
-ro.mtk_pow_perf_support=1
-ro.mtk_rebootmeta_support=0
 ro.mtk_search_db_support=1
-ro.mtk_send_rr_support=1
-ro.mtk_single_bin_modem_support=1
 ro.opa.eligible_device=true
 ro.ussd_ksc5601=0
-service.wcn.driver.ready=no
