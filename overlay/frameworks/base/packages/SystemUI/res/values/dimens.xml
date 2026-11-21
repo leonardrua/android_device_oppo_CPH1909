@@ -2,8 +2,8 @@
 <!--
      Device SystemUI dimensions for the OPPO A5s (CPH1909).
 
-     GENERATED FILE: regenerate with
-     tools/extract-framework-overlay.py.
+     Extracted from the stock OPPO CPH1909 kernel (all real 720x1520 LCM
+     drivers use an 82px corner pattern); see overlay/README.md.
 
      rounded_corner_content_padding = 82px (navigation_layout.xml uses it as the start/end margin; it has to clear the 82px hardware corner pattern)
 -->

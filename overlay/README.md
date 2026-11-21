@@ -1,6 +1,6 @@
 # CPH1909 framework overlay
 
-This directory is generated from the stock OPPO CPH1909 (Android
+This directory is extracted from the stock OPPO CPH1909 (Android
 8.1 / ColorOS 5.2) framework.  It contains only values whose
 resource still exists in LineageOS 17.1: a value that Android 10
 does not read is never copied, and a value whose 8.1 meaning is ROM
@@ -8,19 +8,10 @@ policy rather than device configuration is excluded with a reason.
 The four values that are not stock framework values are listed
 under "Device capabilities" below with their evidence.
 
-Do not edit the generated files by hand.  Regenerate with:
-
-```
-tools/extract-framework-overlay.py \
-    --framework-res  /path/to/framework-res.apk \
-    --stock-build-prop /path/to/stock/vendor/build.prop \
-    --los-config     /path/to/lineage-17.1/core/res/res/values/config.xml \
-    --los-dimens     /path/to/lineage-17.1/core/res/res/values/dimens.xml \
-    --los-power-profile /path/to/lineage-17.1/core/java/com/android/internal/os/PowerProfile.java
-```
-
-`--check` regenerates into a temporary directory and diffs the result
-against the committed files.
+The files are extracted from the stock `framework-res.apk` and the stock
+vendor `build.prop`; the LineageOS 17.1 inputs are used only to decide which
+resources are still read. The input hashes below pin the exact sources the
+extraction was made from.
 
 ## Inputs
 
@@ -34,7 +25,7 @@ against the committed files.
 
 The stock APK comes from the CPH1909 A.46 dump.  The LineageOS
 inputs are the 17.1 sources named on the command line; their hashes
-above pin the exact revision the overlay was generated against.
+above pin the exact revision the extraction was made against.
 
 ## Accounting
 
@@ -50,8 +41,7 @@ above pin the exact revision the overlay was generated against.
 | LOS 17.1 resources not present in the stock framework | 265 |
 
 Every resource that differs is either emitted or listed under
-"Excluded" below; the generator refuses to run if one is
-unclassified.
+"Excluded" below.
 
 ## Emitted values
 

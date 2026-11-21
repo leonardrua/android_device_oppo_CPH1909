@@ -29,20 +29,19 @@ TARGET_SCREEN_WIDTH := 720
 
 # Framework resource overlay
 #
-# Generated from the stock CPH1909 framework-res.apk by
-# tools/extract-framework-overlay.py and limited to resources that
-# LineageOS 17.1 still defines:
+# Extracted from the stock CPH1909 framework-res.apk and limited to
+# resources that LineageOS 17.1 still defines:
 #
 #   values/config.xml        device configuration (brightness, display
 #                            cutout, telephony, Wi-Fi, Bluetooth, ...)
 #   values/dimens.xml        stock status_bar_height for the 55px notch
+#                            and the 82px hardware corner radius
 #   xml/power_profile.xml    energy model for BatteryStats, with the 8.1
 #                            CPU keys mapped to the names Android 10 reads
 #
 # overlay/README.md records the provenance (input hashes), the complete
 # accounting of the 603 stock resources that LineageOS 17.1 also defines,
-# every excluded ROM-policy value with its reason, and the regeneration
-# command. Do not edit the generated files by hand.
+# and every excluded ROM-policy value with its reason.
 DEVICE_PACKAGE_OVERLAYS += \
     $(DEVICE_PATH)/overlay
 

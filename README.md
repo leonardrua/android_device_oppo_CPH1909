@@ -672,10 +672,10 @@ makes the loader open the shipped `kmsetkey.trustonic.so` directly.
 
 ### Resource overlay
 
-`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which is regenerated from the
-stock CPH1909 `framework-res.apk` by `tools/extract-framework-overlay.py` and
-limited to resources that LineageOS 17.1 still defines. `overlay/README.md`
-records the input hashes, the regeneration command and the complete accounting:
+`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which is extracted from the
+stock CPH1909 `framework-res.apk` and limited to resources that LineageOS 17.1
+still defines. `overlay/README.md` records the input hashes and the complete
+accounting:
 603 stock resources also exist in LOS 17.1, 66 differ, 47 are stock device
 configuration and are emitted, 19 are ROM policy and are excluded with a
 reason, and 537 are identical. Four additional values describe device

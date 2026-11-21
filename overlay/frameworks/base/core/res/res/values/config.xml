@@ -2,12 +2,12 @@
 <!--
      Device framework configuration for the OPPO A5s (CPH1909).
 
-     GENERATED FILE: do not edit by hand.  Regenerate with
-     tools/extract-framework-overlay.py; see overlay/README.md for the
-     provenance, the full accounting and the list of stock values that
-     are deliberately excluded.
+     Extracted from the stock OPPO CPH1909 (Android 8.1 / ColorOS 5.2)
+     framework-res.apk.  See overlay/README.md for the provenance, the
+     full accounting and the list of stock values that are deliberately
+     excluded.
 
-     The generated sections read the stock ColorOS 8.1
+     The extracted sections read the stock ColorOS 8.1
      framework-res.apk and keep only resources that LineageOS 17.1
      still defines.  The final section adds device capabilities that
      the stock framework config does not attest; the README records

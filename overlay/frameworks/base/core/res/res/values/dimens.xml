@@ -2,8 +2,8 @@
 <!--
      Device framework dimensions for the OPPO A5s (CPH1909).
 
-     GENERATED FILE: regenerate with
-     tools/extract-framework-overlay.py.
+     Extracted from the stock OPPO CPH1909 framework-res.apk; see
+     overlay/README.md.
 
      status_bar_height -> status_bar_height_portrait = 28dp
        (stock has a single status_bar_height; LOS 17.1 reads status_bar_height_portrait; LOS 17.1 default 24dp)
