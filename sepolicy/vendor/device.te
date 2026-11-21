@@ -293,7 +293,7 @@ type tbase_device_binding_exec, exec_type, vendor_file_type, file_type;
 allow shell tbase_device_binding_exec:file { read getattr execute execute_no_trans open };
 allow shell mcd:process transition;
 allow mcd tbase_device_binding_exec:file entrypoint;
-typetransition shell tbase_device_binding_exec process mcd;
+type_transition shell tbase_device_binding_exec:process mcd;
 # Stock grants the shell direct access to /dev/mobicore-user for this flow.
 # /dev/mobicore and /dev/mobicore-user share mobicore_device here.
 allow shell mobicore_device:chr_file { open read write ioctl };
@@ -483,10 +483,10 @@ type mtk_aee_core_forwarder_exec, exec_type, vendor_file_type, file_type;
 type aee_core_data_file, file_type, data_file_type;
 allow init mtk_aee_core_forwarder_exec:file { read getattr map execute open };
 allow init mtk_aee_core_forwarder:process transition;
-typetransition init mtk_aee_core_forwarder_exec process mtk_aee_core_forwarder;
+type_transition init mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
 allow kernel mtk_aee_core_forwarder_exec:file { read getattr map execute open };
 allow kernel mtk_aee_core_forwarder:process transition;
-typetransition kernel mtk_aee_core_forwarder_exec process mtk_aee_core_forwarder;
+type_transition kernel mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
 allow mtk_aee_core_forwarder mtk_aee_core_forwarder_exec:file { read getattr map execute entrypoint open };
 allow mtk_aee_core_forwarder vendor_data_file:dir { create add_name write search };
 allow mtk_aee_core_forwarder aee_core_data_file:dir create_dir_perms;
