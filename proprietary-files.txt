@@ -114,7 +114,7 @@ system/lib/libMMListParser.so
 system/lib64/libMMListParser.so
 system/lib/libgraphics2d_ext.so
 system/lib64/libgraphics2d_ext.so
-system/lib64/libLLVM.so
+vendor/lib64/libLLVM.so
 
 # libsink.so: MTK IMS media sink, 32-bit only (as in stock).
 #
