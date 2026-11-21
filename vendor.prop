@@ -19,6 +19,19 @@
 ro.mtk_audio_tuning_tool_ver=V2.2
 ro.audio.usb.period_us=16000
 
+# Skip audio-effects configuration loading entirely. The stock 8.1 MTK effect
+# HAL (android.hardware.audio.effect@2.0-impl.so) + effects framework is a known
+# boot-blocker on this device: when effects loading runs, the vendor audio path
+# can crash in libeffects.so, audioserver never keeps media.audio_policy up,
+# AudioService blocks and the Watchdog restarts system_server ("every app not
+# responding"). This is the AOSP/LineageOS switch read by EffectsFactory.c init()
+# (PROPERTY_IGNORE_EFFECTS, media/libeffects/factory/EffectsFactory.h); when true
+# it never calls EffectLoadXmlEffectConfig. It is the device-build equivalent of
+# the phh-GSI persist.sys.phh.disable_audio_effects workaround, and being ro.* it
+# cannot be overridden by a stale /data/property value. We ship no
+# audio_effects.xml/conf or soundfx libs, so this only disables optional effects.
+ro.audio.ignore_effects=true
+
 # Dirac audio enhancement (the stock vendor image ships the Dirac service,
 # libs and /vendor/etc/dirac tuning blobs; these are the values its daemon and
 # the effect framework read at boot).
