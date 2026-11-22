@@ -25,8 +25,7 @@
 # with the build's platform key. The stock APKs carry OPPO's platform
 # certificate, which cannot match an unofficial LineageOS build. Without
 # re-signing, the apps that declare android.uid.system / android.uid.phone are
-# rejected for a shared-user signature mismatch, and
-# SysuiDarkThemeOverlay no longer matches SystemUI.
+# rejected for a shared-user signature mismatch.
 #
 # The Soter files below come from the stock /system partition, not /vendor.
 # SoterService is com.tencent.soter.soterserver (sharedUserId=android.uid.system)
@@ -1721,7 +1720,6 @@ vendor/lib64/vendor.oppo.hardware.wifi.supplicant@1.0_vendor.so
 vendor/lib64/vendor.silead.hardware.fingerprintext@1.0_vendor.so
 vendor/media/LMspeed_508.emd
 vendor/media/PFFprec_600.emd
--vendor/overlay/SysuiDarkTheme/SysuiDarkThemeOverlay.apk
 vendor/res/images/lcd_test_00.png
 vendor/res/images/lcd_test_01.png
 vendor/res/images/lcd_test_02.png
