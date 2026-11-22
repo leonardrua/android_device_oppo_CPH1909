@@ -15,10 +15,14 @@
 # first_stage_mount entries that are already mounted, so nothing is mounted
 # twice.
 #
-# /odm is listed because the scatter defines a 256 MiB odm partition, but the
-# factory image leaves it zeroed (no ext4 superblock). recoveryonly matches
-# stock and means normal boot never tries to mount it; nothing on the device
-# uses /odm.
+# /odm holds the precompiled SELinux policy: because BOARD_ODMIMAGE_FILE_SYSTEM_TYPE
+# is set, the build installs precompiled_sepolicy to /odm/etc/selinux (not /vendor).
+# Mount it in the first stage so init can load that precompiled policy instead of
+# recompiling the CIL at boot. no_fail is essential: the factory image leaves the
+# partition zeroed (no ext4 superblock), and a failed first_stage_mount is otherwise
+# fatal -- with no_fail an empty/missing odm is ignored and init falls back to
+# compiling the policy from the /system + /vendor CIL. The LOS OTA writes odm.img,
+# so a normal install has a mountable odm.
 #
 # /data uses FDE (full-disk encryption) with the key blob on the dedicated
 # `metadata` partition, backed by the Trustonic Kinibi TEE. It is NOT FBE.
@@ -31,7 +35,7 @@
 
 /dev/block/platform/bootdevice/by-name/system             /system              ext4    ro                                                                   wait,first_stage_mount
 /dev/block/platform/bootdevice/by-name/vendor             /vendor              ext4    ro                                                                   wait,first_stage_mount
-/dev/block/platform/bootdevice/by-name/odm                /odm                 ext4    ro                                                                   wait,recoveryonly
+/dev/block/platform/bootdevice/by-name/odm                /odm                 ext4    ro                                                                   wait,first_stage_mount,no_fail
 
 /dev/block/platform/bootdevice/by-name/cache              /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,async_discard                   wait,check
 
