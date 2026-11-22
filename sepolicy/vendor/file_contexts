@@ -39,6 +39,7 @@
 # -service-lazy as hal_drm_default_exec and declares no hal_drm_widevine_exec.
 /(vendor|system/vendor)/bin/hw/android\.hardware\.drm@1\.0-service\.widevine                  u:object_r:hal_drm_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.light@2\.0-service-mediatek                 u:object_r:hal_light_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.light@2\.0-service\.CPH1909                u:object_r:hal_light_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.sensors@1\.0-service-mediatek               u:object_r:hal_sensors_default_exec:s0
 
 ###
