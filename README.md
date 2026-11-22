@@ -16,8 +16,15 @@ The device is **A-only**, **non-system-as-root**, and **legacy Treble**:
   (`BOARD_VNDK_VERSION := current`, see *Vendor partition and VNDK*).
 
 The hardware values (partition sizes, kernel base and offsets, MT6765 platform,
-fstab partition layout) are carried over unchanged from the stock device tree.
-Everything that had to change for Android 10 is listed below.
+fstab partition layout) are carried over from the stock device tree. Everything
+that had to change for Android 10 is listed below.
+
+Several HALs that stock ships as blobs are instead **built from source in this
+tree** — fingerprint (`biometrics/fingerprint/`), face (`biometrics/face/`),
+power (`power/`) and lights (`light/`) — and the matching vendor blobs are
+dropped or disabled. The vendor blob adaptations (repacked APKs, ELF/VNDK
+repairs, compatibility libraries) are documented in the vendor tree's README;
+this file documents the device-side wiring and the Android 10 changes.
 
 ## Building
 
@@ -34,57 +41,51 @@ Lunch choices are declared through `COMMON_LUNCH_CHOICES` in
 `AndroidProducts.mk`; there is no `add_lunch_combo` any more (it is obsolete in
 Android 10 and only prints a warning).
 
-Automated CI builds are covered under
-[`## CI workflows`](#ci-workflows) below; the `build.yml` workflow also has a
-`target` dispatch input so `bootimage` / `vendorimage` / `productimage` /
-`systemimage` can be produced in place of `bacon`.
+Automated CI builds are covered under [`## CI workflows`](#ci-workflows) below;
+the `build.yml` workflow also has a `target` dispatch input so `bootimage` /
+`vendorimage` / `productimage` / `systemimage` can be produced in place of
+`bacon`.
 
 ### Kernel
 
 This tree **builds the kernel from source** — there is no prebuilt kernel image
 in the repository. `TARGET_KERNEL_SOURCE := kernel/oppo/CPH1909` and
-`TARGET_KERNEL_CONFIG := a46_defconfig` (plus
-`TARGET_KERNEL_ARCH := arm64` and `BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb`),
-so the build compiles the 4.9 MediaTek/OPPO `VENDOR_EDIT` kernel and packs
-`Image.gz-dtb` itself. The config was switched from
-`oppo6765_18511_defconfig` to `a46_defconfig` (commit `7d11630`) to match the
-A.46 firmware baseline carried by the `kernel/oppo/CPH1909` lineageos branch;
-both configs build the same `oppo6765_18511` project
+`TARGET_KERNEL_CONFIG := a46_defconfig` (plus `TARGET_KERNEL_ARCH := arm64` and
+`BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb`), so the build compiles the 4.9
+MediaTek/OPPO `VENDOR_EDIT` kernel and packs `Image.gz-dtb` itself. The config
+was switched from `oppo6765_18511_defconfig` to `a46_defconfig` to match the A.46
+firmware baseline carried by the `kernel/oppo/CPH1909` lineageos branch; both
+configs build the same `oppo6765_18511` project
 (`CONFIG_ARCH_MTK_PROJECT="oppo6765_18511"`,
 `CONFIG_BUILD_ARM64_DTB_OVERLAY_IMAGE_NAMES="mediatek/oppo6765_18511"`), and
 `a46_defconfig` also sets `CONFIG_OPPO_KTV_DEV=y`.
 
 `TARGET_PREBUILT_KERNEL` is deliberately never set: the tree carries no kernel
-image, and LineageOS clears `TARGET_KERNEL_SOURCE` when it is — which would
-also break the `generated_kernel_includes` Soong module, since that runs
-`make -C $(TARGET_KERNEL_SOURCE) ... headers_install` for modules that depend
-on `generated_kernel_headers`. Keeping a real kernel source tree at
-`kernel/oppo/CPH1909` is therefore required both for the image and for the
-headers.
+image, and LineageOS clears `TARGET_KERNEL_SOURCE` when it is — which would also
+break the `generated_kernel_includes` Soong module (it runs
+`make -C $(TARGET_KERNEL_SOURCE) ... headers_install` for modules that depend on
+`generated_kernel_headers`). A real kernel source tree at `kernel/oppo/CPH1909`
+is therefore required both for the image and for the headers.
 
-The CI build workflow clones `leonardrua/A5S-8.1-kernel-source` into that
-path, with the GCC Linaro 6.3.1 + Python 2 toolchain and on-the-fly warning
-fixes (see [`## CI workflows`](#ci-workflows)). On a local build, check out
-the same tree at `kernel/oppo/CPH1909` relative to the LineageOS source root
-before lunching.
+The CI build workflow clones `leonardrua/A5S-8.1-kernel-source` into that path,
+with the GCC Linaro 6.3.1 + Python 2 toolchain and on-the-fly warning fixes (see
+[`## CI workflows`](#ci-workflows)). On a local build, check out the same tree at
+`kernel/oppo/CPH1909` relative to the LineageOS source root before lunching.
 
-The source tree is version `4.9.80` (`CONFIG_LOCALVERSION=""`), while the
-stock vendor image ships seven 4.9.77+ kernel modules — `wmt_drv.ko`,
+The source tree is version `4.9.80` (`CONFIG_LOCALVERSION=""`), while the stock
+vendor image ships seven 4.9.77+ kernel modules — `wmt_drv.ko`,
 `wmt_chrdev_wifi.ko`, `wlan_drv_gen4m.ko`, `bt_drv.ko`, `gps_drv.ko`,
 `fmradio_drv.ko` and `met.ko` in `/vendor/lib/modules/`, loaded by
-`init.wmt_drv.rc` / `init.wlan_drv.rc` / `init.bt_drv.rc` / `init.gps_drv.rc`
-/ `init.fmradio_drv.rc` — all built with `CONFIG_MODVERSIONS=y`. The stock
-boot ramdisk also ships `fpsgo.ko`, a small FPSGO companion module that
-provides the implementation behind `xgf_est_slptime_fp`, which the source-built
-kernel exports. It is kept in this tree at `rootdir/modules/fpsgo.ko` (SHA-256
-`ab532998884b64151dc2c0d7c82a20ea37c3cd9d3001d7742e67d1cf3b932d8d`) and is
-installed by `device.mk` as `/system/lib/modules/fpsgo.ko`. The vendor
-`init.mt6765.rc` in this tree is edited from the stock original to load that
-path instead of the stock `/lib/modules/fpsgo.ko` — Android 10's system image
-root has no `/lib`, and no `/lib` alias is created for a single insmod line.
-The prior kernel module mix without this companion binary has been verified to
-work: a kernel built from this source boots on the stock vendor image and the
-stock modules load at boot.
+`init.wmt_drv.rc` / `init.wlan_drv.rc` / `init.bt_drv.rc` / `init.gps_drv.rc` /
+`init.fmradio_drv.rc` — all built with `CONFIG_MODVERSIONS=y`. The stock boot
+ramdisk also ships `fpsgo.ko`, a small FPSGO companion module that provides the
+implementation behind `xgf_est_slptime_fp`, which the source-built kernel
+exports. It is kept in this tree at `rootdir/modules/fpsgo.ko` (SHA-256
+`ab532998884b64151dc2c0d7c82a20ea37c3cd9d3001d7742e67d1cf3b932d8d`) and installed
+by `device.mk` as `/system/lib/modules/fpsgo.ko`. The vendor `init.mt6765.rc` in
+this tree is edited to load that path instead of the stock `/lib/modules/fpsgo.ko`
+— Android 10's system image root has no `/lib`, and no `/lib` alias is created for
+a single insmod line.
 
 Why the version mismatch is not a problem, for the record:
 
@@ -97,8 +98,8 @@ Why the version mismatch is not a problem, for the record:
   commented out in this tree, so even a trailing vermagic mismatch only logs.
 * What still matters is the modversions CRC check in `check_version()`, which
   resolves against the running kernel's exported-symbol CRCs. The MediaTek
-  driver ABI is shared between the two trees, so the modules resolve — which
-  is the part the boot test proves and static analysis could not.
+  driver ABI is shared between the two trees, so the modules resolve — which is
+  the part the boot test proves and static analysis could not.
 
 ## Extracting the vendor blobs
 
@@ -117,61 +118,50 @@ copies every path in `proprietary-files.txt` to
 ### The `/system` side blobs
 
 The system partition blobs this device needs (the Soter Trustonic interface
-libraries, the IMS stack and the stub jars) also live in the vendor tree under
-`vendor/oppo/CPH1909/proprietary/system/` and are installed into `/system/...`
-by the vendor makefile / prebuilt modules; the device tree's blob list
-documents them in the same file as the vendor blobs. Two things are worth
-knowing about that set:
+libraries, the IMS stack, the stub jars, and the MediaTek native libraries) also
+live in the vendor tree under `vendor/oppo/CPH1909/proprietary/system/` and are
+installed into `/system/...` by the vendor makefile / prebuilt modules; the
+device tree's blob list documents them in the same file as the vendor blobs. The
+vendor tree's README has the full accounting; the highlights:
 
 * The stock `ImsService.apk` (`com.mediatek.ims`) and `OppoSimSettings.apk`
-  (`com.coloros.simsettings`) are dex-stripped and repacked with an
-  unquickened `classes.dex` extracted from their `oat/arm64/*.vdex` files
-  (vdexExtractor), so they re-sign with this build's platform key — both
-  declare platform shared uids (`android.uid.phone`, `android.uid.system`).
-* The VoLTE video-telephony chain is imported as well: `/system/bin/vtservice`
-  and its full MTK dependency closure (`libmtk_vt_service.so`, `libsource.so`,
+  (`com.coloros.simsettings`) are dex-stripped and repacked with an unquickened
+  `classes.dex` extracted from their `oat/arm64/*.vdex` files (vdexExtractor), so
+  they re-sign with this build's platform key — both declare platform shared uids
+  (`android.uid.phone`, `android.uid.system`). `SoterService` and `EmCamera` are
+  repacked the same way.
+* The VoLTE video-telephony chain is imported: `/system/bin/vtservice` and its
+  full MTK dependency closure (`libmtk_vt_service.so`, `libsource.so`,
   `libcomutils.so`, `libdpframework_mtk.so`, `libged_sys.so`,
   `libgralloc_extra_sys.so`, `libion_mtk_sys.so`, `libion_ulit_sys.so`,
-  `libpq_prot_mtk.so`, `libsignal.so`, `libvt_avsync.so` plus the `/system`
-  HIDL interface libraries) — required by `init.vtservice.rc`, which starts
-  `class main` service `vtservice`. `vtservice_hidl` is labeled
-  `mtk_vtservice_exec` (vendor path, `vendor_file_type`); `/system/bin/vtservice`
-  is labeled `mtk_vtservice_main_exec` and given its own `mtk_vtservice_main`
-  domain (`coredomain` + `system_file_type`) because domains/types entered
-  from `/system` must carry those attributes (`treble_sepolicy_tests` /
+  `libpq_prot_mtk.so`, `libsignal.so`, `libvt_avsync.so` plus the `/system` HIDL
+  interface libraries) — required by `init.vtservice.rc`. `vtservice_hidl` is
+  labeled `mtk_vtservice_exec`; `/system/bin/vtservice` is labeled
+  `mtk_vtservice_main_exec` with its own `mtk_vtservice_main` domain
+  (`coredomain` + `system_file_type`), because domains/types entered from
+  `/system` must carry those attributes (`treble_sepolicy_tests` /
   `sepolicy_tests`). Both domains stay permissive during bring-up.
 * Additional stock `/system/bin` helpers referenced by the vendor init tree are
-  imported at their original system paths, along with their direct native-library
-  closure: `autochmod.sh`, `emdlogger1`, `emdlogger2`, `emdlogger5`, `factory`,
-  `iwpriv`, `mdlogger` and `meta_tst`, plus `libmdloggerrecycle.so` and
-  `libmemoryDumpEncoder.so` in both system library directories, and 64-bit
-  `libaudiocustparam.so`, `libkmsetkey.so`, `libminiui.so` and
-  `libsysenv_system.so`. These are factory/meta/modem/logging tools, not
-  replacements for AOSP-built platform services; the stock `/system/bin` files
-  that are absent from the stock dump or are AOSP-built are not imported.
-* The stock `/system/lib` and `/system/lib64` MediaTek native libraries are
-  also stored in the vendor tree and installed at their original `/system`
-  paths. This includes the MediaTek HIDL interface library
-  `vendor.mediatek.hardware.camera.device@1.1.so`, a direct dependency of the
-  stock camera stack, and the directly required 64-bit gralloc/ION/UBSan
-  support libraries. The API-27 MediaTek framework implementation JARs and
-  precompiled ART/OAT files are not included; they are not drop-in Android 10
-  framework artifacts. The separately documented 309-byte empty framework
-  stubs remain a distinct exception.
-* The stock fingerprint framework stub jars are imported
+  imported at their original system paths with their direct native-library
+  closure (`autochmod.sh`, `emdlogger1/2/5`, `factory`, `iwpriv`, `mdlogger`,
+  `meta_tst`, `libmdloggerrecycle.so`, `libmemoryDumpEncoder.so`, and 64-bit
+  `libaudiocustparam.so`, `libkmsetkey.so`, `libminiui.so`, `libsysenv_system.so`).
+  These are factory/meta/modem/logging tools, not replacements for AOSP services.
+* The stock `/system/lib[64]` MediaTek native libraries are stored in the vendor
+  tree and installed at their original `/system` paths, including
+  `vendor.mediatek.hardware.camera.device@1.1.so` (a direct camera-stack
+  dependency). The API-27 MediaTek framework JARs and precompiled ART/OAT files
+  are not included. The 309-byte empty framework stub jars remain a distinct
+  exception (stock-layout parity; nothing loads them).
+* The fingerprint/face framework stub jars are imported
   (`android.frameworks.fingerprintservice-V1.0-java.jar`,
-  `vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar`, `ifaamanager.jar`)
-  plus OPPO's `org.ifaa.android.manager.permissions.xml`, which declares
-  `ifaamanager.jar` (the OPPO IFAA fingerprint framework) a public library.
-  The two stock face framework stub jars are imported the same way
-  (`android.frameworks.faceservice-V1.0-java.jar`,
-  `vendor.oppo.hardware.biometrics.face-V1.0-java.jar`). All five jars are
-  309-byte empty stubs; nothing in this ROM references them — they are
-  stock-layout parity. There is no face permissions XML in stock, so none is
-  imported. The stock system-side interface libraries for the disabled OPPO
-  fingerprint and face services are deliberately not imported (see the vendor
-  tree's README).
-* Both apps' `<uses-library>` entries carry `required="false"`, and their
+  `vendor.oppo.hardware.biometrics.fingerprint-V2.1-java.jar`, `ifaamanager.jar`,
+  `android.frameworks.faceservice-V1.0-java.jar`,
+  `vendor.oppo.hardware.biometrics.face-V1.0-java.jar`) plus OPPO's
+  `org.ifaa.android.manager.permissions.xml`. All five jars are 309-byte empty
+  stubs. The stock system-side interface libraries for the disabled OPPO
+  fingerprint services are deliberately not imported.
+* Both IMS apps' `<uses-library>` entries carry `required="false"`, and their
   signature|privileged permissions are allowlisted by
   `configs/permissions/privapp-permissions-ims.xml` (installed to
   `/system/etc/permissions/`) in addition to AOSP's
@@ -179,150 +169,151 @@ knowing about that set:
 
 Entries that exist on the stock 8.1 vendor partition but must not be copied are
 documented at the top of `proprietary-files.txt` (VINTF data, the 8.1 SELinux
-policy, mkshrc, and the generated `public.libraries.txt` /`fs_config*` files).
+policy, mkshrc, and the generated `public.libraries.txt` / `fs_config*` /
+`NOTICE.xml.gz` files).
 
-Pins are optional: lines of the form `path|sha1` additionally record the SHA-1
-of the extracted blob so a stale or corrupted extraction fails the build early.
-The current list carries none — it is generated without `--pin`, and
+Pins are optional: lines of the form `path|sha1` additionally record the SHA-1 of
+the extracted blob so a stale or corrupted extraction fails the build early. The
+current list carries none — it is generated without `--pin`, and
 `extract_utils.sh` strips any `|sha1` suffix before resolving the path, so an
-unpinned list extracts identically. `update-sha1sums.sh` can add or refresh
-them against the blobs in `vendor/oppo/CPH1909/proprietary/`:
+unpinned list extracts identically. `update-sha1sums.sh` can add or refresh them:
 
 ```sh
 ./update-sha1sums.sh          # refresh existing pins
 ./update-sha1sums.sh --add    # pin every entry
 ```
 
-It reads `proprietary-files.txt` line by line (paths with spaces are safe),
-leaves comments, blank lines and unpinned entries untouched unless `--add` is
-given, warns and preserves any entry whose blob is missing, and rewrites the
-file atomically only when something changed.
+It reads `proprietary-files.txt` line by line (paths with spaces are safe), leaves
+comments, blank lines and unpinned entries untouched unless `--add` is given,
+warns and preserves any entry whose blob is missing, and rewrites the file
+atomically only when something changed.
 
 ## CI workflows
 
-The repository also contains two GitHub Actions workflows.
+The repository also contains GitHub Actions workflows.
 
 ### `build.yml` — Namespace build
 
 `Build LineageOS 17.1 (Oppo A5s CPH1909) - Namespace` is a manual
 (`workflow_dispatch`) build workflow that runs on the user-provisioned
-`namespace-profile-leonard` runner and writes its `out/` tree to the
-persistent `/cache` disk so that consecutive runs reuse ccache and
-intermediates. Its main characteristics:
+`namespace-profile-leonard` runner and writes its `out/` tree to the persistent
+`/cache` disk so consecutive runs reuse ccache and intermediates. Its main
+characteristics:
 
-* Syncs the LineageOS 17.1 source with `repo`, then clones the device and
-  vendor trees and a source kernel tree
-  (`leonardrua/A5S-8.1-kernel-source`) into
+* Syncs the LineageOS 17.1 source with `repo`, then clones the device and vendor
+  trees and a source kernel tree (`leonardrua/A5S-8.1-kernel-source`) into
   `kernel/oppo/CPH1909`. The kernel image is built from this source tree
-  (`TARGET_KERNEL_SOURCE`/`TARGET_KERNEL_CONFIG`, no prebuilt image in the
-  device tree); the tree is additionally
-  patched on the fly to keep warnings non-fatal.
-* The `Keep kernel warnings non-fatal` step appends `-Wno-error` to the
-  standard C-flags line in `scripts/Makefile.lib`, so the large MTK kernel
-  (which is full of arch-specific warnings) still builds. It is idempotent and
-  asserts exactly one occurrence of the Kbuild line before patching.
-* The AArch64 UAPI header guard is **not** a workflow step: it is committed in
-  the kernel repository as `9ff77c8aa0b1` ("uapi: guard fpsimd_context in the
-  AArch64 sigcontext header"), which wraps `struct fpsimd_context` in
+  (`TARGET_KERNEL_SOURCE`/`TARGET_KERNEL_CONFIG`, no prebuilt image in the device
+  tree); the tree is additionally patched on the fly to keep warnings non-fatal.
+* The `Keep kernel warnings non-fatal` step appends `-Wno-error` to the standard
+  C-flags line in `scripts/Makefile.lib`, so the large MTK kernel (full of
+  arch-specific warnings) still builds. It is idempotent and asserts exactly one
+  occurrence of the Kbuild line before patching.
+* The AArch64 UAPI header guard is **not** a workflow step: it is committed in the
+  kernel repository as `9ff77c8aa0b1` ("uapi: guard fpsimd_context in the AArch64
+  sigcontext header"), wrapping `struct fpsimd_context` in
   `arch/arm64/include/uapi/asm/sigcontext.h` with `#ifdef __aarch64__` so
   `headers_install` also works for 32-bit ARM (used by
-  `generated_kernel_includes`). The related fixes `c728eada242c`,
-  `809fe558e875` and `3bdc4c825601` cover the other AArch64-only UAPI
-  declarations. (Earlier revisions of this README described this as a CI step
-  at commit `ac03987`; it is in-tree now, so nothing patches it at build time.)
-* Before the build starts it verifies the Git LFS artifact
-  `external/chromium-webview/prebuilt/arm64/webview.apk`. If the file is a
-  small LFS pointer (typical: 134 bytes, not the ~260 MB real APK) it runs
-  `git lfs pull` to materialise the real ZIP, then fails fast if the file is
-  still not a ZIP. This protects the run from the
-  `//external/chromium-webview:webview` `veridex` / `aapt2`
-  "failed opening zip: Invalid file" failure observed at ~99 % on the first
-  CI build (around `110688/111307`).
-* Builds with `lunch lineage_CPH1909-<type>` and `mka <target>`. The job
-  exposes `target`, `build_type`, `build_timeout_min`, `out_on_cache` and
-  `clean_out` dispatch inputs. `OUT_DIR`/`OUT_BASE` live on `/cache` when
-  the runner provides it, otherwise the workspace is used.
+  `generated_kernel_includes`). Related fixes `c728eada242c`, `809fe558e875` and
+  `3bdc4c825601` cover the other AArch64-only UAPI declarations.
+* Before the build it verifies the Git LFS artifact
+  `external/chromium-webview/prebuilt/arm64/webview.apk`. If the file is a small
+  LFS pointer (typical: 134 bytes, not the ~260 MB real APK) it runs `git lfs
+  pull` to materialise the real ZIP, then fails fast if the file is still not a
+  ZIP. This protects the run from the `//external/chromium-webview:webview`
+  `veridex` / `aapt2` "failed opening zip: Invalid file" failure observed at ~99 %
+  on the first CI build.
+* Builds with `lunch lineage_CPH1909-<type>` and `mka <target>`. The job exposes
+  `target`, `build_type`, `build_timeout_min`, `out_on_cache` and `clean_out`
+  dispatch inputs. `OUT_DIR`/`OUT_BASE` live on `/cache` when the runner provides
+  it, otherwise the workspace is used.
 * After the build the `Collect output` step packages the images, the
-  `lineage-*.zip` OTA, `build-tail.log` and, when non-empty, `error.log`
-  into a `result/` folder, which is uploaded as a workflow artifact named
+  `lineage-*.zip` OTA, `build-tail.log` and, when non-empty, `error.log` into a
+  `result/` folder, uploaded as a workflow artifact named
   `lineage-17.1-<device>-<target>` (default target `bacon` →
   `lineage-17.1-CPH1909-bacon`).
 
-Because the runner blocks `swapon` and `zram` and clears `/cache` between
-runs, the workflow does **not** try to create its own swap. Rely on the
-runner-level swap instead; the build just reports what `free -h` sees.
+Because the runner blocks `swapon` and `zram` and clears `/cache` between runs,
+the workflow does **not** try to create its own swap. Rely on the runner-level
+swap instead; the build just reports what `free -h` sees.
 
 ### `publish.yml` — optional publishing
 
 `Publish build artifacts (optional)` is a second, purely manual
-(`workflow_dispatch`) workflow that takes the artifact produced by a
-successful `build.yml` run and turns it into a GitHub draft pre-release of
-the device repository. It:
+(`workflow_dispatch`) workflow that takes the artifact produced by a successful
+`build.yml` run and turns it into a GitHub draft pre-release of the device
+repository. It:
 
-* Defaults to the latest successful `Build LineageOS 17.1` run but accepts
-  an explicit `run_id`.
+* Defaults to the latest successful `Build LineageOS 17.1` run but accepts an
+  explicit `run_id`.
 * Defaults to the `lineage-17.1-CPH1909-bacon` artifact (or
   `lineage-17.1-CPH1909-<target>`).
 * Downloads the artifact into `published/`, **deletes any zero-byte files**
-  (GitHub release assets must be at least 1 byte — the empty `error.log`
-  that produced `{"resource":"ReleaseAsset","code":"custom","field":"size",
-  "message":"size must be greater than or equal to 1"}` on the first
-  release attempt is filtered out here), then recomputes the list of
-  release assets from the remaining non-empty files and writes a
-  `SHA256SUMS` alongside them.
-* Creates the release with `softprops/action-gh-release` using an explicit
-  file list, with `draft` and `prerelease` both on by default; publish only
-  happens when the workflow is explicitly triggered.
+  (GitHub release assets must be at least 1 byte — the empty `error.log` that
+  produced a `size must be greater than or equal to 1` error on the first release
+  attempt is filtered out here), then recomputes the release asset list from the
+  remaining non-empty files and writes a `SHA256SUMS` alongside them.
+* Creates the release with `softprops/action-gh-release` using an explicit file
+  list, with `draft` and `prerelease` both on by default; publish only happens
+  when the workflow is explicitly triggered.
 
-`recovery-build.yml` (legacy TWRP recovery build) and `ci.yml` (device
-tree integrity validation) are unchanged by the recent CI work.
+`recovery-build.yml` (legacy TWRP recovery build) and `ci.yml` (device tree
+integrity validation) are unchanged by the recent CI work. `ci.yml` explicitly
+checks that the source-built HAL modules (e.g. `power.mt6765`,
+`android.hardware.light@2.0-service.CPH1909`) resolve, guarding against the
+Soong-finder issue described under *Resource overlay / power shim*.
 
 ## What changed for Android 10
 
 ### Boot, system-as-root and first-stage mount
 
-This is a non-system-as-root device, but Android 10 always builds `system.img`
-in the system-as-root layout: `build_image.py` merges the root directory into the
+This is a non-system-as-root device, but Android 10 always builds `system.img` in
+the system-as-root layout: `build_image.py` merges the root directory into the
 system image and mounts the result at `/`. For this device the boot image still
-carries a ramdisk (`BOARD_BUILD_SYSTEM_ROOT_IMAGE` is intentionally unset), so
-the kernel starts `init_first_stage` from the ramdisk and the system image is
-mounted later.
+carries a ramdisk (`BOARD_BUILD_SYSTEM_ROOT_IMAGE` is intentionally unset), so the
+kernel starts `init_first_stage` from the ramdisk and the system image is mounted
+later.
 
 First-stage init does not use the kernel device tree for the fstab. The kernel
-tree this device builds (`lineageos-no-bakasu-susfs`) carries commit
-`070094089462` ("ARM64: dts: Switch mt6765 to 2-stage-init"), which removed the
-`firmware/android/fstab` node from
-`arch/arm64/boot/dts/mediatek/mt6765.dts` — the same change xiaomi-lotus-devs
-made for MT6765 in kernel commit `8e24bd2`. So `ReadFstabFromDt()` finds
-nothing, `ReadFirstStageFstab()` falls back to `GetFstabPath()`, which probes
-`/odm/etc/fstab.<hw>`, `/vendor/etc/fstab.<hw>` and `/fstab.<hw>`; neither
-`/odm` nor `/vendor` is mounted that early, so only the ramdisk copy is
-reachable.
+tree this device builds carries commit `070094089462` ("ARM64: dts: Switch mt6765
+to 2-stage-init"), which removed the `firmware/android/fstab` node from
+`arch/arm64/boot/dts/mediatek/mt6765.dts` — the same change xiaomi-lotus-devs made
+for MT6765 in kernel commit `8e24bd2`. So `ReadFstabFromDt()` finds nothing,
+`ReadFirstStageFstab()` falls back to `GetFstabPath()`, which probes
+`/odm/etc/fstab.<hw>`, `/vendor/etc/fstab.<hw>` and `/fstab.<hw>`; neither `/odm`
+nor `/vendor` is mounted that early, so only the ramdisk copy is reachable.
 
-That is why `rootdir/etc/fstab.mt6765` is installed **twice**: as
-`/fstab.mt6765` in the boot ramdisk by the `fstab.mt6765_ramdisk` prebuilt
-(top-level `Android.mk`), and as `/vendor/etc/fstab.mt6765` by
-`PRODUCT_COPY_FILES`. Its `/system` and `/vendor` lines carry
-`wait,first_stage_mount`, so first-stage init mounts `/system`, pivots to it
-(`TrySwitchSystemAsRoot()` → `SwitchRoot("/system")`), then mounts `/vendor`
-from the new root. From that point on the system image is the root filesystem
-and second-stage `/system/bin/init` runs.
+That is why `rootdir/etc/fstab.mt6765` is installed **twice**: as `/fstab.mt6765`
+in the boot ramdisk by the `fstab.mt6765_ramdisk` prebuilt (top-level `Android.mk`),
+and as `/vendor/etc/fstab.mt6765` by `PRODUCT_COPY_FILES`. Its `/system` and
+`/vendor` lines carry `wait,first_stage_mount`, so first-stage init mounts
+`/system`, pivots to it (`TrySwitchSystemAsRoot()` → `SwitchRoot("/system")`), then
+mounts `/vendor` from the new root. From that point on the system image is the
+root filesystem and second-stage `/system/bin/init` runs.
 
 The `/vendor` copy then serves the stock `init.mt6765.rc` `mount_all` in its
 `on fs` / `on late-fs` blocks (and is the recovery fstab via
 `TARGET_RECOVERY_FSTAB`). `fs_mgr` skips `first_stage_mount` entries that are
-already mounted, so nothing is mounted twice. Its `/odm` line keeps the stock
-`wait,recoveryonly` flags, which keep it out of the normal second-stage
-`mount_all` while still letting recovery mount it.
+already mounted, so nothing is mounted twice.
 
-There is no `/odm` mount in normal boot. The scatter defines a 256 MiB `odm`
-partition, but the factory image leaves it zeroed (no ext4 superblock);
-`recoveryonly` matches stock and means the boot never tries to mount it. Nothing
-on the device uses it.
+**`/odm` is mounted in the first stage.** The scatter defines a 256 MiB `odm`
+partition. Stock leaves it zeroed and unused (`recoveryonly`), but this build
+installs the **precompiled SELinux policy** to `/odm/etc/selinux` (because
+`BOARD_ODMIMAGE_FILE_SYSTEM_TYPE` forces `BOARD_USES_ODMIMAGE`, and
+`system/sepolicy/Android.mk` puts `precompiled_sepolicy` in
+`$(TARGET_OUT_ODM)/etc/selinux` in that case). The fstab `/odm` line therefore
+carries `wait,first_stage_mount` so the partition is available before init's
+SELinux policy load: `FindPrecompiledSplitPolicy()` checks
+`/odm/etc/selinux/precompiled_sepolicy` first and loads the precompiled,
+sha256-validated policy instead of recompiling the CIL at boot. The LOS build
+always flashes `odm.img` (the OTA's `block_image_update` writes it
+unconditionally), so the partition always has a valid ext4 filesystem when
+booting LOS — no `no_fail` guard is needed. The same fstab feeds the boot ramdisk,
+`/vendor/etc` and recovery, so recovery mounts `/odm` too.
 
-The A-only layout is reflected by the absence of `slotselect` flags, the
-separate `recovery` partition, and `BOARD_AVB_ENABLE := false` (the device has no
-`vbmeta` partition and the bootloader is locked to OPPO's keys).
+The A-only layout is reflected by the absence of `slotselect` flags, the separate
+`recovery` partition, and `BOARD_AVB_ENABLE := false` (the device has no `vbmeta`
+partition and the bootloader is locked to OPPO's keys).
 
 ### MediaTek init scripts
 
@@ -333,70 +324,66 @@ separate `recovery` partition, and `BOARD_AVB_ENABLE := false` (the device has n
 import /vendor/etc/init/hw/init.${ro.hardware}.rc
 ```
 
-That file in turn builds several of its own imports out of `${ro.mtkrc.path}`,
-so `ro.mtkrc.path=/vendor/etc/init/hw/` is set through
+That file in turn builds several of its own imports out of `${ro.mtkrc.path}`, so
+`ro.mtkrc.path=/vendor/etc/init/hw/` is set through
 `PRODUCT_DEFAULT_PROPERTY_OVERRIDES`, and
-`BOARD_PROPERTY_OVERRIDES_SPLIT_ENABLED := true` puts it in
-`/vendor/default.prop`, which init loads before parsing the boot scripts. With
-the property unset those imports expand to `/init.connectivity.rc` and friends,
-fail silently, and the device hangs at the logo with no modem, sensors or
-connectivity services.
+`BOARD_PROPERTY_OVERRIDES_SPLIT_ENABLED := true` puts it in `/vendor/default.prop`,
+which init loads before parsing the boot scripts. With the property unset those
+imports expand to `/init.connectivity.rc` and friends, fail silently, and the
+device hangs at the logo with no modem, sensors or connectivity services.
 
-The stock `init.mt6765.rc` starts `swap_enable_init`, a oneshot service that
-runs `/system/etc/swap_enable.sh` with the `rutilsdaemon` seclabel. That script
-lives on the system partition and is therefore not part of the blob extraction,
-so `rootdir/bin/swap_enable.sh` supplies it. It is a rewrite of the stock
-script: the OPPO-private `direct_swappiness` and `almk_swap_ratio1` nodes do not
-exist in this kernel (userspace lmkd replaced the in-kernel lowmemorykiller),
-and every write is guarded so a missing node cannot leave zram half-configured.
+The stock `init.mt6765.rc` starts `swap_enable_init`, a oneshot service that runs
+`/system/etc/swap_enable.sh` with the `rutilsdaemon` seclabel. That script lives
+on the system partition and is therefore not part of the blob extraction, so
+`rootdir/bin/swap_enable.sh` supplies it. It is a rewrite of the stock script: the
+OPPO-private `direct_swappiness` and `almk_swap_ratio1` nodes do not exist in this
+kernel (userspace lmkd replaced the in-kernel lowmemorykiller), and every write is
+guarded so a missing node cannot leave zram half-configured.
 
 The stock `init.mt6765.rc` also runs `mount_all /vendor/etc/fstab.mt6765` in its
-`on fs` block. `fs_mgr_mount_all()` skips `recoveryonly` entries, so
-system/vendor/odm stay out of the second stage, and mounts the remaining
-partitions (data, cache, protect_f, protect_s, nvdata, nvcfg, persist,
-opporeserve) as before. The vendor image is assembled from the extracted
-blobs, so `Android.mk` also creates the empty
+`on fs` block, mounting the remaining partitions (data, cache, protect_f,
+protect_s, nvdata, nvcfg, persist, opporeserve). The vendor image is assembled
+from the extracted blobs, so `Android.mk` also creates the empty
 `/vendor/{protect_f,protect_s,nvdata,nvcfg,persist}` mount point directories;
 `init.mt6765.rc` and `fs_mgr` would `mkdir()` them at runtime, but init is not
 allowed to create directories under `/vendor` (`vendor_file_type` is excluded
 from AOSP's broad init rules).
 
-`init.mt6765.rc` also runs `restorecon_recursive /vendor/nvcfg` (and `/vendor/nvdata`) in its
-`post-fs-data` block. Those are no-ops in any AOSP 10 policy: full-Treble neverallows forbid
-every domain -- including init -- from `relabelto` on `vendor_file_type`, and `read`/`getattr`
-on the files are not covered either, so the stock lines can never fix labels from init. The
-mkdir/chown/chmod/restorecon in the stock rc will also be denied under enforcing (mkdir/chown/
-chmod on `vendor_file_type` directories are neverallowed for every domain); the partitions
-keep their factory labels, which this policy does not define, so their inodes appear
-`unlabeled` -- and all vendor domains in this policy are `permissive` during bring-up, so
-unlabeled reads are logged, not blocked. The only device rules are the `mounton` allows below
-(AOSP's mounton list covers only platform types), and `oppo_reserve_file` stays a plain
-`file_type` because `/opporeserve` is at the root, not under `/vendor`.
+`init.mt6765.rc` also runs `restorecon_recursive /vendor/nvcfg` (and
+`/vendor/nvdata`) in its `post-fs-data` block. Those are no-ops in any AOSP 10
+policy: full-Treble neverallows forbid every domain — including init — from
+`relabelto` on `vendor_file_type`, and `read`/`getattr` on the files are not
+covered either, so the stock lines can never fix labels from init. The
+mkdir/chown/chmod/restorecon in the stock rc will also be denied under enforcing;
+the partitions keep their factory labels, which this policy does not define, so
+their inodes appear `unlabeled` — and all vendor domains in this policy are
+`permissive` during bring-up, so unlabeled reads are logged, not blocked. The only
+device rules are the `mounton` allows (AOSP's mounton list covers only platform
+types), and `oppo_reserve_file` stays a plain `file_type` because `/opporeserve`
+is at the root, not under `/vendor`.
 
 The same file also imports two ColorOS ramdisk scripts by relative name,
-`init.oppo.debug.rc` and `init.oppo.engineermode.rc`, and the debug script
-imports `init.oppo.reserve.rc` the same way. Relative imports resolve against
-init's working directory, which after `SwitchRoot("/system")` is the system
-image root, so the adapted copies live in `rootdir/` and are installed to
-`/init.oppo.*.rc` via `PRODUCT_COPY_FILES` (`$(TARGET_COPY_OUT_ROOT)` = `root/`,
-which `build_image.py` merges into system.img). The boot ramdisk itself stays
-minimal (`init` only) and is freed after the pivot.
+`init.oppo.debug.rc` and `init.oppo.engineermode.rc`, and the debug script imports
+`init.oppo.reserve.rc` the same way. Relative imports resolve against init's
+working directory, which after `SwitchRoot("/system")` is the system image root,
+so the adapted copies live in `rootdir/` and are installed to `/init.oppo.*.rc`
+via `PRODUCT_COPY_FILES` (`$(TARGET_COPY_OUT_ROOT)` = `root/`, which
+`build_image.py` merges into system.img). The boot ramdisk itself stays minimal
+(`init` only) and is freed after the pivot.
 
-The adaptations drop everything that needs ColorOS userland binaries absent
-from `proprietary-files.txt` (junklog, nativedump, perf_record and the
-`autochmod.sh` helpers), the phoenix crash-log actions (`CONFIG_OPPO_PHOENIX`
-is disabled in the kernel) and the `persist.sys.mtk.pwkdump` triggers
-(`/proc/aee_kpd_enable` does not exist). What remains is the
-`/opporeserve` directory tree, the vendor-provided `init.oppo.seccommon.rc`
-hook, and the charger `mmi_charging_enable` switches. The reserve script also
-drops the stock `restorecon_recursive /opporeserve`: the mounts in
-`init.oppo.seccommon.rc` create the directory tree on the stock partition
-itself (the rest of the tree comes from the stock image), so no relabel is
-possible or needed, and `file_contexts` labels it `oppo_reserve_file`, which
-is a plain `file_type` (root, not `/vendor`). `sepolicy/vendor/device.te`
-grants init `mounton` on it and the vendor mount points; the init domain is
-neverallowed to create directories there, so the stock mkdir paths would be
-dead in an enforcing build regardless.
+The adaptations drop everything that needs ColorOS userland binaries absent from
+`proprietary-files.txt` (junklog, nativedump, perf_record and the `autochmod.sh`
+helpers), the phoenix crash-log actions (`CONFIG_OPPO_PHOENIX` is disabled in the
+kernel) and the `persist.sys.mtk.pwkdump` triggers (`/proc/aee_kpd_enable` does not
+exist). What remains is the `/opporeserve` directory tree, the vendor-provided
+`init.oppo.seccommon.rc` hook, and the charger `mmi_charging_enable` switches. The
+reserve script also drops the stock `restorecon_recursive /opporeserve`: the
+mounts in `init.oppo.seccommon.rc` create the directory tree on the stock
+partition itself, so no relabel is possible or needed, and `file_contexts` labels
+it `oppo_reserve_file` (a plain `file_type`, root not `/vendor`).
+`sepolicy/vendor/device.te` grants init `mounton` on it and the vendor mount
+points. The dead `rootdir/init.mt6765.usb.rc` stub was removed (the vendor
+`init.project.rc` already imports the real one by absolute path).
 
 ### Recovery init
 
@@ -407,17 +394,30 @@ alias for the `by-name` fstab paths, makes the backlight writable, opens the
 Trustonic `mobicore` nodes used by keymaster during sideload, and stops the MTK
 hung-task watchdog from firing while recovery idles at the menu.
 
+**Recovery USB uses configfs.** Recovery's own `init.rc` sets `sys.usb.configfs=0`
+in early-init, selecting the legacy `/sys/class/android_usb` gadget — which this
+kernel does not provide (`a46_defconfig` has `CONFIG_USB_CONFIGFS=y` and
+`# CONFIG_USB_G_ANDROID is not set`, so `drivers/usb/gadget/android.c`, the only
+creator of the `android_usb` class, is never built). Every write under
+`/sys/class/android_usb` would fail with ENOENT and recovery adb/sideload would
+never enumerate. The recovery rc sets `sys.usb.configfs 1`; recovery's `init.rc`
+already contains the matching configfs actions (mount configfs, create
+`/config/usb_gadget/g1`, `ffs.adb`/`ffs.fastboot`, bind the UDC), and Android 10's
+init fills `sys.usb.controller` itself from `/sys/class/udc`.
+`sys.usb.ffs.aio_compat` is deliberately not set: this 4.9 kernel's `f_fs.c`
+implements AIO and the stock 8.1 userspace used it, so adbd's default AIO path is
+the tested one.
+
 ### init fatal errors and the recoverable reboot
 
 `BOARD_KERNEL_CMDLINE` carries `androidboot.init_fatal_reboot_target=recovery`
 (`BoardConfig.mk`). init reads it once in `SetFatalRebootTarget()`
 (`system/core/init/reboot_utils.cpp`) and stores it; without the option the
 default is `bootloader`. Every fatal exit path then funnels through
-`InitFatalReboot()`, which calls `RebootSystem(ANDROID_RB_RESTART2, "recovery")`
-— the kernel `LINUX_REBOOT_CMD_RESTART2` with the argument `recovery`, which
-MTK's LK maps back to the recovery partition. So an init `LOG(FATAL)`,
-`CHECK()` or fatal signal parks the device in recovery instead of hanging at
-the logo.
+`InitFatalReboot()`, which calls `RebootSystem(ANDROID_RB_RESTART2, "recovery")` —
+the kernel `LINUX_REBOOT_CMD_RESTART2` with the argument `recovery`, which MTK's
+LK maps back to the recovery partition. So an init `LOG(FATAL)`, `CHECK()` or
+fatal signal parks the device in recovery instead of hanging at the logo.
 
 There are two ways to reach it:
 
@@ -427,107 +427,144 @@ There are two ways to reach it:
   unconditional: it applies to user builds too, not only debuggable ones.
 * **Fatal signals.** `InstallRebootSignalHandlers()` catches
   SIGABRT/SIGBUS/SIGFPE/SIGILL/SIGSEGV/SIGSYS/SIGTRAP and forks to
-  `InitFatalReboot()`. It is installed only when `REBOOT_BOOTLOADER_ON_PANIC` is
-  1, i.e. debuggable builds (userdebug/eng — the CI default), from
-  `FirstStageMain()`, `SetupSelinux()` and `SecondStageMain()`. A user build
-  takes the kernel default instead.
+  `InitFatalReboot()`. It is installed only when `REBOOT_BOOTLOADER_ON_PANIC` is 1,
+  i.e. debuggable builds (userdebug/eng — the CI default), from
+  `FirstStageMain()`, `SetupSelinux()` and `SecondStageMain()`. A user build takes
+  the kernel default instead.
 
 The sites init can reach on this device, in boot order:
 
 | Phase | Site | Fires when |
 | --- | --- | --- |
 | first stage | `first_stage_init.cpp:179` | one of the `CHECKCALL` mounts/mkdirs (`/dev`, `/dev/pts`, `/proc`, `/apex`, ...) failed |
-| first stage | `first_stage_init.cpp:219`, `switch_root.cpp:41-94` | `DoFirstStageMount()` failed: the ramdisk fstab (`/fstab.mt6765`, via `GetFstabPath()`) `/system`/`/vendor` entry could not be resolved or mounted, or the `/system` pivot failed |
+| first stage | `first_stage_init.cpp:219`, `switch_root.cpp:41-94` | `DoFirstStageMount()` failed: the ramdisk fstab `/system`/`/vendor` entry could not be resolved or mounted, or the `/system` pivot failed |
 | first stage | `first_stage_init.cpp:244` | `/system/bin/init` missing after the pivot |
-| selinux_setup | `selinux.cpp:428` | `LoadPolicy()` failed — split-policy load: unreadable `/vendor/etc/selinux/plat_sepolicy_vers.txt`, missing `/vendor/etc/selinux/{vendor_sepolicy.cil,plat_pub_versioned.cil}`, missing `/system/etc/selinux/mapping/<vers>.cil`, or `secilc` failed |
+| selinux_setup | `selinux.cpp:428` | `LoadPolicy()` failed — split-policy load: unreadable `plat_sepolicy_vers.txt`, missing `vendor_sepolicy.cil`/`plat_pub_versioned.cil`, missing `mapping/<vers>.cil`, or `secilc` failed |
 | selinux_setup | `selinux.cpp:435,440` | `security_setenforce()` mismatch, or `/sys/fs/selinux/checkreqprot` not writable |
-| second stage | `selinux.cpp:506` (via `property_service.cpp`) | `/vendor/etc/selinux/plat_sepolicy_vers.txt` unreadable/empty when the property service starts |
-| second stage | `init.cpp:350` | ueventd did not write `/dev/.coldboot_done` within 60 s (ueventd crash-looping or stuck) |
+| second stage | `selinux.cpp:506` (via `property_service.cpp`) | `plat_sepolicy_vers.txt` unreadable/empty when the property service starts |
+| second stage | `init.cpp:350` | ueventd did not write `/dev/.coldboot_done` within 60 s |
 | second stage | `property_service.cpp:128,131` | property area/contexts could not be initialised |
 | second stage | `security.cpp:179,194` | mmap entropy / `kptr_restrict` setup failed |
 | second stage | `service.cpp:203` | a `service` command line contains a `${prop}` that expands empty |
-| second stage | `service.cpp:291-342` | a service's `rlimit`, `user`/`group`, `seclabel` or capabilities could not be applied (`setuid`/`setgroups`/`setexeccon`/`setpriority` failed) |
+| second stage | `service.cpp:291-342` | a service's `rlimit`, `user`/`group`, `seclabel` or capabilities could not be applied |
 | second stage | `service.cpp:389` | a `critical` service exited 4 times in 4 min or before `sys.boot_completed` |
 | second stage | `ueventd.cpp:235,238` (ueventd) | a coldboot handler subprocess crashed; ueventd aborts, init restarts it, and after 4 crashes the `service.cpp:389` fatal fires |
 
 Reachability notes for this tree:
 
-* First-stage mount uses the ramdisk `/fstab.mt6765`, not the kernel DT (the DT
-  `firmware/android/fstab` node was removed by kernel commit `070094089462`).
-  With `CONFIG_MTK_DM_VERITY_OFF=y` the `/system` and `/vendor` entries carry
-  no `verify`/`avb` flags, so there is no verity check to fail; the realistic
-  trigger is a missing/renamed `by-name` node, an unfinished fastboot flash, or
-  a build that failed to install `fstab.mt6765_ramdisk` into the boot ramdisk.
-* The SELinux fatals are the ones to watch if the vendor policy plumbing
-  changes. They should not fire in a normal build: `BOARD_VENDOR_SEPOLICY_DIRS`
-  makes the build emit `vendor_sepolicy.cil` and `plat_pub_versioned.cil`
-  (`system/sepolicy/Android.mk`), `BOARD_SEPOLICY_VERS` defaults to
-  `PLATFORM_SEPOLICY_VERSION`, and the stock 8.1 `/vendor/etc/selinux/*` is
-  deliberately not imported (`proprietary-files.txt`), so
-  `plat_sepolicy_vers.txt` and the `/system/etc/selinux/mapping/<vers>.cil` it
-  names agree. When this path does fire, the log line above the fatal names the
-  exact file.
-* Only `ueventd` is `critical` among the services the platform `init.rc` starts
-  (`system/core/rootdir/init.rc`); the vendor `critical` services are in
-  `factory_init.rc` and `meta_init.rc`,
-  which normal boot never imports (`init.mt6765.rc`: "DO NOT import the new rc
-  file after this line"). A service that merely crash-loops without `critical`
-  is restarted, not fatal.
+* First-stage mount uses the ramdisk `/fstab.mt6765`, not the kernel DT. With
+  `CONFIG_MTK_DM_VERITY_OFF=y` the `/system` and `/vendor` entries carry no
+  `verify`/`avb` flags, so there is no verity check to fail; the realistic trigger
+  is a missing/renamed `by-name` node, an unfinished fastboot flash, or a build
+  that failed to install `fstab.mt6765_ramdisk` into the boot ramdisk. `/odm` is
+  `first_stage_mount` but always flashed by the LOS OTA, so it mounts cleanly.
+* The SELinux fatals are the ones to watch if the vendor policy plumbing changes.
+  They should not fire in a normal build: `BOARD_VENDOR_SEPOLICY_DIRS` makes the
+  build emit `vendor_sepolicy.cil` and `plat_pub_versioned.cil`,
+  `BOARD_SEPOLICY_VERS` defaults to `PLATFORM_SEPOLICY_VERSION`, and the stock 8.1
+  `/vendor/etc/selinux/*` is deliberately not imported, so `plat_sepolicy_vers.txt`
+  and the `/system/etc/selinux/mapping/<vers>.cil` it names agree. The shipped CIL
+  was verified to compile with `secilc` and pass all neverallows. When this path
+  does fire, the log line above the fatal names the exact file.
+* Only `ueventd` is `critical` among the services the platform `init.rc` starts;
+  the vendor `critical` services are in `factory_init.rc` and `meta_init.rc`,
+  which normal boot never imports. A service that merely crash-loops without
+  `critical` is restarted, not fatal.
 * A failing builtin in an action (`write`, `setprop`, `symlink`, ...) is *not*
-  fatal — `Action::ExecuteCommand()` only logs it (`init/action.cpp`). The fatal
-  expansion case is specific to a `service` command line (`Service::Start()` ->
+  fatal — `Action::ExecuteCommand()` only logs it. The fatal expansion case is
+  specific to a `service` command line (`Service::Start()` ->
   `ExpandArgsAndExecv()`).
 
 Because init logs through the kernel logger, the fatal line lands in the kernel
-log buffer, and the MTK ram console preserves the previous boot's log. After
-the reboot into recovery, read it from TWRP:
-`adb shell cat /proc/last_kmsg` (created 0444 by
-`drivers/misc/mediatek/ram_console/mtk_ram_console.c`), or from
+log buffer, and the MTK ram console preserves the previous boot's log. After the
+reboot into recovery, read it from TWRP: `adb shell cat /proc/last_kmsg` (created
+0444 by `drivers/misc/mediatek/ram_console/mtk_ram_console.c`), or from
 `/sys/fs/pstore/console-ramoops-0` (`CONFIG_PSTORE=y`,
-`pstore-reserved-memory@54410000` in `mt6765.dts`). It holds the log *up to*
-the fatal init line, which is the fastest way to tell which site above tripped.
+`pstore-reserved-memory@54410000` in `mt6765.dts`). It holds the log *up to* the
+fatal init line, which is the fastest way to tell which site above tripped.
 
 ### Vendor partition and VNDK
 
 `TARGET_COPY_OUT_VENDOR := vendor` (required by build/make whenever
 `BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE` is set) keeps the separate vendor image.
+`TARGET_COPY_OUT_ODM := odm` is likewise required because
+`BOARD_ODMIMAGE_FILE_SYSTEM_TYPE` is set; this is what places the precompiled
+SELinux policy in `/odm` (see *Boot, system-as-root and first-stage mount*).
 
-`BOARD_VNDK_VERSION := current` in `BoardConfig.mk` selects **full VNDK**,
-matching xiaomi-lotus-devs commit a53267f (lotus is also MT6765 and also
-8.1-launched). Note that `PRODUCT_USE_VNDK` would stay false on its own:
-`core/config.mk` only auto-defaults `BOARD_VNDK_VERSION` to `"current"` when
-`PRODUCT_SHIPPING_API_LEVEL` is 28+, and this device ships at 27 — so the
-variable is set explicitly rather than inferred.
+`BOARD_VNDK_VERSION := current` in `BoardConfig.mk` selects **full VNDK**, matching
+xiaomi-lotus-devs commit a53267f (lotus is also MT6765 and also 8.1-launched).
+`PRODUCT_USE_VNDK` would stay false on its own: `core/config.mk` only auto-defaults
+`BOARD_VNDK_VERSION` to `"current"` when `PRODUCT_SHIPPING_API_LEVEL` is 28+, and
+this device ships at 27 — so the variable is set explicitly rather than inferred.
 
-The consequence is that the vendor namespace is isolated. `ld.config.txt`
-gives the vendor `default` namespace only `/odm/${LIB}` and `/vendor/${LIB}`
-plus the VNDK/LLNDK sets, so a blob may **not** reach into `/system/lib[64]`
-unless the library is LLNDK or VNDK. The 8.1 blobs' needs are covered by
-shipping the handful of core-only libraries they `DT_NEEDED` into `/vendor`
-(see the `VENDOR_CORE_LIBS` list in `Android.mk`) and by the explicit copies
-into `/system` for the system-side blobs (the *System-side VNDK* block in
-`device.mk`).
+The consequence is that the vendor namespace is isolated. `ld.config.29.txt`
+gives the vendor `default` namespace only `/odm/${LIB}` and `/vendor/${LIB}` plus
+the VNDK/LLNDK sets, so a blob may **not** reach into `/system/lib[64]` unless the
+library is LLNDK or VNDK. The 8.1 blobs' needs are covered three ways:
 
-Earlier revisions of this tree used VNDK-lite (`BOARD_VNDK_VERSION` unset,
-`ro.vndk.lite=true`, `ld.config.vndk_lite.txt`), where the vendor `default`
-namespace also searched `/system/${LIB}`. The switch to full VNDK left two such
-dependencies behind, both now handled explicitly: the core-only libraries are
-shipped as `/vendor` copies (commit 21f1f5c, `VENDOR_CORE_LIBS`), and the
-xHE-AAC decoder is copied into `/vendor/lib` because `sphal` never searched
-`/system/lib` in the first place (see *xHE-AAC decoder*).
+* **`VENDOR_CORE_LIBS`** (top-level `Android.mk`): core-only libraries the blobs
+  `DT_NEEDED` are copied from the system build into `/vendor/lib[64]`
+  (`libmedia`, `libcamera_client`, `libaudioclient`, `libnetd_client`,
+  `liblogwrap`, `libsensor`, `libhwui`, `libpixelflinger`, `libandroid_runtime`,
+  `libandroid_net`, `libkeystore_binder`, `libnativehelper`, `libprogrambinary`,
+  `libaed`, `vendor.mediatek.hardware.camera.device@1.1`,
+  `vendor.qti.hardware.soter@1.0`).
+* **System-side VNDK copies** (`device.mk`): the 8.1 `/system` MTK blobs were
+  linked when the system namespace was reachable; the libraries they need that
+  are not LLNDK/VNDK are copied into `/system` for the system-side blobs.
+* **`libbase-v28.so`** (`device.mk`, from `prebuilts/vndk/v28`): the Android 8.1
+  `libbase`, copied into `/vendor/lib[64]` and `/system/lib[64]`. Blobs that import
+  the 5-argument `android::base::LogMessage` constructor removed in AOSP 10
+  (sensors impl, `libnvram`, `libsysenv`, the widevine DRM service, the wifi
+  service) had their `DT_NEEDED libbase.so` rewritten to `libbase-v28.so`.
 
 `PRODUCT_EXTRA_VNDK_VERSIONS` is intentionally not used: there is no old VNDK
-snapshot to install for an API 27 vendor, and the `vndk_snapshot_package`
-phony only exists when `BOARD_VNDK_VERSION` is set
-(`build/make/target/product/gsi/Android.mk`), which it is here — but the
-variable would still install nothing without a matching prebuilt snapshot.
+snapshot to install for an API 27 vendor.
+
+#### ELF dependency closure and VNDK namespace repairs
+
+A full-image `DT_NEEDED` closure audit (and a vendor-process namespace audit)
+found and fixed the remaining gaps. The blob-side changes live in the vendor tree
+(see its README); the device-side `proprietary-files.txt` tracks them:
+
+* **`libutilscallstack.so`** added (`patchelf --add-needed`) to the camera
+  libraries that import `android::CallStack` (`gralloc.mt6765`,
+  `hwcomposer.mt6765`, `libsrv_um`, `libion_ulit`, `libmtkcam_stdutils`,
+  `libmtkcam_debugutils`). The library itself is platform VNDK.
+* **The libskia trio** (`libskia.so`, `libMMListParser.so`, `libgraphics2d_ext.so`,
+  stock 8.1): `libhwuiext.so` needs `libskia.so`, which needs the two MTK-only
+  libraries. They are extracted from the stock `/system/lib[64]` but installed
+  **only to `/vendor/lib[64]`** via a `system/...:vendor/...` remap in
+  `proprietary-files.txt` (AOSP `libhwui` links skia statically, so nothing in
+  `/system` loads the shared libskia; a `/system` copy would only add a
+  reverse-Treble dependency). The earlier `cp`-from-system hack in `Android.mk`
+  was removed in favour of the direct remap.
+* **Compatibility libraries** shipped vendor-local (or system, where the consumer
+  is a system binary): `libLLVM.so` (`/vendor/lib64`, for `rs2spir`),
+  `libsuspend.so` (`/system/lib`, for `kpoc_charger`), `libbacktrace.so` +
+  `libunwind.so` (`/vendor/lib[64]`, for `aee_aedv`/`libudf`), and `liblog-v28.so`
+  (`/vendor/lib[64]`, the stock 8.1 liblog with soname rewritten, for `aee_aedv`'s
+  legacy logprint API removed in AOSP 10; its `DT_NEEDED liblog.so` was rewritten
+  to `liblog-v28.so`).
+* **VNDK namespace `DT_NEEDED` trims** (`patchelf --remove-needed` /
+  `--replace-needed`) so vendor processes only reference vendor-local or
+  LLNDK/VNDK-delegated libs: `sound_trigger.primary.mt6765` and
+  `audio.usb.mt6765` (drop `libaudioclient`/`libmedia`), `libabfadp` /
+  `libfactoryfmjni` (drop `libmedia`), the OPPO face service (drop
+  `libkeystore_binder`), `libPolarrRender` / `libmpbase` (drop `libandroid`), and
+  `libwapi` (`libkeystore_binder` → `libkeystore-wifi-hidl`, which exports
+  `keystore_get`). These links were no-ops or only `__aeabi_*` helpers already
+  provided by libc.
+
+After these repairs the vendor-process namespace closure and the full-image
+`DT_NEEDED` closure both resolve with zero unresolved entries.
 
 ### HIDL transport libraries
 
 Android 10 merged `libhidltransport` and `libhwbinder` into `libhidlbase` and
 removed the standalone libraries from `base_system.mk`. Every stock 8.1 vendor
-binary — `camerahalserver`, `mtkfusionrild`, the audio, bluetooth, sensors,
-light, PQ and composer services — carries explicit `DT_NEEDED` entries for both
+binary — `camerahalserver`, `mtkfusionrild`, the audio, bluetooth, sensors, light,
+PQ and composer services — carries explicit `DT_NEEDED` entries for both
 libraries. Without them the dynamic linker aborts every vendor HAL with
 `library "libhidltransport.so" not found`, causing a total bootloop.
 
@@ -541,151 +578,155 @@ PRODUCT_PACKAGES += \
     libhwbinder.vendor
 ```
 
-The `.vendor` variants are needed because the 8.1 blobs live in the vendor
-linker namespace; without them `ld-android.so` resolves the system copy but
-the vendor namespace isolation rejects it.
+The `.vendor` variants are needed because the 8.1 blobs live in the vendor linker
+namespace; without them `ld-android.so` resolves the system copy but the vendor
+namespace isolation rejects it.
 
 ### SELinux
 
-`sepolicy/vendor/` labels the MediaTek and OPPO vendor binaries that AOSP does
-not label. The stock 8.1 precompiled policy is excluded from
-`proprietary-files.txt`; loading an 8.1 policy on Android 10 is a hard boot
-failure, not a compatibility question.
+`sepolicy/vendor/` labels the MediaTek and OPPO vendor binaries that AOSP does not
+label. The stock 8.1 precompiled policy is excluded from `proprietary-files.txt`;
+loading an 8.1 policy on Android 10 is a hard boot failure, not a compatibility
+question. The shipped CIL (`plat_sepolicy.cil` + `mapping/29.0.cil` +
+`plat_pub_versioned.cil` + `vendor_sepolicy.cil`) was verified to compile with
+`secilc` and pass all 3449 neverallow assertions.
 
-The file_contexts labelling was audited against the stock dump's `vendor/bin`
-and `vendor/etc/init/*.rc` (all 201 services in 94 rc files) and against
+The file_contexts labelling was audited against the stock dump's `vendor/bin` and
+`vendor/etc/init/*.rc` (all 201 services in 94 rc files) and against
 `proprietary-files.txt`:
 
-* Every path regex was checked against the binary it points at. Three were
-  wrong and are fixed: `mtkfusionrild` (the real binary is
-  `/vendor/bin/hw/mtkfusionrild`, per `rild.rc`), `wod` (the real binary is
-  `epdg_wod`, per `init.wod.rc`) and `imsm` (the real binary is
-  `volte_imsm_93`, per `init.volte_imsm_93.rc`).
+* Every path regex was checked against the binary it points at. Three were wrong
+  and are fixed: `mtkfusionrild` (the real binary is `/vendor/bin/hw/mtkfusionrild`,
+  per `rild.rc`), `wod` (the real binary is `epdg_wod`, per `init.wod.rc`) and
+  `imsm` (the real binary is `volte_imsm_93`, per `init.volte_imsm_93.rc`).
 * Entries for binaries this vendor image does not ship were dropped:
   `cas@1.0-service`, `thermald` and `6620_launcher`.
 * Entries that merely re-label paths already covered by upstream
-  `system/sepolicy/vendor/file_contexts` (with broader regexes like
-  `cas@1\.[01]-service`) were dropped as redundant: `configstore@1.0`,
-  `graphics.composer@2.1`, `thermal@1.0` and `broadcastradio@1.1`, on top of
-  the AOSP-standard HAL services (`drm@1.0`, `gatekeeper@1.0`,
-  `graphics.allocator@2.0`, `keymaster@3.0`, `media.omx@1.0`, `memtrack@1.0`,
-  `vibrator@1.0`, `wifi@1.0`) that were already omitted. checkfc only rejects
-  a repeated path regex when the two entries give *different* contexts; the
-  identical-context copies were harmless dead weight, not build breakers.
-* Real services that ship and start but had no label were added: `aee_aedv`
-  and `aee_aedv64` (started at `on post-fs` by `init.aee.rc`), `connsyslogger`
-  (class main), `bip` and `volte_imsm_93` (both on `mtk.md1.status=ready`),
-  `epdg_wod` (on `persist.mtk_epdg_support=1`, which `vendor.prop` sets),
-  `stp_dump3` (on `persist.mtk.wcn.coredump.mode=2`, which `vendor.prop` sets),
-  `wfca` (class core), `oppoalgo_daemon` (on `sys.boot_completed=1`) and
-  `vtservice_hidl` (class hal). Each gets a new `mtk_*` domain in `device.te`,
-  permissive like the rest.
+  `system/sepolicy/vendor/file_contexts` were dropped as redundant. checkfc only
+  rejects a repeated path regex when the two entries give *different* contexts;
+  the identical-context copies were harmless dead weight, not build breakers.
+* Real services that ship and start but had no label were added: `aee_aedv` and
+  `aee_aedv64`, `connsyslogger`, `bip` and `volte_imsm_93`, `epdg_wod`, `stp_dump3`,
+  `wfca`, `oppoalgo_daemon` and `vtservice_hidl`. Each gets a new `mtk_*` domain in
+  `device.te`, permissive like the rest.
 
 A second audit pass covered the remaining runtime edges:
 
-* `aee_core_forwarder` was unlabelled. It is the kernel `core_pattern`
-  helper (`init.aee.rc` writes `/proc/sys/kernel/core_pattern`), so it is
-  exec'd by the kernel usermodehelper rather than by init. It now has
-  `mtk_aee_core_forwarder_exec`, the init and kernel transitions, an
-  `aee_core_data_file` label for `/data/vendor/core`, and a permissive
-  bring-up domain.
-* `TBaseDeviceBinding` (the Trustonic provisioning helper run from a shell)
-  now has `tbase_device_binding_exec` and the stock shell -> `mcd`
-  transition.
+* `aee_core_forwarder` was unlabelled. It is the kernel `core_pattern` helper
+  (`init.aee.rc` writes `/proc/sys/kernel/core_pattern`), so it is exec'd by the
+  kernel usermodehelper rather than by init. It now has
+  `mtk_aee_core_forwarder_exec`, the init **and kernel** transitions, an
+  `aee_core_data_file` label for `/data/vendor/core`, and a permissive bring-up
+  domain. The kernel→vendor execute neverallow (`public/domain.te`) is satisfied
+  by adding `kernel` to the `system_executes_vendor_violators` attribute — AOSP's
+  designated full-Treble exception (the attribute is `expandattribute false` and
+  not in the treble `TestViolatorAttributes` list, so it does not trip the
+  violator tests).
+* `TBaseDeviceBinding` (the Trustonic provisioning helper run from a shell) now
+  has `tbase_device_binding_exec` and the stock shell → `mcd` transition.
 * `oppoalgo_daemon` registers `android.OPPO.IOppoAlgoDaemon` with
   vndservicemanager; the missing `vndservice_contexts` was added with the
-  `oppoalgo_service` type and the stock `add_service` / `vndbinder_use` /
-  client rules.
-* `property_contexts` now covers all 165 families in the stock
+  `oppoalgo_service` type and the stock `add_service` / `vndbinder_use` / client
+  rules.
+* `property_contexts` covers all 165 families in the stock
   `nonplat_property_contexts` (51 were missing), still mapped to
   `mtk_persist_prop`; the stock-evidenced setters got `set_prop` grants.
-* The stock `seapp_contexts` assigns custom app domains to
-  `com.gd.mobicore.pa`, `com.silead.fingerprint` and
-  `com.mediatek.mtklogger.proxy`. Those domains are not ported: the APKs
-  are re-signed with the platform key and run as `platform_app`.
-  sileadManager talks to the vendor HIDL HAL rather than the device node,
-  and the MTK logger proxy is not boot-critical, so this remains a
+* The stock `seapp_contexts` assigns custom app domains to `com.gd.mobicore.pa`,
+  `com.silead.fingerprint` and `com.mediatek.mtklogger.proxy`. Those domains are
+  not ported: the APKs are re-signed with the platform key and run as
+  `platform_app`. sileadManager talks to the vendor HIDL HAL rather than the
+  device node, and the MTK logger proxy is not boot-critical, so this remains a
   documented divergence rather than a guessed domain.
+
+The `.te` files use make-style `type_transition src type:process dst` (not CIL
+`typetransition`); an earlier CIL-syntax mistake was corrected.
 
 Two notes on services deliberately *not* given a domain:
 
-* `init.mt6765.rc` retains the stock `service oae /system/bin/oae_server -s`
-  entry with `seclabel u:r:oae_server:s0`. The service is disabled on the
-  stock image as well: `oae_server` is a ColorOS-only system binary that
-  neither the stock dump nor the OTA list ships, so Android init's
-  `stat()` check fails and marks the service disabled before fork. It is kept
-  for stock-image parity; no `oae_server` domain is declared or imported.
+* `init.mt6765.rc` retains the stock `service oae /system/bin/oae_server -s` entry
+  with `seclabel u:r:oae_server:s0`. The service is disabled on the stock image as
+  well: `oae_server` is a ColorOS-only system binary that neither the stock dump
+  nor the OTA list ships, so Android init's `stat()` check fails and marks the
+  service disabled before fork. It is kept for stock-image parity; no `oae_server`
+  domain is declared or imported.
 * The KTV HAL (`vendor.oppo.hardware.ktv@1.0-service`) is in the stock
-  `vendor/etc/init/` but its binary and rc are not in
-  `proprietary-files.txt`, so it never starts and needs no label.
+  `vendor/etc/init/` but its binary and rc are not in `proprietary-files.txt`, so
+  it never starts and needs no label.
 
-Most vendor domains are `permissive` during bring-up, following the convention
-in the policy file. This includes the standard AOSP HAL domains that the MTK
-vendor blobs are assigned to (`hal_audio_default`, `hal_bluetooth_default`,
+Most vendor domains are `permissive` during bring-up, following the convention in
+the policy file. This includes the standard AOSP HAL domains that the MTK vendor
+blobs are assigned to (`hal_audio_default`, `hal_bluetooth_default`,
 `hal_camera_default`, `hal_graphics_composer_default`, `hal_light_default`,
-`hal_sensors_default`, `rild`): these domains are enforcing by default in AOSP
-and lack rules for MTK-specific device nodes (`/dev/kd_camera_hw`,
-`/dev/mtk_sched`, `/dev/ccci*`, `/dev/mtk_disp_mgr`, etc.), so denials on
-those nodes crash the daemons immediately. Marking them permissive during
-bring-up logs the denials instead of blocking them.
+`hal_sensors_default`, `rild`): these domains are enforcing by default in AOSP and
+lack rules for MTK-specific device nodes (`/dev/kd_camera_hw`, `/dev/mtk_sched`,
+`/dev/ccci*`, `/dev/mtk_disp_mgr`, etc.), so denials on those nodes crash the
+daemons immediately. Marking them permissive during bring-up logs the denials
+instead of blocking them.
 
 `device.te` also declares `gps_device` and `sw_sync_device` itself: both were
 dropped from Android 10's `system/sepolicy/public/device.te`, but the MT6765
 kernel still exposes `/dev/gps`, `/dev/stpgps` (opened directly by `mnld` /
-`mtk_agpsd`) and `/dev/sw_sync` (legacy sync fences used by the display
-driver), so the device-local types are required.
+`mtk_agpsd`) and `/dev/sw_sync` (legacy sync fences used by the display driver),
+so the device-local types are required.
 
-Convert the denials they log into `allow` rules and remove the `permissive`
-lines before shipping.
+The biometrics policy mirrors the stock 8.1 vendor policy: `silead_fpd_device`
+(`/dev/silead_fp`), `egis_device` (`/dev/esfp0`), `silead_fpd_data_file`
+(`/data/{vendor,system}/silead`, `/persist/silead`), `face_data_file` and
+`face_picture_file` are labeled with the stock types, and `device.te` grants
+`hal_fingerprint_default` / `hal_face` the same sensor-node and data-file allows
+the stock rules had. The DT2W proc node is labeled `proc_dt2w`
+(`genfs_contexts`) and `hal_power_default` is granted write access
+(`hal_power_default.te`), so DT2W is not dependent on the permissive bring-up.
+
+Convert the denials the permissive domains log into `allow` rules and remove the
+`permissive` lines before shipping.
 
 ### VINTF
 
 `manifest.xml` carries the CPH1909 stock vendor HAL declarations (Android 8.1
 blobs) plus the HALs LineageOS 17.1 builds: `android.hardware.health@2.0`,
-`android.hardware.usb@1.0`, `android.hardware.power@1.0` (served by the AOSP
-HIDL service that forwards to `power.mt6765`, used for DT2W), and
-`android.hardware.biometrics.fingerprint@2.1` (AOSP interface backed by the
-Silead legacy-HAL shim). The `drm@1.2` clearkey instance is provided by a VINTF
-fragment, not listed statically (see below). It declares `target-level="2"`.
-The file is formatted in the expanded VINTF style (per-hal
-`<version>`/`<interface>`/`<fqname>` blocks).
+`android.hardware.usb@1.0`, `android.hardware.power@1.0` (served by the AOSP HIDL
+service that forwards to `power.mt6765`, used for DT2W),
+`android.hardware.light@2.0` (served by the source-built
+`android.hardware.light@2.0-service.CPH1909`), and
+`android.hardware.biometrics.fingerprint@2.1` (AOSP interface backed by the Silead
+legacy-HAL shim) and `android.hardware.biometrics.face@1.0` (the source-built
+proxy). The `drm@1.2` clearkey instance is provided by a VINTF fragment, not listed
+statically (see below). It declares `target-level="2"`. The file is formatted in
+the expanded VINTF style (per-hal `<version>`/`<interface>`/`<fqname>` blocks).
 
 This is the key legacy-Treble setting. Android 10 replaced the old
-`PRODUCT_COMPATIBILITY_MATRIX_LEVEL_OVERRIDE` with the `target-level` attribute
-on the device manifest. API 27 corresponds to FCM level 2 (O-MR1), so the Q
-framework validates the vendor HALs against the frozen O-MR1 compatibility
-matrix. `assemble_vintf` would infer level 2 from
-`PRODUCT_SHIPPING_API_LEVEL=27` even without the attribute, but only after
-printing a warning. All ten HALs that FCM 2 marks as required are present in
-this manifest. The stock 8.1 vendor device matrix is replaced by
-`compatibility_matrix.xml` in this tree (`DEVICE_MATRIX_FILE`), which keeps the
-framework requirements the 8.1 vendor blobs expect
+`PRODUCT_COMPATIBILITY_MATRIX_LEVEL_OVERRIDE` with the `target-level` attribute on
+the device manifest. API 27 corresponds to FCM level 2 (O-MR1), so the Q framework
+validates the vendor HALs against the frozen O-MR1 compatibility matrix.
+`assemble_vintf` would infer level 2 from `PRODUCT_SHIPPING_API_LEVEL=27` even
+without the attribute, but only after printing a warning. All ten HALs that FCM 2
+marks as required are present in this manifest. The stock 8.1 vendor device matrix
+is replaced by `compatibility_matrix.xml` in this tree (`DEVICE_MATRIX_FILE`),
+which keeps the framework requirements the 8.1 vendor blobs expect
 (`android.frameworks.{schedulerservice,sensorservice}`, `android.hidl.*`,
 `android.system.wifi.keystore`) in Android 10 VINTF format.
 
-`android.hardware.cas` and `android.hardware.drm@1.2` (clearkey) are *not*
-listed in the static manifest: `base_vendor.mk` always builds
+`android.hardware.cas` and `android.hardware.drm@1.2` (clearkey) are *not* listed
+in the static manifest: `base_vendor.mk` always builds
 `android.hardware.cas@1.1-service`, and `device.mk` builds
 `android.hardware.drm@1.2-service.clearkey`. Both packages ship their own VINTF
-fragments, and a second entry for the same HAL name and major version is
-rejected by `assemble_vintf` with a duplicate-instance error.
-
-The stock 8.1 `cas@1.0-service` daemon is likewise dropped in favour of the
-AOSP 1.1 service (`@1.1::IMediaCasService` extends `@1.0`).
+fragments, and a second entry for the same HAL name and major version is rejected
+by `assemble_vintf` with a duplicate-instance error. The stock 8.1 `cas@1.0-service`
+daemon is likewise dropped in favour of the AOSP 1.1 service
+(`@1.1::IMediaCasService` extends `@1.0`).
 
 ### Keymaster and gatekeeper HAL modules
 
-Android locates a HAL implementation with `hw_get_module_by_class()`, which
-tries `"<class>.<ro.hardware>.so"` before falling back to `"<class>.default.so"`.
-With `ro.hardware=mt6765` that means `keystore.mt6765.so` and
-`gatekeeper.mt6765.so`. The vendor image carries no symlinks and ships the
-MediaTek TEE modules under their own names, so the loader could not find either
-one and both services came up in a degraded mode — keymaster printed "Could not
-find any keystore module, using software-only implementation." and gatekeeper
-failed to open at all.
+Android locates a HAL implementation with `hw_get_module_by_class()`, which tries
+`"<class>.<ro.hardware>.so"` before falling back to `"<class>.default.so"`. With
+`ro.hardware=mt6765` that means `keystore.mt6765.so` and `gatekeeper.mt6765.so`.
+The vendor image carries no symlinks and ships the MediaTek TEE modules under
+their own names, so the loader could not find either one and both services came up
+in a degraded mode — keymaster printed "Could not find any keystore module, using
+software-only implementation." and gatekeeper failed to open at all.
 
-`Android.mk` installs the names the loader expects as symlinks next to the
-blobs:
+`Android.mk` installs the names the loader expects as symlinks next to the blobs:
 
 | module name             | target                 |
 | ----------------------- | ---------------------- |
@@ -693,60 +734,49 @@ blobs:
 | `gatekeeper.mt6765.so`  | `libMcGatekeeper.so`   |
 | `gatekeeper.default.so` | `libSoftGatekeeper.so` |
 
-`kmsetkey` needs no alias: `ro.hardware.kmsetkey=trustonic` in `vendor.prop`
-makes the loader open the shipped `kmsetkey.trustonic.so` directly.
+`kmsetkey` needs no alias: `ro.hardware.kmsetkey=trustonic` in `vendor.prop` makes
+the loader open the shipped `kmsetkey.trustonic.so` directly.
 
 ### Resource overlay
 
-`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which is extracted from the
-stock CPH1909 `framework-res.apk` and limited to resources that LineageOS 17.1
-still defines. `overlay/README.md` records the input hashes and the complete
-accounting:
+`DEVICE_PACKAGE_OVERLAYS` points at `overlay/`, which is extracted from the stock
+CPH1909 `framework-res.apk` and limited to resources that LineageOS 17.1 still
+defines. `overlay/README.md` records the input hashes and the complete accounting:
 603 stock resources also exist in LOS 17.1, 66 differ, 47 are stock device
-configuration and are emitted, 19 are ROM policy and are excluded with a
-reason, and 537 are identical. Four additional values describe device
-capabilities that the stock framework does not attest; they are listed with
-their evidence in `overlay/README.md`.
+configuration and are emitted, 19 are ROM policy and are excluded with a reason,
+and 537 are identical. Four additional values describe device capabilities that
+the stock framework does not attest; they are listed with their evidence in
+`overlay/README.md`.
 
-* `frameworks/base/core/res/res/values/config.xml` — device configuration:
-  display and auto-brightness, the waterdrop cutout, navigation bar, ACCDET
-  audio jack, proximity suspend, the MediaTek `networkAttributes` table, MMS
-  user agent, Wi-Fi capabilities and RSSI thresholds, tether regexes, Bluetooth
-  HFP/power values, multi-user, auto power modes and the icon mask. Every entry
-  is the stock 8.1 value except the two capability overrides noted below;
-  resources that exist only in 8.1 are not copied, and 8.1 values that are ROM
-  policy (component names, feature lists, packages this build does not ship)
-  are listed in `overlay/README.md` instead of being silently overlaid.
-* `frameworks/base/core/res/res/values/dimens.xml` — the stock
-  `status_bar_height` (28dp = 56px at 320dpi, clearing the 55px notch) under
-  the LOS 17.1 name `status_bar_height_portrait`, which is the value the
-  framework reads, plus the 82px hardware corner radius.
+* `frameworks/base/core/res/res/values/config.xml` — device configuration: display
+  and auto-brightness, the waterdrop cutout, navigation bar, ACCDET audio jack,
+  proximity suspend, the MediaTek `networkAttributes` table, MMS user agent, Wi-Fi
+  capabilities and RSSI thresholds, tether regexes, Bluetooth HFP/power values,
+  multi-user, auto power modes and the icon mask. Every entry is the stock 8.1
+  value except the capability overrides noted below.
+* `frameworks/base/core/res/res/values/dimens.xml` — the stock `status_bar_height`
+  (28dp = 56px at 320dpi, clearing the 55px notch) under the LOS 17.1 name
+  `status_bar_height_portrait`, plus the 82px hardware corner radius.
 * `frameworks/base/packages/SystemUI/res/values/dimens.xml` — the 82px
-  `rounded_corner_content_padding` used as the navigation bar's start/end
-  margin, matching the same kernel corner pattern.
+  `rounded_corner_content_padding` used as the navigation bar's start/end margin.
 * `frameworks/base/core/res/res/xml/power_profile.xml` — the stock energy model
   with the 8.1 CPU keys mapped to the names Android 10 reads
   (`cpu.speeds.clusterN` → `cpu.core_speeds.clusterN`, `cpu.active.clusterN` →
   `cpu.core_power.clusterN`; `dsp.audio`/`dsp.video` → `audio`/`video`), both
-  clusters included and the 4230 mAh battery. The old overlay's
-  `cpu.speeds.cluster0`/`cpu.active.cluster0` names were not read by LOS 17.1
-  at all, so battery statistics used the defaults.
+  clusters included and the 4230 mAh battery.
 
 The `config.xml` overlay is grouped as follows:
 
-**Display and brightness.** AOSP 10 ships empty `config_autoBrightnessLevels`
-and `config_autoBrightnessLcdBacklightValues` arrays, which makes
-`BrightnessMappingStrategy.create()` return null. No
-`AutomaticBrightnessController` is then created, so auto-brightness is
-unavailable and manual brightness has no device curve. The overlay supplies the
-stock lux thresholds (`45, 1025, 1480, 2250, 3300, 10000`), the matching
-backlight levels (`8, 22, 48, 78, 128, 206, 255`), the stock debounce/sampling
-values and `config_automatic_brightness_available=true`. The vendor side was
-already complete: `lights.mt6765.so` writes
-`/sys/class/leds/lcd-backlight/brightness`, which the MT6765 LEDs driver
-exposes. The manual range is the stock CPH1909 one: minimum `1`, default `44`
-of `255` (dark/doze `2`). The previous CPH1920-derived `4/140` range has been
-removed because it did not come from this device. The waterdrop notch cutout
+**Display and brightness.** AOSP 10 ships empty `config_autoBrightnessLevels` and
+`config_autoBrightnessLcdBacklightValues` arrays, which makes
+`BrightnessMappingStrategy.create()` return null, so auto-brightness is unavailable
+and manual brightness has no device curve. The overlay supplies the stock lux
+thresholds (`45, 1025, 1480, 2250, 3300, 10000`), the matching backlight levels
+(`8, 22, 48, 78, 128, 206, 255`), the stock debounce/sampling values and
+`config_automatic_brightness_available=true`. The vendor side is the source-built
+lights HAL (see *Lights HAL* below), which writes
+`/sys/class/leds/lcd-backlight/brightness`. The manual range is the stock CPH1909
+one: minimum `1`, default `44` of `255` (dark/doze `2`). The waterdrop notch cutout
 (`M -105,0 L -105,55 L 105,55 L 105,0 Z`) is overridden too;
 `config_mainBuiltInDisplayCutoutRectApproximation` follows the cutout string
 automatically. `config_showNavigationBar=true` because the device has no
@@ -754,70 +784,51 @@ capacitive navigation buttons.
 
 **Input, sensors and audio jack.** The MTK ACCDET driver
 (`CONFIG_MTK_PMIC_CHIP_MT6357`) reports `SW_HEADPHONE_INSERT` /
-`SW_MICROPHONE_INSERT` through the Linux input subsystem, not through the
-legacy `/sys/class/switch/h2w` uevent path. AOSP defaults
-`config_useDevInputEventForAudioJack` to false, so the framework never saw
-headset insertion; the stock ROM sets it true. The stock ROM also enables
+`SW_MICROPHONE_INSERT` through the Linux input subsystem, not through the legacy
+`/sys/class/switch/h2w` uevent path. AOSP defaults
+`config_useDevInputEventForAudioJack` to false, so the framework never saw headset
+insertion; the stock ROM sets it true. The stock ROM also enables
 `config_suspendWhenScreenOffDueToProximity`, so the proximity sensor turns the
 screen off against the ear during a call.
 
 **Double-tap to wake.** The stock 8.1 framework sets
-`config_supportDoubleTapWake=false` (ColorOS handled the setting outside the
-AOSP switch), so this is one of the documented capability overrides: the
-overlay adds `<bool name="config_supportDoubleTapWake">true</bool>`, backed by
-the stock kernel and the power HAL. The
-authoritative 8.1 kernel (`oppo6765_18511.dts`, multi-panel SPI touch `ili_ts@0`
-on `spi3`) exposes `/proc/touchpanel/double_tap_enable` on the Himax summer,
-NT36525B and Ilitek ipio_mmi panel drivers (the NT36xxx non-B path uses
-`WAKEUP_GESTURE`/double-click mapped to `KEY_POWER`; its proc enable node is not
-confirmed). `BoardConfig.mk` sets `TARGET_TAP_TO_WAKE_NODE` to that proc node.
-On LineageOS 17.1 the Display toggle writes `Settings.Secure.DOUBLE_TAP_TO_WAKE`,
-and `PowerManagerService` forwards it as
-`IPower::setFeature(POWER_FEATURE_DOUBLE_TAP_TO_WAKE)` to
-`android.hardware.power@1.0`. The default AOSP `android.hardware.power@1.0-service`
-loads the legacy `libhardware` module and forwards `setFeature` to it, so this
-tree builds a small `power.mt6765` shim (`power/`) that mirrors the MT6765
-RMX2185 device trees' `Mediatek Power HAL`: same `power_open()` device-class
-allocation, same `LOG_TAG "MTKPowerHAL"`, the sustained-performance and VR-mode
-hint handlers with `*((int *)data)` parsing, and the DT2W write through
-`TARGET_TAP_TO_WAKE_NODE` (`/proc/touchpanel/double_tap_enable`). The node is
-labelled `proc_dt2w` by `sepolicy/vendor/genfs_contexts` and `hal_power_default`
-is granted write access (`sepolicy/vendor/hal_power_default.te`), so DT2W is
-not dependent on the permissive bring-up. The stock legacy
-power HALs (`vendor/lib/hw/power.mt6765.so` and `power.default.so`, both
-32-bit and 64-bit) are deliberately absent from `proprietary-files.txt`: they
-installed to the same vendor path as the shim while having no proc-node writer
-at all (verified: no `/proc` or `/sys` references in the binaries), so the stock
-`power.mt6765.so` was dropped from the vendor image to keep the shim the
-definitive one. `power.default.so` is *not* from the stock dump -- it is built
-from AOSP's `hardware/libhardware/modules/power` and installed unconditionally
-by the platform, so it is present in every image; the probe order above makes it
-unreachable whenever `ro.hardware=mt6765` resolves the shim.
-
-Note the AOSP `android.hardware.power@1.0-service` passthrough service supports
-both open()-based and open()-less legacy modules: with `methods->open` present
-(as here) it takes the `hw_module_methods->open()` branch, allocating a
-`power_module_t` as the device class, which is exactly the interface the stock
-MediaTek and RMX2185 modules expose. Both
-`android.hardware.power@1.0-service` and `power.mt6765` are added in
-`device.mk`, and `android.hardware.power@1.0::IPower/default` is declared in
-`manifest.xml`. This shim only handles DT2W (other power hints/interactive are
-stubs); the MTK vendor power interface
-(`vendor.mediatek.hardware.power@1.1-service` / blobs) is separate and
-unchanged. Behavior is panel-variant dependent; build/boot-test on hardware.
+`config_supportDoubleTapWake=false` (ColorOS handled the setting outside the AOSP
+switch), so this is one of the documented capability overrides: the overlay adds
+`<bool name="config_supportDoubleTapWake">true</bool>`, backed by the stock kernel
+and the power HAL. The authoritative 8.1 kernel (`oppo6765_18511.dts`, multi-panel
+SPI touch `ili_ts@0` on `spi3`) exposes `/proc/touchpanel/double_tap_enable` on the
+Himax summer, NT36525B and Ilitek ipio_mmi panel drivers. `BoardConfig.mk` sets
+`TARGET_TAP_TO_WAKE_NODE` to that proc node. On LineageOS 17.1 the Display toggle
+writes `Settings.Secure.DOUBLE_TAP_TO_WAKE`, and `PowerManagerService` forwards it
+as `IPower::setFeature(POWER_FEATURE_DOUBLE_TAP_TO_WAKE)` to
+`android.hardware.power@1.0`. The default AOSP service loads the legacy
+`libhardware` module and forwards `setFeature` to it, so this tree builds a small
+`power.mt6765` shim (`power/`) — same `power_open()` device-class allocation, same
+`LOG_TAG "MTKPowerHAL"`, the sustained-performance and VR-mode hint handlers, and
+the DT2W write through `TARGET_TAP_TO_WAKE_NODE`. The node is labelled `proc_dt2w`
+and `hal_power_default` is granted write access, so DT2W is not dependent on the
+permissive bring-up. The stock legacy power HALs (`vendor/lib/hw/power.mt6765.so`
+and `power.default.so`) are deliberately absent from `proprietary-files.txt`: they
+installed to the same vendor path as the shim while having no proc-node writer at
+all. `power.default.so` is built from AOSP's
+`hardware/libhardware/modules/power` and installed unconditionally by the platform,
+but the probe order makes it unreachable whenever `ro.hardware=mt6765` resolves
+the shim. This shim only handles DT2W (other power hints/interactive are stubs);
+the MTK vendor power interface (`vendor.mediatek.hardware.power@1.1-service`) is
+separate and unchanged.
 
 `power/Android.mk` is compiled only because the top-level `Android.mk` ends with
-`include $(call all-makefiles-under,$(LOCAL_PATH))`. That include is
-load-bearing: Soong's finder uses `FindFirstNamedAt` for `Android.mk`, which
-**stops descending** once it matches a directory (finder.go:262), so the
-top-level `Android.mk` hides every nested one. Without the include the module
-was never parsed, `PRODUCT_PACKAGES += power.mt6765` resolved to nothing, and
-the image shipped AOSP's `power.default.so` -- whose `power_module_t` has no
-`setFeature` member at all, so `Power::setFeature()`'s `if (mModule->setFeature)`
-guard made `IPower::setFeature(DOUBLE_TAP_TO_WAKE)` a silent no-op and DT2W
-never worked. The build system only warns about an unresolvable
-`PRODUCT_PACKAGES` entry in `TARGET_BUILD_APPS` (sdk) builds, which is why a
-normal ROM build stayed green. `ci.yml` now checks this explicitly.
+`include $(call all-makefiles-under,$(LOCAL_PATH))`. That include is load-bearing:
+Soong's finder uses `FindFirstNamedAt` for `Android.mk`, which **stops descending**
+once it matches a directory, so the top-level `Android.mk` hides every nested one.
+Without the include the module was never parsed, `PRODUCT_PACKAGES += power.mt6765`
+resolved to nothing, and the image shipped AOSP's `power.default.so` — whose
+`power_module_t` has no `setFeature` member at all, so `Power::setFeature()`'s
+`if (mModule->setFeature)` guard made `IPower::setFeature(DOUBLE_TAP_TO_WAKE)` a
+silent no-op and DT2W never worked. The build system only warns about an
+unresolvable `PRODUCT_PACKAGES` entry in `TARGET_BUILD_APPS` (sdk) builds, which is
+why a normal ROM build stayed green. `ci.yml` now checks this explicitly. The same
+mechanism builds the lights HAL (`light/Android.mk`).
 
 After a build, confirm the shim is present and picked up:
 
@@ -828,47 +839,74 @@ adb shell 'ls -l /proc/touchpanel/double_tap_enable' # node exists
 adb shell dmesg | grep -i MTKPowerHAL               # shim log lines
 ```
 
-`hw_get_module()` probes `ro.hardware` first, and `androidboot.hardware=mt6765`
-makes it `mt6765`, so `power.mt6765.so` wins over any `power.default.so` that
-also happens to be installed; the AOSP fallback is harmless.
-
-**Telephony.** `config_hotswapCapable=true` and the stock `networkAttributes`
-table (including the MediaTek WAP, XCAP, RCS, BIP, VSIM and preempt connection
-types) match the dual-SIM, hot-swap-capable modem (`ro.telephony.sim.count=2`,
-`ro.radio.simcount=2`, `ro.mtk_sim_hot_swap=1`). `radioAttributes` is identical
-to the AOSP 10 table and is therefore not overlaid. `config_num_physical_slots`
-is a capability override set to `2` from the stock vendor
-`ro.telephony.sim.count=2`; `UiccController` also raises the slot count to the
-number of RIL channels (2 here), so the explicit value and the modem agree.
+**Telephony.** `config_hotswapCapable=true` and the stock `networkAttributes` table
+(including the MediaTek WAP, XCAP, RCS, BIP, VSIM and preempt connection types)
+match the dual-SIM, hot-swap-capable modem (`ro.telephony.sim.count=2`,
+`ro.radio.simcount=2`, `ro.mtk_sim_hot_swap=1`). `radioAttributes` is identical to
+the AOSP 10 table and is therefore not overlaid. `config_num_physical_slots` is a
+capability override set to `2` from the stock vendor `ro.telephony.sim.count=2`;
+`UiccController` also raises the slot count to the number of RIL channels (2 here),
+so the explicit value and the modem agree.
 
 **Connectivity.** `config_wifi_dual_band_support` and
-`config_wifi_background_scan_support` are set for the MT6765 802.11ac radio,
-and the tethering regexes (`ap\d`, `rndis\d`, `bt-pan`/`bt-dun`) match the
-stock vendor configuration (`wifi.tethering.interface=ap0`).
+`config_wifi_background_scan_support` are set for the MT6765 802.11ac radio, and
+the tethering regexes (`ap\d`, `rndis\d`, `bt-pan`/`bt-dun`) match the stock vendor
+configuration (`wifi.tethering.interface=ap0`).
 
 **Bluetooth.** HFP in-band ringing plus the stock Bluetooth power model
 (`1/2/3` mA idle/rx/tx, `3300` mV) used by BatteryStats.
 
 **UI and power.** `config_enableMultiUserUI` and `config_multiuserMaximumUsers=4`
-are enabled as in the stock ROM, and `config_unplugTurnsOnScreen=true` restores
-the stock behaviour of waking the screen when power is unplugged.
+are enabled as in the stock ROM, and `config_unplugTurnsOnScreen=true` restores the
+stock behaviour of waking the screen when power is unplugged.
 
 **SystemUI dimensions.** `navigation_layout.xml` uses
-`rounded_corner_content_padding` as the start/end margin of the navigation
-bar, and the framework uses `rounded_corner_radius` for its software corner
-masks. Both are `82px`: all eight real 720x1520 LCM drivers in the stock a46
-kernel set `corner_pattern_height`/`corner_pattern_height_bot` to 82 (`82` is
-the actual panel curve, the `virtual_dsi_vdo_default` entry is not a real
-LCM), and `CONFIG_MTK_ROUND_CORNER_SUPPORT=y` enables the hardware mask. The
-previous `34px` value came from a sibling OPPO A12/A11k and has been replaced
-by the value this device's own panel drivers declare.
+`rounded_corner_content_padding` as the start/end margin of the navigation bar,
+and the framework uses `rounded_corner_radius` for its software corner masks. Both
+are `82px`: all eight real 720x1520 LCM drivers in the stock a46 kernel set
+`corner_pattern_height`/`corner_pattern_height_bot` to 82, and
+`CONFIG_MTK_ROUND_CORNER_SUPPORT=y` enables the hardware mask.
+
+The stock **`SysuiDarkThemeOverlay`** (`vendor/overlay`,
+`com.android.systemui.theme.dark`) was **dropped**: it is a ColorOS theme-engine
+RRO whose main override targets `style/qs_base`, which LineageOS SystemUI does not
+define (LOS uses `qs_theme` / `QSHeaderTheme` plus night mode), so the style
+override is inert; the lone `qs_detail_progress_track` color override is redundant
+with the SystemUI default. LOS drives the SystemUI dark theme itself.
+
+### Lights HAL
+
+The proprietary MediaTek lights stack (`android.hardware.light@2.0-service-mediatek`,
+`android.hardware.light@2.0-impl-mediatek.so`, `lights.mt6765.so`) is **dropped**
+from the vendor tree and replaced by a source-built
+`android.hardware.light@2.0-service.CPH1909` (`light/`), adapted from the LineageOS
+light@2.0 template used by xiaomi-lotus (lineage-17.1) and oppo OP4BFB (lineage-20).
+
+Hardware adaptation (authoritative kernel `oppo6765_18511.dts` + `mtk_leds_drv.c`):
+
+* The only registered LED is **lcd-backlight** (`led@6`, `led_mode=4`, TDDI panel
+  brightness control). red/green/blue/jogball/keyboard/button are all `led_mode=0`
+  (`MT65XX_LED_MODE_NONE`) and are skipped at `led_classdev_register`, so the A5s
+  has **no notification LED and no button backlight** (on-screen navigation keys).
+  The HAL therefore advertises and handles **BACKLIGHT only** and returns
+  `LIGHT_NOT_SUPPORTED` for notification/battery/attention.
+* The MTK LED class does not set `max_brightness`, so `led-class.c` defaults it to
+  `LED_FULL` (255). Hence `/sys/class/leds/lcd-backlight/brightness` is 0..255
+  (lotus's 2047 is panel-specific and does not apply here).
+
+`light/Android.mk` (not Android.bp, for the Soong-finder reason above) builds the
+service; `device.mk` adds it to `PRODUCT_PACKAGES`; `file_contexts` labels the
+binary `hal_light_default_exec`. The stock chain (service → dlopen impl →
+`hw_get_module("lights")` → `lights.mt6765.so`) was self-contained — no other blob
+references it — so dropping it loses nothing. `android.hardware.light@2.0::ILight`
+is declared in `manifest.xml`.
 
 ### Input key layouts
 
 AOSP 10 ships neither the MediaTek accessory-detect headset-button map
 (`ACCDET.kl`) nor its keypad map (`mtk-kpd.kl`). Without them the wired headset
-buttons (hook, media transport, `VOICE_ASSIST`) and the `mtk-kpd` key map fall
-back to `Generic.kl`. The stock files are copied unchanged into
+buttons (hook, media transport, `VOICE_ASSIST`) and the `mtk-kpd` key map fall back
+to `Generic.kl`. The stock files are copied unchanged into
 `/system/usr/keylayout/` through `PRODUCT_COPY_FILES`.
 
 ### Media profiles
@@ -883,11 +921,11 @@ installed as `/vendor/etc/media_profiles_V1_0.xml`, keeping the device's own
 
 ### xHE-AAC decoder
 
-Instagram and Facebook serve some audio tracks as xHE-AAC (`mp4a.40.42`).
-Neither Android 10's C2 AAC decoder nor AOSP's SoftAAC2 OMX decoder can decode
-that profile, and Meta's HeroPlayer picks a decoder by MIME without falling
-back. The build therefore compiles AOSP's libxaac-backed OMX decoder from
-source and makes it the image's AAC decoder:
+Instagram and Facebook serve some audio tracks as xHE-AAC (`mp4a.40.42`). Neither
+Android 10's C2 AAC decoder nor AOSP's SoftAAC2 OMX decoder can decode that
+profile, and Meta's HeroPlayer picks a decoder by MIME without falling back. The
+build therefore compiles AOSP's libxaac-backed OMX decoder from source and makes it
+the image's AAC decoder:
 
 ```make
 PRODUCT_PACKAGES += \
@@ -897,139 +935,88 @@ PRODUCT_PACKAGES += \
 ```
 
 `libstagefright_soft_xaacdec` is `SoftXAAC` from
-`frameworks/av/media/libstagefright/codecs/xaacdec`, with `external/libxaac`
-linked in statically. It inherits `compile_multilib: "32"` from
+`frameworks/av/media/libstagefright/codecs/xaacdec`, with `external/libxaac` linked
+in statically. It inherits `compile_multilib: "32"` from
 `libstagefright_softomx-defaults`, matching the 32-bit 8.1 vendor OMX service.
 
 The platform plugin is loaded by `OMXMaster::addPlatformPlugin()` through
-`android_load_sphal_library()`, i.e. into the isolated `sphal` linker namespace
-(`OMXMaster.cpp:70`), and `SoftOMXPlugin` then `dlopen()`s each codec from that
-same namespace (`SoftOMXPlugin.cpp:117`). On this full-VNDK build
-(`BOARD_VNDK_VERSION := current`) `sphal` searches only `/odm/${LIB}`,
-`/vendor/${LIB}` and `/vendor/${LIB}/hw` — it never searches `/system/lib`
-(`android-10.0.0_r47` `rootdir/etc/ld.config.txt:242-248`). The plugin is
+`android_load_sphal_library()`, i.e. into the isolated `sphal` linker namespace,
+and `SoftOMXPlugin` then `dlopen()`s each codec from that same namespace. On this
+full-VNDK build `sphal` searches only `/odm/${LIB}`, `/vendor/${LIB}` and
+`/vendor/${LIB}/hw` — it never searches `/system/lib`. The plugin is
 `vendor_available` and lands in `/vendor/lib` on its own, but
 `libstagefright_soft_xaacdec` is not, so the top-level `Android.mk` copies the
 32-bit codec into `/vendor/lib` next to the plugin.
 
-Note the earlier claim that VNDK-lite has no `sphal` namespace was wrong:
-Android 10's `ld.config.vndk_lite.txt` defines it too, and neither variant ever
-searches `/system/lib` from `sphal`. Under VNDK-lite that only worked by
-accident, via the vendor `default` namespace's `/system/${LIB}` entry; with full
-VNDK it does not, which is why the explicit copy is required.
-
 AOSP's `SoftOMXPlugin.cpp` registers two components for the `audio_decoder.aac`
 role and leaves the selection to the vendor `media_codecs_google_audio.xml`:
+`OMX.google.aac.decoder` (SoftAAC2, stops at HE-AAC) and `OMX.google.xaac.decoder`
+(libxaac, supports AAC-LC, HE-AAC, HE-AACv2 and xHE-AAC). The device copy in
+`configs/media/media_codecs_google_audio.xml` advertises only the xaac component
+for the whole `audio/mp4a-latm` type, so it also serves the plain-AAC slot that
+Facebook Lite selects by MIME. Software OMX audio codecs rank ahead of C2 software
+codecs, so the xaac node is chosen for AAC playback.
 
-* `OMX.google.aac.decoder` → `libstagefright_soft_aacdec` (SoftAAC2, stops at
-  HE-AAC)
-* `OMX.google.xaac.decoder` → `libstagefright_soft_xaacdec` (libxaac, supports
-  AAC-LC, HE-AAC, HE-AACv2 and xHE-AAC)
+`configs/media/media_codecs_google_video_le.xml` replaces the stock Google software
+video list with an empty `<Included>`: installing the platform plugin registers
+Google's software video component names, but their libraries are not built in this
+image and MediaTek's hardware OMX video codecs cover every format the stock file
+listed; the entries would otherwise advertise codecs that fail when instantiated.
 
-The device copy in `configs/media/media_codecs_google_audio.xml` advertises
-only the xaac component, for the whole `audio/mp4a-latm` type. It therefore
-also serves the plain-AAC slot that Facebook Lite selects by MIME, which is the
-behaviour the GSI v7.1 release note describes. Software OMX audio codecs rank
-ahead of C2 software codecs, so the xaac node is chosen for AAC playback.
-
-`configs/media/media_codecs_google_video_le.xml` replaces the stock Google
-software video list with an empty `<Included>`. Installing the platform plugin
-registers Google's software video component names, but their libraries are not
-built in this image and MediaTek's hardware OMX video codecs cover every format
-the stock file listed; the entries would otherwise advertise codecs that fail
-when instantiated.
-
-Both overrides are listed in `device.mk` before the vendor makefile is
-inherited, because `PRODUCT_COPY_FILES` keeps the first source for a
-destination.
+Both overrides are listed in `device.mk` before the vendor makefile is inherited,
+because `PRODUCT_COPY_FILES` keeps the first source for a destination.
 
 ### Properties
 
 Both property files were audited against the stock dump (`a5s-dump`:
-`system/build.prop`, `vendor/build.prop` and `vendor/default.prop`) and against
-the Android 10 / LineageOS 17.1 sources that read them. Two rules follow from
-that audit:
+`system/build.prop`, `vendor/build.prop` and `vendor/default.prop`) and against the
+Android 10 / LineageOS 17.1 sources that read them. Two rules follow:
 
-* The stock 8.1 blobs read the **unprefixed** `ro.mtk_*` names that the stock
-  vendor `build.prop` set. The `ro.vendor.mtk_*` names used by Android-10-era
-  MTK trees only work with Android 10 vendor blobs, so they are not used here.
+* The stock 8.1 blobs read the **unprefixed** `ro.mtk_*` names that the stock vendor
+  `build.prop` set. The `ro.vendor.mtk_*` names used by Android-10-era MTK trees
+  only work with Android 10 vendor blobs, so they are not used here.
 * Properties that no stock image for this device ever set and that no Android 10
   reader consumes are left out rather than borrowed from other MTK trees.
 
-`system.prop` (framework side) currently carries, grouped in-file:
-
-* **Display / camera / audio**: `ro.sf.lcd_density=320`, `ro.camera.sound.forced=0`,
-  `ro.audio.silent=0`.
-* **Radio / Wi-Fi**: `rild.libpath=mtk-ril.so`, `rild.libargs=-d /dev/ttyC0`;
-  `wifi.interface=wlan0`, `wifi.direct.interface=p2p0`,
-  `wifi.tethering.interface=ap0`; the MediaTek Wi-Fi feature gates
-  `ro.mediatek.wlan.wsc=1` / `ro.mediatek.wlan.p2p=1` / `mediatek.wlan.ctia=0`
-  and `qemu.hw.mainkeys=0`.
-* **Dalvik**: `ro.config.low_ram=false` (read by `core/jni/AndroidRuntime.cpp`
-  and `RoSystemProperties`; this is not a low-RAM device).
-* **Zygote**: nothing — `lineage_CPH1909.mk` inherits `core_64_bit.mk`, which
-  already sets `ro.zygote=zygote64_32` via `PRODUCT_VENDOR_PROPERTIES`.
-* **Crypto**: only `ro.crypto.allow_encrypt_override=true`; see *Encryption*.
-* **MediaTek framework knobs**: `ro.kernel.zio=38,108,105,16`,
-  `ro.zygote.preload.enable=0`, and the `ro.mtk_perf_*` start-window /
-  response-time performance hints.
+`system.prop` (framework side) carries, grouped in-file: display/camera/audio
+(`ro.sf.lcd_density=320`, `ro.camera.sound.forced=0`, `ro.audio.silent=0`);
+radio/Wi-Fi (`rild.libpath=mtk-ril.so`, `rild.libargs=-d /dev/ttyC0`,
+`wifi.interface=wlan0`, `wifi.direct.interface=p2p0`, `wifi.tethering.interface=ap0`,
+the MediaTek Wi-Fi feature gates and `qemu.hw.mainkeys=0`); Dalvik
+(`ro.config.low_ram=false`); crypto (`ro.crypto.allow_encrypt_override=true`, see
+*Encryption*); and the MediaTek framework knobs (`ro.kernel.zio`,
+`ro.zygote.preload.enable=0`, the `ro.mtk_perf_*` hints). Zygote is set by
+`core_64_bit.mk` (`ro.zygote=zygote64_32`), not here.
 
 `vendor.prop` (vendor side) holds the subset of the stock vendor
-`build.prop` / `default.prop` that the prebuilt MediaTek / OPPO blobs and their
-`rc` files actually read. Grouped in-file:
+`build.prop`/`default.prop` that the prebuilt blobs and their rc files actually
+read, **regrouped by subsystem** (Audio, Dirac, Camera, Display, DRM, Media, FM,
+GPS, Radio, IMS, Modem/CCCI, Wi-Fi, Bluetooth, WFD, Platform, Storage, USB, Dalvik,
+Power, Misc) with the comments trimmed to the load-bearing notes. Notable entries:
 
-* **Audio**: the Dirac suite (`persist.dirac.*`),
-  `ro.mtk_audio_tuning_tool_ver=V2.2` and `ro.audio.usb.period_us=16000`
-  (stock values). The Aurisys tuning set (`vendor/etc/aurisys_config.xml` and
-  `vendor/etc/aurisys_param/*`, extracted through `proprietary-files.txt`) is
-  loaded by the MTK audio HAL from that fixed path, so — as on the stock image,
-  and in rosemary / mt6768 trees — no `vendor.audiohal.aurisys.*` property is
-  needed to point at it.
-* **Camera**: `ro.mtk_camera_app_version=3`, `ro.mtk_fd_support=1`,
-  `camera.disable_zsl_mode=1` and the MDP capture flags
-  `camera.mdp.cz.enable=1` / `camera.mdp.dre.enable=0` — all stock values;
-  ZSL stays disabled as on ColorOS.
-* **Display / graphics**: `ro.surface_flinger.has_wide_color_display=false`
-  and `ro.surface_flinger.has_HDR_display=false` (Android 10
-  `SurfaceFlingerProperties` sysprops), `debug.sf.disable_backpressure=1`
-  (stock; read by `SurfaceFlinger.cpp`), `debug.sf.latch_unsignaled=1` (read by
-  `BufferLayer.cpp`), `ro.opengles.version=196610`, `ro.sf.hwrotation=0`, and —
-  critically — `ro.hardware.egl=mtk`. The Android 10 EGL loader appends
-  `ro.hardware.egl` (then `ro.board.platform`) to `libEGL_`; this device's
-  vendor tree ships `libEGL_mtk.so` / `libGLESv2_mtk.so`, so without it the
-  loader looks for the non-existent `libEGL_mt6765` and SurfaceFlinger never
-  starts.
-* **DRM / Media**: `drm.service.enabled=true`,
-  `ro.mtk_widevine_drm_l3_support=1`; `media.settings.xml` points at
-  `/vendor/etc/media_profiles_V1_0.xml`, the file this device tree installs
-  (see *Media profiles*); `mtk.vdec.waitkeyframeforplay=1`; and the stock
-  playback flags `ro.mtk_wmv_playback_support=1` /
-  `ro.mtk_flv_playback_support=1`.
-* **FM / GPS / radio / telephony**: `fmradio.driver.enable=1` and
-  `ro.mtk_fm_50khz_support=1`; GPS via `ro.mtk_gps_support=1` and
-  `ro.mtk_agps_app=1`, plus `ro.mtk_omacp_support=1` in the platform block;
-  the dual-SIM hot-swap modem
-  block (`persist.radio.default.sim=0`, `persist.radio.fd.counter=150`, ...);
-  and the `persist.mtk.connsys.poweron.ctl` / `persist.mtk.wcn.patch.version`
-  WCN connect bits.
-* **Bluetooth**: `bt.profiles.avrcp.multiPlayer.enable=0` (AVRCP single active
-  player, matching stock) and
-  `persist.bluetooth.a2dp_offload.disabled=true`. The AOSP Bluetooth stack
-  (`system/bt`, the Bluetooth app) reads the prefix-less name; the
-  `persist.vendor.bluetooth.*` form is not read by anything.
-* **Storage / init / USB**: `ro.frp.pst=/dev/block/.../frp`, `ro.mount.fs=EXT4`,
-  `ro.sys.sdcardfs=1`, `ro.oem_unlock_supported=1`,
-  `persist.sys.usb.config=mtp` (the stock `default.prop` name read by
-  `UsbDeviceManager`).
-* **Platform identification / TEE**: the `ro.mtk_*` platform block, including
-  `ro.mtk_tee_gp_support=1`, `ro.mtk_trustonic_tee_support=1` and
-  `ro.hardware.kmsetkey=trustonic` (what `kmsetkey` actually opens, see
-  *Keymaster and gatekeeper HAL modules* above).
-* **Wi-Fi**: `ro.mtk_wapi_support=1` (the stock value; the Android-10 trees use
-  `ro.vendor.mtk_wapi_support=0`, which these blobs do not read),
-  `ro.mtk_dhcpv6c_wifi=1`, and the WCN/consys connection values.
-* **Dalvik / ART**: `dalvik.vm.heapgrowthlimit=384m`,
-  `dalvik.vm.heapsize=512m` (the stock 3/4 GB sizing).
+* **Audio**: the Dirac suite (`persist.dirac.*`), `ro.mtk_audio_tuning_tool_ver=V2.2`,
+  `ro.audio.usb.period_us=16000`, and **`ro.audio.ignore_effects=true`**. The last
+  makes `EffectsFactory init()` skip `EffectLoadXmlEffectConfig` entirely. The
+  stock 8.1 MTK effects path can crash in `libeffects.so` and watchdog-reboot
+  `system_server`; this tree ships no `audio_effects.xml`/`.conf` or soundfx libs
+  (AOSP builds `libeffects`), so the switch only disables optional effects and
+  removes the crash path. Being `ro.*` it cannot be overridden by a stale
+  `/data/property` value. The Aurisys tuning set (`vendor/etc/aurisys_config.xml`,
+  `vendor/etc/aurisys_param/*`) is loaded by the MTK audio HAL from its fixed path,
+  so no `vendor.audiohal.aurisys.*` property is needed.
+* **Display / graphics**: `ro.surface_flinger.has_wide_color_display=false`,
+  `ro.surface_flinger.has_HDR_display=false`, `debug.sf.disable_backpressure=1`,
+  `debug.sf.latch_unsignaled=1`, `ro.opengles.version=196610`, `ro.sf.hwrotation=0`,
+  and — critically — `ro.hardware.egl=mtk`. The Android 10 EGL loader appends
+  `ro.hardware.egl` to `libEGL_`; this device ships `libEGL_mtk.so` /
+  `libGLESv2_mtk.so`, so without it the loader looks for the non-existent
+  `libEGL_mt6765` and SurfaceFlinger never starts.
+* **Camera, DRM/Media, FM/GPS/radio/telephony, Bluetooth, Storage/init/USB,
+  Platform/TEE, Wi-Fi, Dalvik**: the stock values, including
+  `media.settings.xml=/vendor/etc/media_profiles_V1_0.xml`,
+  `persist.bluetooth.a2dp_offload.disabled=true` (the prefix-less name the AOSP
+  stack reads), `ro.hardware.kmsetkey=trustonic`, and
+  `dalvik.vm.heapgrowthlimit=384m` / `dalvik.vm.heapsize=512m`.
 
 The ColorOS-only values (`ro.com.google.gmsversion`, `ro.setupwizard.*`,
 `pm.dexopt.*`, the `persist.log.tag.*` block and the `ro.mtk_*` feature switches
@@ -1037,27 +1024,15 @@ that no prebuilt blob consults) are deliberately dropped.
 
 #### Properties deliberately not carried over
 
-These were added at various points but have no reader (or no stock backing) on
-this device, so they were removed:
-
-* `ro.keystore.disable_strongbox` — not read by AOSP, LineageOS or the MTK
-  blobs. StrongBox availability is probed from the keymaster HAL; the Trustonic
-  TEE here is keymaster 3.0, so no StrongBox is advertised anyway.
-* `ro.crypto.dm_default_key.options_format.version` — does not exist in the
-  Android 10 `vold` (checked against `android-10.0.0_r47`); it was added in a
-  later release and is inert here.
-* `ro.charge.animation.hz` — ColorOS charger-app property with no LineageOS
-  reader and no entry in the stock `build.prop`.
-* `persist.vendor.radio.gps.support`, `ro.vendor.mtk_passpoint_r1_support`,
-  `ro.vendor.mtk_thermal_config`, `ro.vendor.mtk_tee_support`,
-  `ro.vendor.mtk_sec_usb_check`, `ro.vendor.mtk_lcm_physical_rotation`,
-  `ro.vendor.mtk_hwc_support`, `ro.vendor.gpu.type`, the `ro.vendor.mtk_cam_*`
-  set, `persist.vendor.camera3.zsl.enable`, `ro.vendor.mtk_omx_core_log_enable`,
-  the mp4/avi/hevc playback flags, `ro.vendor.bt.stack`,
-  `persist.vendor.bt.a2dp.source_codec` and the extra
-  `persist.vendor.*.usb.config` / `audiohal` entries — none of these exist in
-  this device's stock dump (or they use the Android-10 `ro.vendor.` namespace
-  that its 8.1 blobs do not read), so they would have been inert.
+These were added at various points but have no reader (or no stock backing) on this
+device, so they were removed: `ro.keystore.disable_strongbox` (not read; the
+Trustonic TEE is keymaster 3.0, no StrongBox anyway);
+`ro.crypto.dm_default_key.options_format.version` (does not exist in Android 10
+`vold`); `ro.charge.animation.hz` (ColorOS charger-app property, no LineageOS
+reader); and the `persist.vendor.radio.gps.support` / `ro.vendor.mtk_*` /
+`persist.vendor.camera3.zsl.enable` / `ro.vendor.bt.stack` / extra
+`persist.vendor.*.usb.config` / `audiohal` set — none exist in this device's stock
+dump (or they use the Android-10 `ro.vendor.` namespace its 8.1 blobs do not read).
 
 ### Not taken from the stock dump
 
@@ -1065,24 +1040,23 @@ The stock ROM also carries system-side, device-specific files that this build ha
 no use for, so they are intentionally neither extracted nor copied:
 
 * `system/etc/bluetooth/` — AOSP's own Bluetooth stack installs the generic
-  `bt_stack.conf` and `bt_did.conf` into `/system/etc/bluetooth/`, and this build
-  uses that stack. The remaining stock files there (`mtk_bt_stack.conf`,
-  `mtk_bt_fw.conf`, `bt_mtk_iot_list.conf`, `profile_version.conf`) are read only
-  by MediaTek's patched `bluetooth.default.so`, which is not shipped. Device
-  tuning goes through `bluetooth/bdroid_buildcfg.h` instead.
+  `bt_stack.conf` and `bt_did.conf`; the remaining stock files there
+  (`mtk_bt_stack.conf`, `mtk_bt_fw.conf`, `bt_mtk_iot_list.conf`,
+  `profile_version.conf`) are read only by MediaTek's patched `bluetooth.default.so`,
+  which is not shipped. Device tuning goes through `bluetooth/bdroid_buildcfg.h`.
 * `vendor/etc/fs_config_files` sets the two MTK HAL binaries to be owned by the
   `audioserver`/`bluetooth` accounts. On Android 10 the file ownership comes from
-  the generated `fs_config` and the process credentials come from the `user`
-  directive in each HAL's `.rc`, so the stock override is not needed.
+  the generated `fs_config` and the process credentials from the `user` directive
+  in each HAL's `.rc`, so the stock override is not needed.
 
 ### Encryption
 
 The device ships full-disk encryption with the key blob on the `metadata`
 partition, backed by the Trustonic TEE — not file-based encryption. The stock ROM
 used `forceencrypt=`; this port deliberately uses `encryptable=` instead, so an
-already-encrypted /data is decrypted through the metadata key while an
-unencrypted /data is mounted as-is rather than triggering in-place encryption on
-first boot. `BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
+already-encrypted /data is decrypted through the metadata key while an unencrypted
+/data is mounted as-is rather than triggering in-place encryption on first boot.
+`BOARD_USES_METADATA_PARTITION := true` creates `/metadata`.
 
 The fstab entry is classic FDE (`encryptable=<metadata partition>`), not
 dm-default-key metadata encryption and not file-based encryption, so of the
@@ -1093,133 +1067,94 @@ ro.crypto.allow_encrypt_override=true
 ```
 
 `vold`'s `cryptfs.cpp` reads it when `fscrypt_is_native()` and adds
-`allow_encrypt_override` to the dm-crypt table, letting the encryption path
-override the encryption mode instead of failing when the footer and the
-requested mode disagree. `ro.crypto.volume.filenames_mode` is read by
-`FsCrypt.cpp`, but only when creating volume keys for adoptable storage, and
-`ro.crypto.dm_default_key.options_format.version` does not exist in the
-Android 10 `vold` at all, so neither is set. The TEE side of the setup is the
-`ro.mtk_tee_gp_support` / `ro.mtk_trustonic_tee_support` /
-`ro.hardware.kmsetkey=trustonic` block under *Properties*.
+`allow_encrypt_override` to the dm-crypt table, letting the encryption path override
+the encryption mode instead of failing when the footer and the requested mode
+disagree. `ro.crypto.volume.filenames_mode` is read by `FsCrypt.cpp` only when
+creating volume keys for adoptable storage, and
+`ro.crypto.dm_default_key.options_format.version` does not exist in the Android 10
+`vold` at all, so neither is set. The TEE side is the `ro.mtk_tee_gp_support` /
+`ro.mtk_trustonic_tee_support` / `ro.hardware.kmsetkey=trustonic` block under
+*Properties*.
 
 ### Other build changes
 
-* `BUILD_BROKEN_DUP_RULES := true` — the blob set and AOSP both install several
-  of the same paths (the 8.1 HAL services AOSP 10 replaces); the blob wins Make
-  parse order, which is what we want for the MediaTek binaries.
-* `BUILD_BROKEN_PREBUILT_ELF_FILES := true` — Android 10's build system runs
-  ELF checks (`check_elf_file.py`) on prebuilt shared libraries, verifying
-  DT_NEEDED entries resolve within the declared VNDK set. The 8.1 vendor blobs
-  predate these checks and carry entries like `libhidltransport.so` and
+* `BUILD_BROKEN_DUP_RULES := true` — the blob set and AOSP both install several of
+  the same paths; the blob wins Make parse order, which is what we want for the
+  MediaTek binaries.
+* `BUILD_BROKEN_PREBUILT_ELF_FILES := true` — Android 10's `check_elf_file.py`
+  verifies DT_NEEDED entries resolve within the declared VNDK set; the 8.1 vendor
+  blobs predate these checks and carry entries like `libhidltransport.so` /
   `libhwbinder.so` that would fail the validator.
-* `BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true` — suppresses the
-  parallel check that flags ELF binaries installed through `PRODUCT_COPY_FILES`
-  rather than through `BUILD_PREBUILT`.
-* `BUILD_BROKEN_USES_BUILD_COPY_HEADERS := true` — vendor makefiles may still
-  use the removed `BUILD_COPY_HEADERS` idiom; this flag downgrades the error to
-  a warning.
-* `BOARD_AVB_ENABLE := false` — the bootloader is locked to OPPO keys and this
-  build is not signed by them; the device has no vbmeta partition.
+* `BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true` — suppresses the parallel
+  check that flags ELF binaries installed through `PRODUCT_COPY_FILES`.
+* `BUILD_BROKEN_USES_BUILD_COPY_HEADERS := true` — downgrades the removed
+  `BUILD_COPY_HEADERS` idiom from error to warning.
+* `BOARD_AVB_ENABLE := false` — the bootloader is locked to OPPO keys and this build
+  is not signed by them; the device has no vbmeta partition.
 * `VENDOR_SECURITY_PATCH := 2021-04-05` — the stock system build.prop's
-  `ro.build.version.security_patch`, so `ro.vendor.build.security_patch` reports
-  the real level of the frozen 8.1 vendor blobs.
-* `androidboot.init_fatal_reboot_target=recovery` — a fatal init failure
-  reboots into recovery instead of hanging at the boot logo.
+  `ro.build.version.security_patch`, so `ro.vendor.build.security_patch` reports the
+  real level of the frozen 8.1 vendor blobs.
+* `androidboot.init_fatal_reboot_target=recovery` — a fatal init failure reboots
+  into recovery instead of hanging at the boot logo.
 * `androidboot.selinux=permissive` — BRING-UP ONLY. init's `StatusFromCmdline()`
-  reads `androidboot.selinux=permissive` from the kernel command line and runs
-  the policy in permissive mode before any actions execute (debuggable builds
-  only, i.e. userdebug/eng; the CI default is userdebug; user builds ignore
-  it). Useful while the sepolicy is still being brought up, and it makes the
-  permissive domains in `sepolicy/vendor/device.te` redundant. Remove before
-  shipping a release.
-* `BUILD_BROKEN_DUP_RULES` and the duplicate-path decision are described in
-  `BoardConfig.mk` next to the assignment.
+  reads it from the kernel command line and runs the policy in permissive mode
+  before any actions execute (debuggable builds only; the CI default is userdebug;
+  user builds ignore it). Useful while the sepolicy is still being brought up, and
+  it makes the permissive domains in `sepolicy/vendor/device.te` redundant. Remove
+  before shipping a release.
 
 ## Known limitations / porting notes
 
-* Fingerprint is wired to the AOSP biometric stack via
+* **Fingerprint** is wired to the AOSP biometric stack via
   `biometrics/fingerprint/` (`fingerprint.mt6765`, `proprietary`, multilib): it
   exports the `FINGERPRINT_HARDWARE_MODULE_ID` HMI (required because Android 10
   `libhardware` rejects an `hmi->id`/`class_id` mismatch) and `dlopen`s/forwards
   `open()` to the first working stock legacy vendor HAL, trying Silead
-  (`fingerprint.silead.default.so`, API 2.1, `libsl_fp_impl.so`,
-  `/dev/silead_fp`) then Egis (`fingerprint.egis.default.so`, API 2.1,
-  `vendor.egistec.hardware.fingerprint@4.0.so`/`libRbsFlow.so`, `/dev/esfp0`) —
-  the same order the stock service uses, and it records the winner in
-  `persist.sys.fp.vendor`. `ro.hardware` and `ro.board.platform` are both
-  `mt6765` (`androidboot.hardware=mt6765` in `BOARD_KERNEL_CMDLINE`), so
-  `hw_get_module_by_class("fingerprint")` resolves
-  `fingerprint.mt6765.so` on its very first variant key and never probes
-  `fingerprint.default.so` — no `.default` alias is needed, and
-  `hardware/libhardware/modules/fingerprint/` already builds a real
-  `fingerprint.default` into `vendor/lib[64]/hw/`, so aliasing that path
-  would fight the platform module for the same output. `device.mk`
-  builds/installs `android.hardware.biometrics.fingerprint@2.1-service` and
-  first-wins `PRODUCT_COPY_FILES` overrides (before `CPH1909-vendor.mk`) disable
-  the stock ColorOS `fps_hal` / `fpay_hal` init services, which register
-  `vendor.oppo.hardware.biometrics.fingerprint@2.1` (not the AOSP interface) and
-  would contend for the sensor node (`/dev/silead_fp` or `/dev/esfp0`). The
-  stock face service (`face_hal`) is the mirror image: its override rc does
-  **not** set `disabled`, because the source-built AOSP face@1.0 proxy in
-  `biometrics/face/` forwards to it as its backend. Its two DT_NEEDED
-  interface libraries (`android.frameworks.faceservice@1.0.so` and
-  `vendor.oppo.hardware.biometrics.face@1.0.so`) ship in `/vendor/lib{,64}`
-  (the latter is built from the reconstructed source interface, not the blob),
-  so the service can actually start. `device.mk` still installs the override rc
-  because the vendor makefile would otherwise install the stock one, which has
-  `disabled`.
-  Vendor SELinux contexts/bring-up
-  `permissive hal_fingerprint_default` are in `sepolicy/vendor/`. The
-  biometrics policy mirrors the stock 8.1 vendor policy: `silead_fpd_device`
-  (`/dev/silead_fp`), `egis_device` (`/dev/esfp0`), `silead_fpd_data_file`
-  (`/data/{vendor,system}/silead`, `/persist/silead`), `face_data_file`
-  (`/data/system/users/*/facedata`) and `face_picture_file`
-  (`/data/system/users/*/faceunlock`) are labeled with the stock types, and
-  `device.te` grants `hal_fingerprint_default` the same sensor-node and
-  data-file allows the stock `hal_fingerprint_default`/`hal_face` rules had
-  (the AOSP `hal_fingerprint` attribute grants only cover
-  `fingerprint_vendor_data_file`, which the ColorOS/Silead paths do not use,
-  so the device rules are what makes the domain enforceable-ready). Face
-  unlock is userspace-only on CPH1909 (no face driver in the authoritative
-  kernel; stock vendor face service/`libmegface`/`libstface*` blobs exist). AOSP
-  10 ships no `android.hardware.biometrics.face@1.0` default service — 17.1 ships
-  only the interface and its VTS — and the vendor ships no legacy face HAL module,
-  so unlike fingerprint there is nothing to wrap. `biometrics/face/` therefore
-  builds a source `android.hardware.biometrics.face@1.0-service` that registers
-  the AOSP interface the Lineage biometric stack binds to and forwards to the
-  OPPO backend through `OppoFaceHal`. The stock face service implements a
-  *custom*, vendor-namespaced interface
-  (`vendor.oppo.hardware.biometrics.face@1.0::IBiometricsFace`,
-  fingerprint-shaped — setNotify/preEnroll/postEnroll/getAuthenticatorId/enroll/
-  remove/setActiveGroup/authenticate/cancel). That interface is reconstructed
-  from the stock interface library and **built** as a `hidl_interface`
-  (`interfaces/vendor/hardware/biometrics/face/1.0/`; the exact source bytes are
-  not in the dump, so the frozen hash differs — `getService()` matches by name).
-  `OppoFaceHal` implements the forwarding (with a vendor→AOSP callback adapter).
-  The stock backend service is enabled and its ColorOS handshake is
-  null-checked (Ghidra decompilation in the vendor tree's `audit/` notes: when
-  `android.frameworks.faceservice@1.0` is absent it logs "service NULL" and
-  still registers its own HAL), so `getService()` does connect. Forwarding is
-  nevertheless **unverified on hardware**: the vendor `.hal` is a
-  reconstruction, so the frozen interface hash differs from the stock library's
-  (`getService()` matches by name, so that alone is not fatal), and operations
-  with no faithful vendor equivalent (`getFeature`, `setFeature`,
-  `userActivity`, `resetLockout`) deliberately still return
-  `OPERATION_NOT_SUPPORTED`; the confidence notes per method are in
-  `biometrics/face/OppoFaceHal.h`. The face feature XML *is* installed
-  (`device.mk`, commit `3426fd4`), so Settings does surface the entry — but
-  enrollment depends on the unverified forwarding above. Boot-test to confirm
-  shim load, `IBiometricsFingerprint/default` and `IBiometricsFace/default`
-  registration, sensor-node access (`/dev/silead_fp` or `/dev/esfp0`), that
+  (`fingerprint.silead.default.so`, API 2.1, `libsl_fp_impl.so`, `/dev/silead_fp`)
+  then Egis (`fingerprint.egis.default.so`, API 2.1,
+  `vendor.egistec.hardware.fingerprint@4.0.so`/`libRbsFlow.so`, `/dev/esfp0`) — the
+  same order the stock service uses, recording the winner in
+  `persist.sys.fp.vendor`. `ro.hardware` and `ro.board.platform` are both `mt6765`,
+  so `hw_get_module_by_class("fingerprint")` resolves `fingerprint.mt6765.so` on its
+  first variant key and never probes `fingerprint.default.so` — no `.default` alias
+  is needed (and `hardware/libhardware/modules/fingerprint/` already builds a real
+  `fingerprint.default`, so aliasing that path would fight the platform module).
+  `device.mk` builds `android.hardware.biometrics.fingerprint@2.1-service` and
+  first-wins `PRODUCT_COPY_FILES` overrides disable the stock ColorOS `fps_hal` /
+  `fpay_hal` services, which register `vendor.oppo.hardware.biometrics.fingerprint@2.1`
+  (not the AOSP interface) and would contend for the sensor node.
+* **Face unlock** is userspace-only on CPH1909 (no face driver in the authoritative
+  kernel; stock vendor face service/`libmegface`/`libstface*` blobs exist). AOSP 10
+  ships no `android.hardware.biometrics.face@1.0` default service, and the vendor
+  ships no legacy face HAL module, so unlike fingerprint there is nothing to wrap.
+  `biometrics/face/` builds a source `android.hardware.biometrics.face@1.0-service`
+  that registers the AOSP interface and forwards to the OPPO backend through
+  `OppoFaceHal`. The stock backend implements a *custom*, vendor-namespaced interface
+  (`vendor.oppo.hardware.biometrics.face@1.0::IBiometricsFace`, fingerprint-shaped),
+  reconstructed from the stock interface library and **built** as a `hidl_interface`
+  (`interfaces/vendor/hardware/biometrics/face/1.0/`; the exact source bytes are not
+  in the dump, so the frozen hash differs — `getService()` matches by name). The
+  stock `face_hal` service is **enabled** (its override rc does not set `disabled`)
+  and its two DT_NEEDED interface libraries ship in `/vendor/lib{,64}`, so it can
+  start. Forwarding is nevertheless **unverified on hardware**: operations with no
+  faithful vendor equivalent (`getFeature`, `setFeature`, `userActivity`,
+  `resetLockout`) deliberately return `OPERATION_NOT_SUPPORTED`; the per-method
+  confidence notes are in `biometrics/face/OppoFaceHal.h`. The face feature XML is
+  installed, so Settings surfaces the entry — but enrollment depends on the
+  unverified forwarding. Boot-test to confirm shim load, `IBiometricsFingerprint/default`
+  and `IBiometricsFace/default` registration, sensor-node access, that
   `fps_hal`/`fpay_hal` remain disabled, and that `face_hal` is running.
-* The 8.1 vendor blobs are the highest-risk part of the port. The HIDL
-  transport libraries (`libhidltransport`, `libhwbinder`) and their `.vendor`
-  variants are installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL
-  services still fail to load, check `ro.hardware` / `ro.hardware.egl` and the
-  linker namespace denials first. This is a full-VNDK build, so a vendor binary
-  may **not** resolve a library from `/system/lib[64]` unless it is LLNDK or
-  VNDK — if a blob fails with "library ... not found", the fix is another entry
-  in `VENDOR_CORE_LIBS` (Android.mk) or the *System-side VNDK* copy block
-  (device.mk), not a linker-config override.
-* Recovery: `TARGET_RECOVERY_FSTAB` points at the same fstab. The TWRP tree for
-  this device is a separate branch and is not built from this one.
+* **Lights** is the source-built BACKLIGHT-only HAL (see *Lights HAL*); the
+  proprietary stack is dropped. There is no notification LED or button backlight on
+  this device.
+* The 8.1 vendor blobs are the highest-risk part of the port. The HIDL transport
+  libraries (`libhidltransport`, `libhwbinder`) and their `.vendor` variants are
+  installed to satisfy the blobs' `DT_NEEDED` entries. If HIDL services still fail
+  to load, check `ro.hardware` / `ro.hardware.egl` and the linker namespace denials
+  first. This is a full-VNDK build, so a vendor binary may **not** resolve a library
+  from `/system/lib[64]` unless it is LLNDK or VNDK — if a blob fails with
+  "library ... not found", the fix is another entry in `VENDOR_CORE_LIBS`
+  (`Android.mk`), the *System-side VNDK* copy block (`device.mk`), or a vendor-local
+  compatibility library (see the vendor README), not a linker-config override.
+* Recovery: `TARGET_RECOVERY_FSTAB` points at the same fstab. The TWRP tree for this
+  device is a separate branch and is not built from this one.
