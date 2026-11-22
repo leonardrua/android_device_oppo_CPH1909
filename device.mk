@@ -455,13 +455,12 @@ PRODUCT_COPY_FILES += \
 # 8.1 vendor OMX service does NOT see /system/lib. OMXMaster loads the plugin
 # into the isolated "sphal" namespace, whose search paths are only
 # /odm/${LIB}, /vendor/${LIB} and /vendor/${LIB}/hw; SoftOMXPlugin then
-# dlopen()s the codec in that same namespace. The plugin is vendor_available and
-# therefore already present in /vendor/lib, but libstagefright_soft_xaacdec is
-# not, so the top-level Android.mk copies the 32-bit codec into /vendor/lib as
-# well. (The previous VNDK-lite reasoning -- "no sphal namespace, falls back to
-# the default namespace which includes /system/lib" -- no longer applies; both
-# ld.config.txt and ld.config.vndk_lite.txt in Android 10 define sphal, and it
-# never includes /system/lib.)
+# dlopen()s the codec in that same namespace. libstagefright_softomx-defaults
+# is vendor_available, so Soong installs the plugin and every soft codec using
+# the defaults -- libstagefright_soft_xaacdec included -- into /vendor/lib on
+# its own; no copy rule is needed (an earlier cp rule in the top-level
+# Android.mk only duplicated the module install and raised
+# "overriding commands" warnings).
 #
 # The soft codec inherits compile_multilib: "32" from
 # libstagefright_softomx-defaults, matching the 32-bit vendor OMX service, and

@@ -943,10 +943,14 @@ The platform plugin is loaded by `OMXMaster::addPlatformPlugin()` through
 `android_load_sphal_library()`, i.e. into the isolated `sphal` linker namespace,
 and `SoftOMXPlugin` then `dlopen()`s each codec from that same namespace. On this
 full-VNDK build `sphal` searches only `/odm/${LIB}`, `/vendor/${LIB}` and
-`/vendor/${LIB}/hw` — it never searches `/system/lib`. The plugin is
-`vendor_available` and lands in `/vendor/lib` on its own, but
-`libstagefright_soft_xaacdec` is not, so the top-level `Android.mk` copies the
-32-bit codec into `/vendor/lib` next to the plugin.
+`/vendor/${LIB}/hw` — it never searches `/system/lib`. `libstagefright_softomx-defaults`
+(`frameworks/av media/libstagefright/omx/Android.bp`) is `vendor_available`, so Soong
+installs the plugin **and every soft codec using the defaults** — including
+`libstagefright_soft_xaacdec` — into `/vendor/lib` on its own (verified in the built
+vendor image). An earlier revision kept a `cp` rule here under the belief that the
+codec was not vendor_available; it only duplicated the module's own install command
+and produced `overriding commands for target .../vendor/lib/libstagefright_soft_xaacdec.so`
+warnings (masked by `BUILD_BROKEN_DUP_RULES`), and has been removed.
 
 AOSP's `SoftOMXPlugin.cpp` registers two components for the `audio_decoder.aac`
 role and leaves the selection to the vendor `media_codecs_google_audio.xml`:
