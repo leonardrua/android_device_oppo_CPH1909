@@ -316,15 +316,30 @@
 # It is a plain root-level directory with no policy meaning of its own, so rootfs
 # matches how AOSP labels comparable entries (/charger, /bugreports,
 # /config, /lost+found).
-# --- Vendor EGL driver loaded by SurfaceFlinger -----------------------------
-# libIMGegl.so sits at the TOP LEVEL of /vendor/lib[64] (not in the egl/
-# subdir AOSP labels same_process_hal_file), so e2fsdroid gives it vendor_file.
-# SurfaceFlinger is a coredomain (permissive=0) and dlopens it through
-# libEGL_mtk.so / libGLESv2_mtk.so; without this label it is denied { read },
-# EGL never initialises, sys.boot_completed is never set, and the OPPO phoenix
-# watchdog panics the kernel with ERROR_HANG_OPPO ~8 min into boot (seen in
-# last_kmsg). Label it like the vendor libs in /vendor/lib[64]/egl/ so the
-# existing coredomain allows for same_process_hal_file cover it.
-/(vendor|system/vendor)/lib(64)?/libIMGegl\.so                                                   u:object_r:same_process_hal_file:s0
+# --- Vendor EGL driver and its transitive deps loaded by SurfaceFlinger -----
+# These libs sit at the TOP LEVEL of /vendor/lib[64] (not in the egl/ subdir
+# AOSP labels same_process_hal_file), so e2fsdroid gives them vendor_file.
+# SurfaceFlinger is a coredomain (permissive=0) and dlopens the whole chain
+# into the sphal namespace:
+#
+#   libEGL_mtk.so -> libIMGegl.so -> libsrv_um.so -> libged.so, libdrm.so
+#                                 -> libgralloc_extra.so
+#
+# Without these labels it is denied { read }, EGL never initialises,
+# sys.boot_completed is never set, and the OPPO phoenix watchdog panics the
+# kernel with ERROR_HANG_OPPO ~8 min into boot (seen in last_kmsg).
+#
+# Evidence: the libIMGegl.so label alone left 20 identical AVCs across the
+# fresh tombstones:
+#   avc: denied { read } for name="libsrv_um.so" scontext=u:r:surfaceflinger:s0
+#        tcontext=u:object_r:vendor_file:s0 tclass=file permissive=0
+#   E vndksupport: Could not load /vendor/lib64/egl/libEGL_mtk.so from sphal
+#     namespace: dlopen failed: library "libsrv_um.so" not found.
+#
+# readelf -d on the vendor blobs confirms the full closure at top level:
+# libIMGegl.so, libsrv_um.so, libged.so, libgralloc_extra.so, libdrm.so.
+# libsync.so, libhardware.so, libz.so and libcutils/libutils/etc. resolve from
+# the system LLNDK/VNDK set, so they need no vendor label here.
+/(vendor|system/vendor)/lib(64)?/lib(IMGegl|srv_um|ged|gralloc_extra|drm)\.so                     u:object_r:same_process_hal_file:s0
 
 /custom                                                                                         u:object_r:rootfs:s0
