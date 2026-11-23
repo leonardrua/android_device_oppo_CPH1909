@@ -621,6 +621,13 @@ permissive hal_camera_default;
 permissive hal_face_default;
 permissive hal_fingerprint_default;
 permissive hal_graphics_composer_default;
+# The stock MTK vendor.mediatek.hardware.gnss@1.1-service runs in AOSP's
+# hal_gnss_default domain and opens /dev/binder and /dev/vndbinder. On this
+# enforcing domain those reads are denied (kmsg: "avc: denied { read write }
+# for comm=vendor.mediatek name=binder/vndbinder ... permissive=0"), libbinder's
+# ProcessState::ProcessState() asserts and the service abort-loops (tombstone
+# _01 etc.), so bring it into the permissive set until the explicit rules land.
+permissive hal_gnss_default;
 permissive hal_light_default;
 permissive hal_sensors_default;
 permissive rild;
