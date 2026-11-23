@@ -2,13 +2,7 @@
 # hwservice types and HAL rules are provided by device/mediatek/sepolicy/non_plat.
 
 ### Device-private HAL domains ###
-type mtk_hal_keyattestation, domain;
-type mtk_hal_keyattestation_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_hal_keyattestation)
 
-type mtk_hal_mtkcodecservice, domain;
-type mtk_hal_mtkcodecservice_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_hal_mtkcodecservice)
 
 ### Trustonic Kinibi TEE ###
 type mtk_hal_soter, domain;
@@ -37,8 +31,7 @@ type hal_cryptoeng_hwservice, hwservice_manager_type;
 type hal_fingerprintpay_hwservice, hwservice_manager_type;
 
 hwbinder_use(mtk_hal_soter)
-hwbinder_use(mtk_hal_keyattestation)
-hwbinder_use(mtk_hal_mtkcodecservice)
+hwbinder_use(MtkCodecService)
 hwbinder_use(mtk_hal_cryptoeng)
 hwbinder_use(mtk_hal_factory)
 hwbinder_use(mtk_netdagent)
@@ -83,8 +76,7 @@ set_prop(system_server, mtk_persist_prop)
 set_prop(platform_app, mtk_persist_prop)
 set_prop(shell, mtk_persist_prop)
 
-add_hwservice(mtk_hal_keyattestation, mtk_hal_keyattestation_hwservice)
-add_hwservice(mtk_hal_mtkcodecservice, hal_mtkcodecservice_hwservice)
+add_hwservice(MtkCodecService, hal_mtkcodecservice_hwservice)
 allow system_server mtk_hal_rild_hwservice:hwservice_manager find;
 
 ### Trustonic Kinibi TEE (continued) ###
@@ -133,20 +125,15 @@ type mtk_sysenv_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_sysenv)
 
 # Legacy /vendor mount points (common uses /mnt/vendor/* with different types).
-type mtk_nvdata_file, file_type, vendor_file_type;
-type mtk_nvcfg_file, file_type, vendor_file_type;
-type mtk_protect_f_file, file_type, vendor_file_type;
-type mtk_protect_s_file, file_type, vendor_file_type;
-type mtk_persist_file, file_type, vendor_file_type;
 type oppo_reserve_file, file_type;
 type oppo_reserve_block_device, dev_type;
 
 allow init {
-    mtk_nvdata_file
-    mtk_nvcfg_file
-    mtk_persist_file
-    mtk_protect_f_file
-    mtk_protect_s_file
+    nvdata_file
+    nvcfg_file
+    persist_data_file
+    protect_f_data_file
+    protect_s_data_file
     oppo_reserve_file
 }:dir mounton;
 
@@ -168,30 +155,19 @@ add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 type mtk_stpwmt_device, dev_type;
 
 ### AEE core_pattern usermodehelper ###
-type mtk_aee_core_forwarder, domain;
-type mtk_aee_core_forwarder_exec, exec_type, vendor_file_type, file_type;
-allow init mtk_aee_core_forwarder_exec:file { read getattr map execute open };
-allow init mtk_aee_core_forwarder:process transition;
-type_transition init mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
 typeattribute kernel system_executes_vendor_violators;
-allow kernel mtk_aee_core_forwarder_exec:file { read getattr map execute open };
-allow kernel mtk_aee_core_forwarder:process transition;
-type_transition kernel mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
-allow mtk_aee_core_forwarder mtk_aee_core_forwarder_exec:file { read getattr map execute entrypoint open };
-allow mtk_aee_core_forwarder vendor_data_file:dir { create add_name write search };
-allow mtk_aee_core_forwarder aee_core_vendor_file:dir create_dir_perms;
-allow mtk_aee_core_forwarder aee_core_vendor_file:file create_file_perms;
-allow mtk_aee_core_forwarder kernel:fd use;
-allow mtk_aee_core_forwarder kernel:fifo_file read;
-allow mtk_aee_core_forwarder aee_aedv:unix_stream_socket connectto;
+allow kernel aee_core_forwarder_exec:file { read getattr map execute open };
+allow kernel aee_core_forwarder:process transition;
+type_transition kernel aee_core_forwarder_exec:process aee_core_forwarder;
+allow aee_core_forwarder aee_core_forwarder_exec:file { read getattr map execute entrypoint open };
+allow aee_core_forwarder vendor_data_file:dir { create add_name write search };
+allow aee_core_forwarder aee_core_vendor_file:dir create_dir_perms;
+allow aee_core_forwarder aee_core_vendor_file:file create_file_perms;
+allow aee_core_forwarder kernel:fd use;
+allow aee_core_forwarder kernel:fifo_file read;
+allow aee_core_forwarder aee_aedv:unix_stream_socket connectto;
 
-type mtk_connsyslogger, domain;
-type mtk_connsyslogger_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_connsyslogger)
 
-# Common grants these to connsyslogger, not to our mtk_connsyslogger domain.
-allow mtk_connsyslogger fw_log_wifi_device:chr_file { ioctl read write open };
-allow mtk_connsyslogger fw_log_wmt_device:chr_file { ioctl read write open };
 
 ### Offline charging (KPOC) -- kpoc_charger.rc seclabel u:r:kpoc_charger:s0 ###
 type kpoc_charger, domain, coredomain;
@@ -228,7 +204,6 @@ allow kpoc_charger self:capability2 block_suspend;
 allow kpoc_charger self:netlink_kobject_uevent_socket { create bind read setopt };
 
 ### Misc device nodes ###
-type mtk_adsp_device, dev_type;
 type mtk_pq_device, dev_type;
 type gps_device, dev_type;
 
@@ -239,8 +214,7 @@ permissive rutilsdaemon;
 ### Bring-up permissive domains retained for device-private domains only ###
 permissive hal_face_default;
 permissive hal_fingerprint_default;
-permissive mtk_hal_keyattestation;
-permissive mtk_hal_mtkcodecservice;
+permissive MtkCodecService;
 permissive mtk_hal_soter;
 permissive mcd;
 permissive mtk_ccci;
@@ -249,8 +223,7 @@ permissive mtk_volte_stack;
 permissive mtk_sysenv;
 permissive mtk_wmt_loader;
 permissive mtk_netdagent;
-permissive mtk_aee_core_forwarder;
-permissive mtk_connsyslogger;
+permissive aee_core_forwarder;
 
 ### OPPO / Silead biometrics and factory services ###
 type oppoalgo_daemon, domain;

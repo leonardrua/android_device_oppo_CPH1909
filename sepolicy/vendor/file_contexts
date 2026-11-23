@@ -6,9 +6,9 @@
 /(vendor|system/vendor)/bin/hw/android\.hardware\.audio@2\.0-service-mediatek                 u:object_r:hal_audio_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.light@2\.0-service\.CPH1909                u:object_r:hal_light_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.gnss@1\.1-service                  u:object_r:hal_gnss_default_exec:s0
-/(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.keymaster_attestation@1\.1-service u:object_r:mtk_hal_keyattestation_exec:s0
+/(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.keymaster_attestation@1\.1-service u:object_r:hal_keymaster_attestation_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.mms@1\.5-service                   u:object_r:mtk_hal_mms_exec:s0
-/(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.mtkcodecservice@1\.1-service       u:object_r:mtk_hal_mtkcodecservice_exec:s0
+/(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.mtkcodecservice@1\.1-service       u:object_r:MtkCodecService_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.power@1\.1-service                 u:object_r:hal_power_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.pq@2\.0-service                    u:object_r:mtk_hal_pq_exec:s0
 
@@ -25,14 +25,14 @@
 /system/bin/kpoc_charger                                                         u:object_r:kpoc_charger_exec:s0
 
 ### Device-private vendor domains ###
-/(vendor|system/vendor)/bin/aee_core_forwarder                                               u:object_r:mtk_aee_core_forwarder_exec:s0
+/(vendor|system/vendor)/bin/aee_core_forwarder                                               u:object_r:aee_core_forwarder_exec:s0
 /(vendor|system/vendor)/bin/ccci_rpcd                                                         u:object_r:mtk_ccci_exec:s0
 /(vendor|system/vendor)/bin/md_ctrl                                                           u:object_r:mtk_md_ctrl_exec:s0
 /(vendor|system/vendor)/bin/volte_stack                                                       u:object_r:mtk_volte_stack_exec:s0
 /(vendor|system/vendor)/bin/sysenv_daemon                                                     u:object_r:mtk_sysenv_exec:s0
 /(vendor|system/vendor)/bin/wifi2agps                                                         u:object_r:mtk_agpsd_exec:s0
 /(vendor|system/vendor)/bin/hostapd                                                           u:object_r:hal_wifi_hostapd_default_exec:s0
-/(vendor|system/vendor)/bin/connsyslogger                                                     u:object_r:mtk_connsyslogger_exec:s0
+/(vendor|system/vendor)/bin/connsyslogger                                                     u:object_r:connsyslogger_exec:s0
 /(vendor|system/vendor)/bin/netdagent                                                         u:object_r:mtk_netdagent_exec:s0
 /(vendor|system/vendor)/bin/oppoalgo_daemon                                                   u:object_r:oppoalgo_daemon_exec:s0
 
@@ -50,16 +50,16 @@
 /dev/mtk_mdp                                                                                  u:object_r:video_device:s0
 /dev/camera-.*                                                                                u:object_r:camera_device:s0
 /dev/vcodec                                                                                   u:object_r:video_device:s0
-/dev/mtk-adsp-.*                                                                              u:object_r:mtk_adsp_device:s0
+/dev/mtk-adsp-.*                                                                              u:object_r:adsp_device:s0
 /dev/pq                                                                                       u:object_r:mtk_pq_device:s0
 /dev/mtk_pq                                                                                   u:object_r:mtk_pq_device:s0
 
 ### OPPO / legacy mount paths and root entries ###
-/vendor/nvdata(/.*)?                                                                          u:object_r:mtk_nvdata_file:s0
-/vendor/nvcfg(/.*)?                                                                           u:object_r:mtk_nvcfg_file:s0
-/vendor/protect_f(/.*)?                                                                       u:object_r:mtk_protect_f_file:s0
-/vendor/protect_s(/.*)?                                                                       u:object_r:mtk_protect_s_file:s0
-/vendor/persist(/.*)?                                                                         u:object_r:mtk_persist_file:s0
+/vendor/nvdata(/.*)?                                                                          u:object_r:nvdata_file:s0
+/vendor/nvcfg(/.*)?                                                                           u:object_r:nvcfg_file:s0
+/vendor/protect_f(/.*)?                                                                       u:object_r:protect_f_data_file:s0
+/vendor/protect_s(/.*)?                                                                       u:object_r:protect_s_data_file:s0
+/vendor/persist(/.*)?                                                                         u:object_r:persist_data_file:s0
 /opporeserve(/.*)?                                                                            u:object_r:oppo_reserve_file:s0
 /persist                                                                                      u:object_r:rootfs:s0
 /dev/block/platform/bootdevice/by-name/opporeserve[12]                                        u:object_r:oppo_reserve_block_device:s0
