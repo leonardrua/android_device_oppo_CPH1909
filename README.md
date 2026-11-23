@@ -373,10 +373,14 @@ via `PRODUCT_COPY_FILES` (`$(TARGET_COPY_OUT_ROOT)` = `root/`, which
 
 The adaptations drop everything that needs ColorOS userland binaries absent from
 `proprietary-files.txt` (junklog, nativedump, perf_record and the `autochmod.sh`
-helpers), the phoenix crash-log actions (`CONFIG_OPPO_PHOENIX` is disabled in the
-kernel) and the `persist.sys.mtk.pwkdump` triggers (`/proc/aee_kpd_enable` does not
-exist). What remains is the `/opporeserve` directory tree, the vendor-provided
-`init.oppo.seccommon.rc` hook, and the charger `mmi_charging_enable` switches. The
+helpers), the phoenix crash-log actions and the `persist.sys.mtk.pwkdump` triggers
+(`/proc/aee_kpd_enable` does not exist). `CONFIG_OPPO_PHOENIX` is now disabled in
+`a46_defconfig` too (it was still `=y` there even though `oppo6765_18511_defconfig`
+had it off): its watchdog panics the kernel with `ERROR_HANG_OPPO` roughly eight
+minutes into boot whenever `sys.boot_completed` is not set, which turned a slow
+or blocked boot into an endless reboot-to-recovery loop. What remains is the
+`/opporeserve` directory tree, the vendor-provided `init.oppo.seccommon.rc` hook,
+and the charger `mmi_charging_enable` switches. The
 reserve script also drops the stock `restorecon_recursive /opporeserve`: the
 mounts in `init.oppo.seccommon.rc` create the directory tree on the stock
 partition itself, so no relabel is possible or needed, and `file_contexts` labels

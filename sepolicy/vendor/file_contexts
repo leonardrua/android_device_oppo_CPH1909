@@ -316,4 +316,15 @@
 # It is a plain root-level directory with no policy meaning of its own, so rootfs
 # matches how AOSP labels comparable entries (/charger, /bugreports,
 # /config, /lost+found).
+# --- Vendor EGL driver loaded by SurfaceFlinger -----------------------------
+# libIMGegl.so sits at the TOP LEVEL of /vendor/lib[64] (not in the egl/
+# subdir AOSP labels same_process_hal_file), so e2fsdroid gives it vendor_file.
+# SurfaceFlinger is a coredomain (permissive=0) and dlopens it through
+# libEGL_mtk.so / libGLESv2_mtk.so; without this label it is denied { read },
+# EGL never initialises, sys.boot_completed is never set, and the OPPO phoenix
+# watchdog panics the kernel with ERROR_HANG_OPPO ~8 min into boot (seen in
+# last_kmsg). Label it like the vendor libs in /vendor/lib[64]/egl/ so the
+# existing coredomain allows for same_process_hal_file cover it.
+/(vendor|system/vendor)/lib(64)?/libIMGegl\.so                                                   u:object_r:same_process_hal_file:s0
+
 /custom                                                                                         u:object_r:rootfs:s0
