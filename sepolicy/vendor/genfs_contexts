@@ -20,12 +20,11 @@ genfscon sysfs /class/leds/vibrator u:object_r:sysfs_vibrator:s0
 # real device paths, so AOSP's public/hal_health.te rule
 #   r_dir_file(hal_health_server, sysfs_batteryinfo)
 # only applies once those real nodes carry sysfs_batteryinfo. On this MT6765
-# device the power_supply nodes live under the platform battery device and the
-# two fuel-gauge i2c devices (see the stock 8.1 nonplat_file_contexts). Without
-# these genfscon entries the nodes stay generic sysfs, healthd logs 207
+# device the platform battery node is already covered by the common MediaTek
+# genfs_contexts (genfscon sysfs /devices/platform/battery). Only the two
+# fuel-gauge i2c paths are CPH1909-specific and remain here. Without them the
+# nodes stay generic sysfs, healthd logs
 # "avc: denied { read } name=\"type\" ... tcontext=...sysfs:s0 permissive=0"
-# lines in expdb and reports "healthd: battery none chg=" on every poll,
-# leaving battery state unknown to the framework.
-genfscon sysfs /devices/platform/battery/power_supply u:object_r:sysfs_batteryinfo:s0
+# and reports "healthd: battery none chg=", leaving battery state unknown.
 genfscon sysfs /devices/platform/11017000.i2c/i2c-5/5-006a/power_supply u:object_r:sysfs_batteryinfo:s0
 genfscon sysfs /devices/platform/11017000.i2c/i2c-5/5-006b/power_supply u:object_r:sysfs_batteryinfo:s0

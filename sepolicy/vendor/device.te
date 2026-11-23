@@ -18,18 +18,10 @@
 ###
 ### MediaTek HAL domains
 ###
-# DFPS is a MediaTek-private HAL (`vendor.mediatek.hardware.dfps`), not part of
-# Android's graphics-composer HAL. The stock 8.1 policy has a dedicated
-# hal_dfps attribute with surfaceflinger, system_server and mtk_hal_power as
-# clients. Reusing hal_graphics_composer here would put mtk_hal_dfps in
-# hal_graphics_composer_server and, through
-# hal_attribute_hwservice(graphics_composer, hal_graphics_composer_hwservice),
-# grant it `add` on the *standard* composer hwservice type.
-hal_attribute(dfps)
-
-# mtk_hal_dfps, mtk_hal_mms and mtk_hal_pq domains/exec types and their
-# init_daemon_domain() declarations now come from the common MediaTek policy.
-hal_server_domain(mtk_hal_dfps, hal_dfps)
+# mtk_hal_dfps, mtk_hal_mms and mtk_hal_pq domains/exec types, their
+# init_daemon_domain()/hwbinder_use() declarations, the hal_dfps attribute and
+# its server/client/hwservice rules all come from the common MediaTek policy.
+# Keep only the device-specific permissive bring-up lines for those domains.
 
 type mtk_hal_keyattestation, domain;
 type mtk_hal_keyattestation_exec, exec_type, vendor_file_type, file_type;
@@ -98,20 +90,17 @@ type hal_fingerprintpay_hwservice, hwservice_manager_type;
 # hwservicemanager to actually make that call; Q provides it via hwbinder_use().
 # Stock 8.1 granted the same binder access to every daemon listed here.
 hwbinder_use(mtk_hal_soter)
-hwbinder_use(mtk_hal_dfps)
 hwbinder_use(mtk_hal_keyattestation)
-hwbinder_use(mtk_hal_mms)
 hwbinder_use(mtk_hal_mtkcodecservice)
-hwbinder_use(mtk_hal_pq)
 hwbinder_use(mtk_hal_cryptoeng)
 hwbinder_use(mtk_hal_factory)
-hwbinder_use(mtk_volte_imcb)
-hwbinder_use(mtk_volte_ua)
-hwbinder_use(mtk_vtservice)
-hwbinder_use(mtk_nvram_daemon)
-hwbinder_use(mtk_lbs)
+hwbinder_use(volte_imcb)
+hwbinder_use(volte_ua)
+hwbinder_use(vtservice_hidl)
+hwbinder_use(nvram_daemon)
+hwbinder_use(lbs_hidl_service)
 hwbinder_use(mtk_netdagent)
-hwbinder_use(mtk_mnld)
+hwbinder_use(mnld)
 
 # Stock 8.1 grants add/find on these hwservice types to the standard HAL
 # domains that register them. Without these, hwservicemanager denies the
@@ -134,12 +123,12 @@ type mtk_persist_prop, property_type;
 get_prop(domain, mtk_persist_prop)
 
 # Writers, by the rc service / blob that sets each family:
-#   rild, mtk_ccci, mtk_wod, mtk_stp_dump, mtk_wmt_loader  - radio / modem /
+#   rild, mtk_ccci, epdg_wod, stp_dump3, mtk_wmt_loader  - radio / modem /
 #       connectivity feature switches and persist.mtk_*
-#   mtk_volte_imcb, mtk_volte_imsm_93, mtk_volte_stack,
-#   mtk_volte_ua, mtk_vtservice                           - IMS / VT keys
-#   mtk_mnld                                              - persist.radio.mnl.prop
-#   mtk_aee, mcd                                          - aee / dumpstate keys
+#   volte_imcb, volte_imsm_93, mtk_volte_stack,
+#   volte_ua, vtservice_hidl                           - IMS / VT keys
+#   mnld                                              - persist.radio.mnl.prop
+#   aee_aedv, mcd                                          - aee / dumpstate keys
 #   mtk_hal_pq, hal_graphics_composer_default              - display/PQ keys
 #   hal_audio_default                                     - persist.af.*
 #   hal_bluetooth_default                                 - persist.bt.*
@@ -149,16 +138,16 @@ get_prop(domain, mtk_persist_prop)
 #       (com.mediatek.ims) writes persist.mtk_* through SystemProperties.set
 set_prop(rild, mtk_persist_prop)
 set_prop(mtk_ccci, mtk_persist_prop)
-set_prop(mtk_wod, mtk_persist_prop)
-set_prop(mtk_stp_dump, mtk_persist_prop)
+set_prop(epdg_wod, mtk_persist_prop)
+set_prop(stp_dump3, mtk_persist_prop)
 set_prop(mtk_wmt_loader, mtk_persist_prop)
-set_prop(mtk_volte_imcb, mtk_persist_prop)
-set_prop(mtk_volte_imsm_93, mtk_persist_prop)
+set_prop(volte_imcb, mtk_persist_prop)
+set_prop(volte_imsm_93, mtk_persist_prop)
 set_prop(mtk_volte_stack, mtk_persist_prop)
-set_prop(mtk_volte_ua, mtk_persist_prop)
-set_prop(mtk_vtservice, mtk_persist_prop)
-set_prop(mtk_mnld, mtk_persist_prop)
-set_prop(mtk_aee, mtk_persist_prop)
+set_prop(volte_ua, mtk_persist_prop)
+set_prop(vtservice_hidl, mtk_persist_prop)
+set_prop(mnld, mtk_persist_prop)
+set_prop(aee_aedv, mtk_persist_prop)
 set_prop(mcd, mtk_persist_prop)
 set_prop(mtk_hal_pq, mtk_persist_prop)
 set_prop(hal_graphics_composer_default, mtk_persist_prop)
@@ -202,7 +191,7 @@ set_prop(shell, mtk_persist_prop)
 #     neverallow { domain -hal_gnss_client -hal_gnss_server } \
 #         hal_gnss_hwservice:hwservice_manager find;
 #
-# Raw `allow ... hal_gnss_hwservice ...` rules for mtk_mnld would violate both
+# Raw `allow ... hal_gnss_hwservice ...` rules for mnld would violate both
 # neverallows because mnld is neither a hal_gnss client nor server in this port;
 # see the GNSS section for its actual datagram-channel access.
 
@@ -218,14 +207,9 @@ set_prop(shell, mtk_persist_prop)
 # service type covered while missing the base-descriptor grant. The macro also
 # adds the neverallow { domain -$1 } that keeps other domains from registering
 # the same type.
-# DFPS is a device-private HAL interface, so use its own attribute rather than
-# an upstream HAL's attribute. This grants the server add/find on its own
-# hwservice type and gives the stock clients find: surfaceflinger and
-# system_server (fingerprint policy service users) and the MTK power HAL.
-hal_attribute_hwservice(hal_dfps, mtk_hal_dfps_hwservice)
-hal_client_domain(surfaceflinger, hal_dfps)
-hal_client_domain(system_server, hal_dfps)
-hal_client_domain(hal_power_default, hal_dfps)
+# hal_dfps server/client/hwservice bindings now come from the common MediaTek
+# policy (non_plat/mtk_hal_dfps.te, hal_dfps.te, surfaceflinger.te,
+# system_server.te and mtk_hal_power.te).
 add_hwservice(mtk_hal_keyattestation, mtk_hal_keyattestation_hwservice)
 add_hwservice(mtk_hal_mms, mtk_hal_mms_hwservice)
 add_hwservice(mtk_hal_mtkcodecservice, hal_mtkcodecservice_hwservice)
@@ -239,7 +223,6 @@ add_hwservice(mtk_hal_pq, mtk_hal_pq_hwservice)
 # Repeating either here is redundant and, for hal_camera, a neverallow
 # violation (hal_camera_client is not an attribute system_server carries), so
 # both raw rules are deliberately absent.
-allow system_server mtk_hal_power_hwservice:hwservice_manager find;
 allow system_server mtk_hal_rild_hwservice:hwservice_manager find;
 # rild finds the modem HAL.
 allow rild mtk_hal_rild_hwservice:hwservice_manager find;
@@ -300,13 +283,7 @@ allow shell mobicore_device:chr_file { open read write ioctl };
 ###
 ### Telephony / modem
 ###
-type mtk_muxd, domain;
-type mtk_muxd_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_muxd)
 
-type mtk_muxreport, domain;
-type mtk_muxreport_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_muxreport)
 
 type mtk_ccci, domain;
 type mtk_ccci_exec, exec_type, vendor_file_type, file_type;
@@ -319,43 +296,28 @@ init_daemon_domain(mtk_md_ctrl)
 # Keep the four stock MTK IMS daemons in separate domains, as in the stock
 # vendor policy. They remain permissive during bring-up so denials can be
 # collected per process before writing allow rules.
-type mtk_volte_imcb, domain;
-type mtk_volte_imcb_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_volte_imcb)
-add_hwservice(mtk_volte_imcb, volte_uce_ua_hwservice)
+add_hwservice(volte_imcb, volte_uce_ua_hwservice)
 
-type mtk_volte_imsm_93, domain;
-type mtk_volte_imsm_93_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_volte_imsm_93)
 
 type mtk_volte_stack, domain;
 type mtk_volte_stack_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_volte_stack)
 
-type mtk_volte_ua, domain;
-type mtk_volte_ua_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_volte_ua)
-add_hwservice(mtk_volte_ua, volte_rcs_ua_hwservice)
+add_hwservice(volte_ua, volte_rcs_ua_hwservice)
 
 # vtservice_hidl (vendor/bin/hw/vtservice_hidl, init.vtservice.rc): MTK's
 # VoLTE video-telephony HAL, class hal. The /system/bin/vtservice companion
 # service and its coredomain vtservice_exec label now come from the common
 # MediaTek sepolicy included in BoardConfig.mk; only the vendor-side HIDL
 # service is declared here.
-type mtk_vtservice, domain;
-type mtk_vtservice_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_vtservice)
-add_hwservice(mtk_vtservice, mtk_hal_videotelephony_hwservice)
+add_hwservice(vtservice_hidl, mtk_hal_videotelephony_hwservice)
 
 type mtk_ttyc_device, dev_type;
 
 ###
 ### NVRAM / persistent factory data
 ###
-type mtk_nvram_daemon, domain;
-type mtk_nvram_daemon_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_nvram_daemon)
-add_hwservice(mtk_nvram_daemon, nvram_agent_binder_hwservice)
+add_hwservice(nvram_daemon, nvram_agent_binder_hwservice)
 
 type mtk_sysenv, domain;
 type mtk_sysenv_exec, exec_type, vendor_file_type, file_type;
@@ -404,11 +366,8 @@ allow init {
 ###
 ### GNSS
 ###
-type mtk_mnld, domain;
-type mtk_mnld_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_mnld)
 
-# mtk_mnld is MTK's standalone GNSS daemon (/vendor/bin/mnld). It is NOT the
+# mnld is MTK's standalone GNSS daemon (/vendor/bin/mnld). It is NOT the
 # HIDL server: manifest.xml declares vendor.mediatek.hardware.gnss@1.1::IMtkGnss
 # and file_contexts labels that service hal_gnss_default_exec, so AOSP's
 # hal_gnss_default is the server. The stock O-MR1 policy likewise lists
@@ -416,14 +375,11 @@ init_daemon_domain(mtk_mnld)
 # hal_gnss_client, with mnld outside both; mnld talks to the GNSS HAL over
 # datagram sockets. Do not make mnld a hal_gnss server/client here: that would
 # grant it add/find on the standard hal_gnss_hwservice type it never registers.
-allow mtk_mnld hal_gnss_default:unix_dgram_socket sendto;
+allow mnld hal_gnss_default:unix_dgram_socket sendto;
 
 # mtk_agpsd domain and exec type come from the common MediaTek policy.
 
-type mtk_lbs, domain;
-type mtk_lbs_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_lbs)
-add_hwservice(mtk_lbs, mtk_hal_lbs_hwservice)
+add_hwservice(lbs_hidl_service, mtk_hal_lbs_hwservice)
 
 ###
 ### WiFi / connectivity
@@ -432,13 +388,7 @@ type mtk_wmt_loader, domain;
 type mtk_wmt_loader_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_wmt_loader)
 
-type mtk_wod, domain;
-type mtk_wod_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_wod)
 
-type mtk_ipsec_mon, domain;
-type mtk_ipsec_mon_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_ipsec_mon)
 
 type mtk_netdagent, domain;
 type mtk_netdagent_exec, exec_type, vendor_file_type, file_type;
@@ -452,9 +402,6 @@ type mtk_wmtWifi_device, dev_type;
 
 # AEE (AAED): MediaTek's exception/dump daemon pair started at on post-fs by
 # init.aee.rc. One type covers both the 32- and 64-bit binaries.
-type mtk_aee, domain;
-type mtk_aee_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_aee)
 
 # aee_core_forwarder is the kernel core_pattern helper. init.aee.rc points
 # /proc/sys/kernel/core_pattern at /vendor/bin/aee_core_forwarder, so the
@@ -485,13 +432,10 @@ allow mtk_aee_core_forwarder aee_core_vendor_file:dir create_dir_perms;
 allow mtk_aee_core_forwarder aee_core_vendor_file:file create_file_perms;
 allow mtk_aee_core_forwarder kernel:fd use;
 allow mtk_aee_core_forwarder kernel:fifo_file read;
-allow mtk_aee_core_forwarder mtk_aee:unix_stream_socket connectto;
+allow mtk_aee_core_forwarder aee_aedv:unix_stream_socket connectto;
 
 # stp_dump3: STP coredump dumper for the WCN core (init_connectivity.rc),
 # started when persist.mtk.wcn.coredump.mode is 1 or 2.
-type mtk_stp_dump, domain;
-type mtk_stp_dump_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_stp_dump)
 
 # connsyslogger: connectivity logging daemon, class main (consyslogger.rc).
 type mtk_connsyslogger, domain;
@@ -514,24 +458,12 @@ allow mtk_connsyslogger fw_log_wmt_device:chr_file { ioctl read write open };
 # wfca: MTK Wi-Fi call forward agent, class core (init.wfca.rc).
 # bip: MTK BIP/SAT-transport daemon, started on mtk.md1.status=ready
 # (init.bip.rc).
-type mtk_wfca, domain;
-type mtk_wfca_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_wfca)
 
-type mtk_bip, domain;
-type mtk_bip_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_bip)
 
 ###
 ### Thermal / power
 ###
-type mtk_thermal, domain;
-type mtk_thermal_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_thermal)
 
-type mtk_fuelgauged, domain;
-type mtk_fuelgauged_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_fuelgauged)
 
 ###
 ### Offline charging (KPOC)
@@ -672,32 +604,32 @@ permissive mtk_hal_mtkcodecservice;
 permissive mtk_hal_pq;
 permissive mtk_hal_soter;
 permissive mcd;
-permissive mtk_muxd;
-permissive mtk_muxreport;
+permissive gsm0710muxd;
+permissive muxreport;
 permissive mtk_ccci;
 permissive mtk_md_ctrl;
-permissive mtk_volte_imcb;
-permissive mtk_volte_imsm_93;
+permissive volte_imcb;
+permissive volte_imsm_93;
 permissive mtk_volte_stack;
-permissive mtk_volte_ua;
-permissive mtk_nvram_daemon;
+permissive volte_ua;
+permissive nvram_daemon;
 permissive mtk_sysenv;
-permissive mtk_mnld;
+permissive mnld;
 permissive mtk_agpsd;
-permissive mtk_lbs;
+permissive lbs_hidl_service;
 permissive mtk_wmt_loader;
-permissive mtk_wod;
-permissive mtk_ipsec_mon;
+permissive epdg_wod;
+permissive ipsec_mon;
 permissive mtk_netdagent;
-permissive mtk_thermal;
-permissive mtk_fuelgauged;
-permissive mtk_vtservice;
-permissive mtk_aee;
+permissive thermal;
+permissive fuelgauged;
+permissive vtservice_hidl;
+permissive aee_aedv;
 permissive mtk_aee_core_forwarder;
-permissive mtk_stp_dump;
+permissive stp_dump3;
 permissive mtk_connsyslogger;
-permissive mtk_wfca;
-permissive mtk_bip;
+permissive wfca;
+permissive bip;
 
 ###
 ### OPPO / Silead biometrics and factory services
