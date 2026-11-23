@@ -4,6 +4,11 @@
 # DT2W node written by power.mt6765 via TARGET_TAP_TO_WAKE_NODE.
 genfscon proc /touchpanel/double_tap_enable u:object_r:proc_dt2w:s0
 
+# CPH1909 LCD backlight, written by the source-built light@2.0 HAL to
+# /sys/class/leds/lcd-backlight/brightness. Use AOSP's canonical LED-class
+# type (Lotus used a device-local sysfs_light/sysfs_graphics pair).
+genfscon sysfs /class/leds/lcd-backlight u:object_r:sysfs_leds:s0
+
 # MTK vibrator LEDs-class fallback path (common labels only the odm: path).
 genfscon sysfs /class/leds/vibrator u:object_r:sysfs_vibrator:s0
 
