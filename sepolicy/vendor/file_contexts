@@ -365,4 +365,19 @@
 /(vendor|system/vendor)/lib(64)?/hw/gralloc\.(mt6765|default)\.so                                 u:object_r:same_process_hal_file:s0
 /(vendor|system/vendor)/lib(64)?/libusc\.so                                                       u:object_r:same_process_hal_file:s0
 
+# Complete the rest of the 64-bit EGL/gralloc DT_NEEDED closure. readelf -d on the
+# vendor blobs reached from libEGL_mtk.so shows these top-level vendor modules,
+# all of which plat_file_contexts leaves as generic vendor_file:
+#
+#   libGLESv2_mtk.so -> libglslcompiler.so, libgpu_aux.so
+#   libgpu_aux.so    -> libdpframework.so, vendor.mediatek.hardware.mms@1.5_vendor.so
+#   libdpframework.so -> libpq_prot.so, vendor.mediatek.hardware.pq@2.0_vendor.so,
+#                       libion_mtk.so
+#   libion_mtk.so    -> libion_ulit.so
+#   gralloc.mt6765.so -> libion_mtk.so
+#
+# Once libusc.so and gralloc.mt6765.so are readable, the loader will hit these
+# next and report the same "dlopen failed: library ... not found" symptom.
+/(vendor|system/vendor)/lib(64)?/(libglslcompiler|libgpu_aux|libdpframework|libpq_prot|libion_mtk|libion_ulit|vendor\.mediatek\.hardware\.(mms@1\.[0-5]|pq@2\.0)_vendor)\.so u:object_r:same_process_hal_file:s0
+
 /custom                                                                                         u:object_r:rootfs:s0
