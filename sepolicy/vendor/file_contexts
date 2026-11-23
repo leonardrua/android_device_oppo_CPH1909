@@ -76,6 +76,7 @@
 /(vendor|system/vendor)/bin/hw/interfaces\.factoryInterface@1\.0-service                       u:object_r:mtk_hal_factory_exec:s0
 /(vendor|system/vendor)/bin/factoryAta                                                          u:object_r:mtk_factory_bin_exec:s0
 
-### AOSP gralloc fallback + MTK MMS/PQ vendor interface libraries ###
-/(vendor|system/vendor)/lib(64)?/hw/gralloc\.default\.so                        u:object_r:same_process_hal_file:s0
+### MTK MMS/PQ vendor interface libraries ###
+# gralloc.default.so is already labelled by system/sepolicy/vendor/file_contexts;
+# duplicating it here makes checkfc reject vendor_file_contexts.
 /(vendor|system/vendor)/lib(64)?/vendor\.mediatek\.hardware\.(mms@1\.[0-5]|pq@2\.0)_vendor\.so u:object_r:same_process_hal_file:s0

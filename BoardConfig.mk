@@ -311,8 +311,9 @@ BOARD_SUPPRESS_SECURE_ERASE := true
 # supplies the generic MTK labels/rules we had been duplicating here: the EGL
 # library closure, gralloc.mt*, /dev/dri, /proc/ged, and the graphics/GED
 # permissions for surfaceflinger and bootanim. Our tree keeps only the
-# CPH1909-specific labels (DT2W, vibrator LED, power_supply nodes, AOSP
-# gralloc.default.so, MMS/PQ vendor libs, kpoc_charger).
+# CPH1909-specific labels (DT2W, vibrator LED, power_supply nodes, MMS/PQ
+# vendor libs, kpoc_charger). gralloc.default.so is already labelled by
+# system/sepolicy/vendor/file_contexts and must not be duplicated here.
 #
 # The common MTK policy carries legacy allow rules that AOSP's neverallow
 # assertions reject; Lotus sets this flag for exactly that reason. It disables
