@@ -87,7 +87,6 @@
 # /system, so sepolicy_tests requires the type to carry system_file_type
 # and treble_sepolicy_tests requires the domain to carry coredomain.
 /(vendor|system/vendor)/bin/hw/vtservice_hidl                                                 u:object_r:mtk_vtservice_exec:s0
-/system/bin/vtservice                                                            u:object_r:mtk_vtservice_main_exec:s0
 /system/bin/kpoc_charger                                                         u:object_r:kpoc_charger_exec:s0
 # MediaTek AEE (AAED, the exception/dump daemon). init.aee.rc starts aee_aedv
 # and aee_aedv64 at on post-fs. Both share one type.
@@ -98,7 +97,6 @@
 # usermodehelper rather than by init and needs its own domain/transition.
 /(vendor|system/vendor)/bin/aee_core_forwarder                                               u:object_r:mtk_aee_core_forwarder_exec:s0
 # Core files written by that helper (the core_pattern argument).
-/data/vendor/core(/.*)?                                                                       u:object_r:aee_core_data_file:s0
 /(vendor|system/vendor)/bin/gsm0710muxd                                                       u:object_r:mtk_muxd_exec:s0
 /(vendor|system/vendor)/bin/muxreport                                                         u:object_r:mtk_muxreport_exec:s0
 /(vendor|system/vendor)/bin/ccci_mdinit                                                       u:object_r:mtk_ccci_exec:s0
@@ -168,15 +166,10 @@
 ### Device nodes -- MediaTek specific
 ###
 /dev/ttyC[0-9]*                                                                               u:object_r:mtk_ttyc_device:s0
-/dev/ccci.*                                                                                   u:object_r:mtk_ccci_device:s0
-/dev/eemcs.*                                                                                  u:object_r:mtk_ccci_device:s0
 /dev/stpwmt                                                                                   u:object_r:mtk_stpwmt_device:s0
 /dev/wmtWifi                                                                                  u:object_r:mtk_wmtWifi_device:s0
-/dev/fw_log_wifi                                                                              u:object_r:mtk_fw_log_wifi_device:s0
-/dev/fw_log_wmt                                                                               u:object_r:mtk_fw_log_wmt_device:s0
 /dev/wmtdetect                                                                                u:object_r:mtk_stpwmt_device:s0
 /dev/stpbt                                                                                    u:object_r:hci_attach_dev:s0
-/dev/stpgps                                                                                   u:object_r:gps_device:s0
 /dev/gps                                                                                      u:object_r:gps_device:s0
 /dev/mtk_fb                                                                                   u:object_r:graphics_device:s0
 /dev/mtk_disp_mgr                                                                             u:object_r:graphics_device:s0
@@ -195,7 +188,6 @@
 /dev/vcodec                                                                                   u:object_r:video_device:s0
 /dev/Vcodec                                                                                   u:object_r:video_device:s0
 /dev/sw_sync                                                                                  u:object_r:sw_sync_device:s0
-/dev/mt6605                                                                                   u:object_r:nfc_device:s0
 /dev/accdet                                                                                   u:object_r:mtk_accdet_device:s0
 # /dev/uio[0-9]* is deliberately NOT listed either. plat_file_contexts labels it
 # u:object_r:uio_device:s0 (system/sepolicy/public/device.te:49) and our
@@ -231,17 +223,13 @@
 ###
 ### Block devices
 ###
-/dev/block/platform/bootdevice/by-name/nvdata                                                 u:object_r:nvdata_block_device:s0
 /dev/block/platform/bootdevice/by-name/nvcfg                                                  u:object_r:nvcfg_block_device:s0
-/dev/block/platform/bootdevice/by-name/nvram                                                  u:object_r:nvram_block_device:s0
-/dev/block/platform/bootdevice/by-name/proinfo                                                u:object_r:proinfo_block_device:s0
 /dev/block/platform/bootdevice/by-name/protect1                                               u:object_r:protect1_block_device:s0
 /dev/block/platform/bootdevice/by-name/protect2                                               u:object_r:protect2_block_device:s0
 /dev/block/platform/bootdevice/by-name/persist                                                u:object_r:persist_block_device:s0
 /dev/block/platform/bootdevice/by-name/metadata                                               u:object_r:metadata_block_device:s0
 /dev/block/platform/bootdevice/by-name/seccfg                                                 u:object_r:seccfg_block_device:s0
 /dev/block/platform/bootdevice/by-name/frp                                                    u:object_r:frp_block_device:s0
-/dev/block/platform/bootdevice/by-name/para                                                   u:object_r:misc_block_device:s0
 /dev/block/platform/bootdevice/by-name/boot                                                   u:object_r:boot_block_device:s0
 /dev/block/platform/bootdevice/by-name/recovery                                               u:object_r:recovery_block_device:s0
 /dev/block/platform/bootdevice/by-name/expdb                                                  u:object_r:expdb_block_device:s0
@@ -317,78 +305,20 @@
 # It is a plain root-level directory with no policy meaning of its own, so rootfs
 # matches how AOSP labels comparable entries (/charger, /bugreports,
 # /config, /lost+found).
-# --- Vendor EGL driver and its transitive deps loaded by SurfaceFlinger -----
-# These libs sit at the TOP LEVEL of /vendor/lib[64] (not in the egl/ subdir
-# AOSP labels same_process_hal_file), so e2fsdroid gives them vendor_file.
-# SurfaceFlinger is a coredomain (permissive=0) and dlopens the whole chain
-# into the sphal namespace:
+# --- CPH1909-specific EGL labels ---------------------------------------------
+# device/mediatek/sepolicy/sepolicy.mk (included from BoardConfig.mk) already
+# labels the generic MediaTek EGL closure: libIMGegl.so, libsrv_um.so, libged.so,
+# libgralloc_extra.so, libdrm.so, libusc.so, gralloc.mt[0-9]*.so,
+# libglslcompiler.so, libgpu_aux.so, libdpframework.so, libpq_prot.so,
+# libion_mtk.so, libion_ulit.so, /dev/dri(/.*)? and /proc/ged. Do not duplicate
+# them here: file_contexts rejects conflicting regex specifications.
 #
-#   libEGL_mtk.so -> libIMGegl.so -> libsrv_um.so -> libged.so, libdrm.so
-#                                 -> libgralloc_extra.so
-#
-# Without these labels it is denied { read }, EGL never initialises,
-# sys.boot_completed is never set, and the OPPO phoenix watchdog panics the
-# kernel with ERROR_HANG_OPPO ~8 min into boot (seen in last_kmsg).
-#
-# Evidence: the libIMGegl.so label alone left 20 identical AVCs across the
-# fresh tombstones:
-#   avc: denied { read } for name="libsrv_um.so" scontext=u:r:surfaceflinger:s0
-#        tcontext=u:object_r:vendor_file:s0 tclass=file permissive=0
-#   E vndksupport: Could not load /vendor/lib64/egl/libEGL_mtk.so from sphal
-#     namespace: dlopen failed: library "libsrv_um.so" not found.
-#
-# readelf -d on the vendor blobs confirms the full closure at top level:
-# libIMGegl.so, libsrv_um.so, libged.so, libgralloc_extra.so, libdrm.so.
-# libsync.so, libhardware.so, libz.so and libcutils/libutils/etc. resolve from
-# the system LLNDK/VNDK set, so they need no vendor label here.
-/(vendor|system/vendor)/lib(64)?/lib(IMGegl|srv_um|ged|gralloc_extra|drm)\.so                     u:object_r:same_process_hal_file:s0
-
-# The same IMG EGL driver also dlopens the MTK gralloc module and libusc.so at
-# runtime. They sit at /vendor/lib[64]/hw/ and /vendor/lib[64] root, so e2fsdroid
-# labels them vendor_file unless stated here. Fresh 07:04 UTC tombstones show:
-#
-#   avc: denied { getattr } for path="/vendor/lib64/hw/gralloc.mt6765.so"
-#        scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:vendor_file:s0
-#        tclass=file permissive=0
-#   IMGSRV  : :0: WSEGL_InitialiseDisplay: gralloc_open_gralloc() failed
-#   libEGL  : eglInitialize(0x1) failed (EGL_NOT_INITIALIZED)
-#   GLExtensions::initWithEGLStrings(NULL, NULL) -> strlen(NULL) SIGSEGV
-#
-# and, for libusc.so:
-#
-#   avc: denied { read } for name="libusc.so"
-#        scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:vendor_file:s0
-#   vndksupport: Could not load .../libGLESv2_mtk.so from sphal namespace:
-#     dlopen failed: library "libusc.so" not found.
-#
-# gralloc.default.so is the AOSP-built fallback gralloc module installed to the
-# same directory; it needs the same label for the same reason.
-/(vendor|system/vendor)/lib(64)?/hw/gralloc\.(mt6765|default)\.so                                 u:object_r:same_process_hal_file:s0
-/(vendor|system/vendor)/lib(64)?/libusc\.so                                                       u:object_r:same_process_hal_file:s0
-
-# Complete the rest of the 64-bit EGL/gralloc DT_NEEDED closure. readelf -d on the
-# vendor blobs reached from libEGL_mtk.so shows these top-level vendor modules,
-# all of which plat_file_contexts leaves as generic vendor_file:
-#
-#   libGLESv2_mtk.so -> libglslcompiler.so, libgpu_aux.so
-#   libgpu_aux.so    -> libdpframework.so, vendor.mediatek.hardware.mms@1.5_vendor.so
-#   libdpframework.so -> libpq_prot.so, vendor.mediatek.hardware.pq@2.0_vendor.so,
-#                       libion_mtk.so
-#   libion_mtk.so    -> libion_ulit.so
-#   gralloc.mt6765.so -> libion_mtk.so
-#
-# Once libusc.so and gralloc.mt6765.so are readable, the loader will hit these
-# next and report the same "dlopen failed: library ... not found" symptom.
-/(vendor|system/vendor)/lib(64)?/(libglslcompiler|libgpu_aux|libdpframework|libpq_prot|libion_mtk|libion_ulit|vendor\.mediatek\.hardware\.(mms@1\.[0-5]|pq@2\.0)_vendor)\.so u:object_r:same_process_hal_file:s0
-
-# The PowerVR/IMG user-space driver opens the DRM render nodes /dev/dri/card0
-# and /dev/dri/renderD128 while initialising EGL. AOSP Q has no /dev/dri label,
-# so they inherit generic device and surfaceflinger/bootanim are denied:
-#   avc: denied { read write } for name="renderD128"/"card0"
-#        tcontext=u:object_r:device:s0 tclass=chr_file permissive=0
-#   IMGSRV: _GetFd: Failed to open device node (2)
-# Label them like the other framebuffer/DRM graphics nodes so the existing
-# graphics_device allow rules cover them.
-/dev/dri(/.*)?                                                                  u:object_r:graphics_device:s0
+# Keep only the paths that are specific to this device/build:
+#   - AOSP's built gralloc.default.so fallback (the common rule covers only
+#     MTK's gralloc.mt[0-9]*.so naming).
+#   - The MediaTek MMS/PQ vendor interface libraries reached through
+#     libgpu_aux.so -> libdpframework.so, which the common tree does not label.
+/(vendor|system/vendor)/lib(64)?/hw/gralloc\.default\.so                        u:object_r:same_process_hal_file:s0
+/(vendor|system/vendor)/lib(64)?/vendor\.mediatek\.hardware\.(mms@1\.[0-5]|pq@2\.0)_vendor\.so u:object_r:same_process_hal_file:s0
 
 /custom                                                                                         u:object_r:rootfs:s0

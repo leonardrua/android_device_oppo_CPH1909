@@ -27,26 +27,17 @@
 # grant it `add` on the *standard* composer hwservice type.
 hal_attribute(dfps)
 
-type mtk_hal_dfps, domain;
-type mtk_hal_dfps_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_hal_dfps)
+# mtk_hal_dfps, mtk_hal_mms and mtk_hal_pq domains/exec types and their
+# init_daemon_domain() declarations now come from the common MediaTek policy.
 hal_server_domain(mtk_hal_dfps, hal_dfps)
 
 type mtk_hal_keyattestation, domain;
 type mtk_hal_keyattestation_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_keyattestation)
 
-type mtk_hal_mms, domain;
-type mtk_hal_mms_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_hal_mms)
-
 type mtk_hal_mtkcodecservice, domain;
 type mtk_hal_mtkcodecservice_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_mtkcodecservice)
-
-type mtk_hal_pq, domain;
-type mtk_hal_pq_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_hal_pq)
 
 type mtk_hal_soter, domain;
 type mtk_hal_soter_exec, exec_type, vendor_file_type, file_type;
@@ -78,24 +69,19 @@ allow mtk_hal_soter system_app:fd use;
 # default_hwservice and the per-interface type transitions are impossible.
 
 # --- MediaTek hwservice types ---
-type mtk_hal_bluetooth_hwservice, hwservice_manager_type;
-type mtk_hal_rild_hwservice, hwservice_manager_type;
-type mtk_hal_power_hwservice, hwservice_manager_type;
-type mtk_hal_lbs_hwservice, hwservice_manager_type;
+# The following types are declared by the common MediaTek policy and are no
+# longer repeated here: mtk_hal_bluetooth_hwservice, mtk_hal_rild_hwservice,
+# mtk_hal_power_hwservice, mtk_hal_lbs_hwservice, mtk_hal_imsa_hwservice,
+# nvram_agent_binder_hwservice, mtk_hal_pq_hwservice,
+# mtk_hal_keyattestation_hwservice, mtk_hal_mms_hwservice,
+# mtk_hal_keyinstall_hwservice, mtk_hal_videotelephony_hwservice and
+# mtk_hal_dfps_hwservice.
 type mtk_hal_wifi_hostapd_hwservice, hwservice_manager_type;
-type mtk_hal_imsa_hwservice, hwservice_manager_type;
-type nvram_agent_binder_hwservice, hwservice_manager_type;
-type mtk_hal_pq_hwservice, hwservice_manager_type;
-type mtk_hal_keyattestation_hwservice, hwservice_manager_type;
-type mtk_hal_mms_hwservice, hwservice_manager_type;
 type mtk_hal_wfo_hwservice, hwservice_manager_type;
-type mtk_hal_keyinstall_hwservice, hwservice_manager_type;
-type mtk_hal_videotelephony_hwservice, hwservice_manager_type;
 type volte_uce_ua_hwservice, hwservice_manager_type;
 type hal_mtkcodecservice_hwservice, hwservice_manager_type;
 type mtk_hal_netdagent_hwservice, hwservice_manager_type;
 type volte_rcs_ua_hwservice, hwservice_manager_type;
-type mtk_hal_dfps_hwservice, hwservice_manager_type;
 # Stock 8.1 labels interfaces.factory{Ata,Interface} with this type. Both are
 # declared in this tree's manifest and implemented by the factory service.
 type factory_interface_hwservice, hwservice_manager_type;
@@ -352,21 +338,16 @@ init_daemon_domain(mtk_volte_ua)
 add_hwservice(mtk_volte_ua, volte_rcs_ua_hwservice)
 
 # vtservice_hidl (vendor/bin/hw/vtservice_hidl, init.vtservice.rc): MTK's
-# VoLTE video-telephony service, class hal. /system/bin/vtservice is the
-# companion service (class main) and cannot share this domain: domains
-# entered from /system must carry coredomain (treble_sepolicy_tests) and
-# types labeling /system paths must carry system_file_type
-# (sepolicy_tests), while domains/types entered from /vendor must not.
+# VoLTE video-telephony HAL, class hal. The /system/bin/vtservice companion
+# service and its coredomain vtservice_exec label now come from the common
+# MediaTek sepolicy included in BoardConfig.mk; only the vendor-side HIDL
+# service is declared here.
 type mtk_vtservice, domain;
 type mtk_vtservice_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_vtservice)
 add_hwservice(mtk_vtservice, mtk_hal_videotelephony_hwservice)
-type mtk_vtservice_main, domain, coredomain;
-type mtk_vtservice_main_exec, exec_type, system_file_type, file_type;
-init_daemon_domain(mtk_vtservice_main)
 
 type mtk_ttyc_device, dev_type;
-type mtk_ccci_device, dev_type;
 
 ###
 ### NVRAM / persistent factory data
@@ -396,16 +377,9 @@ type mtk_protect_s_file, file_type, vendor_file_type;
 type mtk_persist_file, file_type, vendor_file_type;
 type oppo_reserve_file, file_type;
 
-type nvdata_block_device, dev_type;
-type nvcfg_block_device, dev_type;
-type nvram_block_device, dev_type;
-type proinfo_block_device, dev_type;
-type protect1_block_device, dev_type;
-type protect2_block_device, dev_type;
-type persist_block_device, dev_type;
-type seccfg_block_device, dev_type;
-type expdb_block_device, dev_type;
-type logo_block_device, dev_type;
+# nvcfg/protect1/protect2/persist/seccfg/expdb/logo block device types are
+# declared by the common MediaTek policy; only their CPH1909 file_contexts
+# entries remain here.
 type oppo_reserve_block_device, dev_type;
 
 ###
@@ -444,9 +418,7 @@ init_daemon_domain(mtk_mnld)
 # grant it add/find on the standard hal_gnss_hwservice type it never registers.
 allow mtk_mnld hal_gnss_default:unix_dgram_socket sendto;
 
-type mtk_agpsd, domain;
-type mtk_agpsd_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_agpsd)
+# mtk_agpsd domain and exec type come from the common MediaTek policy.
 
 type mtk_lbs, domain;
 type mtk_lbs_exec, exec_type, vendor_file_type, file_type;
@@ -475,8 +447,8 @@ add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 
 type mtk_stpwmt_device, dev_type;
 type mtk_wmtWifi_device, dev_type;
-type mtk_fw_log_wifi_device, dev_type;
-type mtk_fw_log_wmt_device, dev_type;
+# fw_log_wifi_device / fw_log_wmt_device come from the common MediaTek
+# sepolicy; the device-specific copies were removed with their file_labels.
 
 # AEE (AAED): MediaTek's exception/dump daemon pair started at on post-fs by
 # init.aee.rc. One type covers both the 32- and 64-bit binaries.
@@ -488,12 +460,11 @@ init_daemon_domain(mtk_aee)
 # /proc/sys/kernel/core_pattern at /vendor/bin/aee_core_forwarder, so the
 # kernel usermodehelper execs it outside init; both the init and kernel
 # transitions are declared here, mirroring the stock O-MR1 policy. The core
-# files are written under /data/vendor/core (labelled aee_core_data_file in
-# file_contexts). The domain stays permissive during bring-up like the rest of
-# the AEE stack.
+# files are written under /data/vendor/core, which the common MediaTek policy
+# labels aee_core_vendor_file (aee_core_data_file is the /data/core type).
+# The domain stays permissive during bring-up like the rest of the AEE stack.
 type mtk_aee_core_forwarder, domain;
 type mtk_aee_core_forwarder_exec, exec_type, vendor_file_type, file_type;
-type aee_core_data_file, file_type, data_file_type;
 allow init mtk_aee_core_forwarder_exec:file { read getattr map execute open };
 allow init mtk_aee_core_forwarder:process transition;
 type_transition init mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
@@ -510,8 +481,8 @@ allow kernel mtk_aee_core_forwarder:process transition;
 type_transition kernel mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
 allow mtk_aee_core_forwarder mtk_aee_core_forwarder_exec:file { read getattr map execute entrypoint open };
 allow mtk_aee_core_forwarder vendor_data_file:dir { create add_name write search };
-allow mtk_aee_core_forwarder aee_core_data_file:dir create_dir_perms;
-allow mtk_aee_core_forwarder aee_core_data_file:file create_file_perms;
+allow mtk_aee_core_forwarder aee_core_vendor_file:dir create_dir_perms;
+allow mtk_aee_core_forwarder aee_core_vendor_file:file create_file_perms;
 allow mtk_aee_core_forwarder kernel:fd use;
 allow mtk_aee_core_forwarder kernel:fifo_file read;
 allow mtk_aee_core_forwarder mtk_aee:unix_stream_socket connectto;
@@ -537,8 +508,8 @@ allow hal_wifi mtk_wmtWifi_device:chr_file w_file_perms;
 
 # connsyslogger opens the WMT/Wi-Fi firmware log character devices.
 # Stock: (allow connsyslogger fw_log_{wifi,wmt}_device (chr_file (ioctl read write open)))
-allow mtk_connsyslogger mtk_fw_log_wifi_device:chr_file { ioctl read write open };
-allow mtk_connsyslogger mtk_fw_log_wmt_device:chr_file { ioctl read write open };
+allow mtk_connsyslogger fw_log_wifi_device:chr_file { ioctl read write open };
+allow mtk_connsyslogger fw_log_wmt_device:chr_file { ioctl read write open };
 
 # wfca: MTK Wi-Fi call forward agent, class core (init.wfca.rc).
 # bip: MTK BIP/SAT-transport daemon, started on mtk.md1.status=ready
@@ -614,7 +585,7 @@ allow kpoc_charger self:netlink_kobject_uevent_socket { create bind read setopt 
 ### Misc MediaTek device nodes
 ###
 type mtk_smi_device, dev_type;
-type mtk_sched_device, dev_type;
+# mtk_sched_device is declared by the common MediaTek policy.
 type mtk_accdet_device, dev_type;
 # mtk_uio_device removed: /dev/uio[0-9]* is already labelled uio_device by
 # plat_file_contexts (AOSP public/device.te:49), and declaring a second type for
@@ -636,7 +607,7 @@ type mtk_pq_device, dev_type;
 # Both are labelled in file_contexts; without the declaration checkfc rejects
 # the whole vendor_file_contexts.
 type gps_device, dev_type;
-type sw_sync_device, dev_type;
+# sw_sync_device is declared by the common MediaTek policy.
 
 ###
 ### rutilsdaemon -- the seclabel MediaTek's rc files name for shell helpers
@@ -721,7 +692,6 @@ permissive mtk_netdagent;
 permissive mtk_thermal;
 permissive mtk_fuelgauged;
 permissive mtk_vtservice;
-permissive mtk_vtservice_main;
 permissive mtk_aee;
 permissive mtk_aee_core_forwarder;
 permissive mtk_stp_dump;

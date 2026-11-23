@@ -306,33 +306,22 @@ TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6765
 BOARD_SUPPRESS_SECURE_ERASE := true
 
 # SELinux
+#
+# Use the common MediaTek policy like the Lotus 17.1 device tree does. It
+# supplies the generic MTK labels/rules we had been duplicating here: the EGL
+# library closure, gralloc.mt*, /dev/dri, /proc/ged, and the graphics/GED
+# permissions for surfaceflinger and bootanim. Our tree keeps only the
+# CPH1909-specific labels (DT2W, vibrator LED, power_supply nodes, AOSP
+# gralloc.default.so, MMS/PQ vendor libs, kpoc_charger).
+#
+# The common MTK policy carries legacy allow rules that AOSP's neverallow
+# assertions reject; Lotus sets this flag for exactly that reason. It disables
+# neverallow enforcement and the sepolicy CTS tests, and is a hard error in
+# user builds, so this tree must stay on userdebug until those conflicts are
+# resolved upstream.
+SELINUX_IGNORE_NEVERALLOWS := true
+include device/mediatek/sepolicy/sepolicy.mk
 BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
-
-# LEFT UNSET ON PURPOSE -- this is the diagnostic mode. With the flag absent,
-# checkpolicy -M and `sepolicy-analyze neverallow -w` run (Android.mk:375-384)
-# and each violation is named with the exact rule and line, which is what makes
-# the policy fixable. Setting it to true sets NEVERALLOW_ARG := -N (:85-93) and
-# hands that to every secilc invocation (:535, :578, :628, :864, :979, :1293),
-# so secilc's --disable-neverallow takes over and the assertions are simply not
-# enforced -- the build passes, the violations go unreported, and the resulting
-# policy can carry allow rules AOSP's assertions exist to prevent. It also drops
-# sepolicy_tests and treble_sepolicy_tests_* from LOCAL_REQUIRED_MODULES
-# (:242-248), so those CTS checks stop running too.
-#
-# So the trade is deliberate: unset costs a red build that names every offender,
-# set costs a green build and a policy nobody can audit. Fix the rules the
-# errors point at; only set this if a violation must be shipped temporarily,
-# and then remove it once the rule is corrected.
-#
-# Note there is no Soong path for this on 17.1: core/soong_config.mk does not
-# reference SelinuxIgnoreNeverallows and build/soong has only cil_compat_map.go
-# and filegroup.go. The Makefile is the whole mechanism here.
-#
-# Hard error in user builds if ever set (Android.mk:86-88: "$(error ... cannot
-# be used in user builds)"), so a release image cannot carry it even by
-# accident. The CI default variant is userdebug, which would permit it.
-#
-# SELINUX_IGNORE_NEVERALLOWS := true
 
 # Double tap to wake
 #

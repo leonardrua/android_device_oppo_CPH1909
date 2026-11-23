@@ -10,12 +10,3 @@
 # /proc/touchpanel, so only this one file is relabeled; the rest of the
 # touchpanel procfs stays generic proc.
 type proc_dt2w, fs_type, proc_type;
-
-# The MTK GED driver exposes /proc/ged, which libged.so (a dependency of the
-# PowerVR EGL stack) reads during initialisation. AOSP leaves it generic proc,
-# so surfaceflinger and bootanimation get:
-#   avc: denied { read } for name="ged" dev="proc"
-#        tcontext=u:object_r:proc:s0 tclass=file permissive=0
-#   GED: failed to open /proc/ged
-# until it carries its own type.
-type proc_ged, fs_type, proc_type;
