@@ -148,11 +148,16 @@ add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 
 
 ### AEE core_pattern usermodehelper ###
+# The platform owns aee_core_forwarder_exec for /system/bin; this vendor image
+# also ships /vendor/bin/aee_core_forwarder as the kernel core_pattern helper,
+# so give that path a vendor-local exec type to keep vendor_policy.cil
+# independent of platform-private types.
+type aee_core_forwarder_vendor_exec, exec_type, vendor_file_type, file_type;
 typeattribute kernel system_executes_vendor_violators;
-allow kernel aee_core_forwarder_exec:file { read getattr map execute open };
+allow kernel aee_core_forwarder_vendor_exec:file { read getattr map execute open };
 allow kernel aee_core_forwarder:process transition;
-type_transition kernel aee_core_forwarder_exec:process aee_core_forwarder;
-allow aee_core_forwarder aee_core_forwarder_exec:file { read getattr map execute entrypoint open };
+type_transition kernel aee_core_forwarder_vendor_exec:process aee_core_forwarder;
+allow aee_core_forwarder aee_core_forwarder_vendor_exec:file { read getattr map execute entrypoint open };
 allow aee_core_forwarder vendor_data_file:dir { create add_name write search };
 allow aee_core_forwarder aee_core_vendor_file:dir create_dir_perms;
 allow aee_core_forwarder aee_core_vendor_file:file create_file_perms;
@@ -161,6 +166,16 @@ allow aee_core_forwarder kernel:fifo_file read;
 allow aee_core_forwarder aee_aedv:unix_stream_socket connectto;
 
 
+
+### connsyslogger vendor binary ###
+# connsyslogger domain is platform-public, but connsyslogger_exec is
+# platform-private; the /vendor/bin copy needs its own exec type and init
+# transition.
+type connsyslogger_vendor_exec, exec_type, vendor_file_type, file_type;
+allow init connsyslogger_vendor_exec:file { read getattr map execute open };
+allow init connsyslogger:process transition;
+type_transition init connsyslogger_vendor_exec:process connsyslogger;
+allow connsyslogger connsyslogger_vendor_exec:file { read getattr map execute entrypoint open };
 
 ### Offline charging (KPOC) -- kpoc_charger.rc seclabel u:r:kpoc_charger:s0 ###
 type kpoc_charger, domain, coredomain;
