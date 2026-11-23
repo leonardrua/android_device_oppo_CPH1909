@@ -127,14 +127,9 @@ init_daemon_domain(mtk_sysenv)
 type oppo_reserve_file, file_type;
 type oppo_reserve_block_device, dev_type;
 
-allow init {
-    nvdata_file
-    nvcfg_file
-    persist_data_file
-    protect_f_data_file
-    protect_s_data_file
-    oppo_reserve_file
-}:dir mounton;
+# nvdata/nvcfg/persist_data/protect_f/protect_s mounton grants already exist in
+# common non_plat/init.te; only the OPPO reserve partition is device-specific.
+allow init oppo_reserve_file:dir mounton;
 
 ### GNSS HAL ###
 # The CPH1909 vendor.mediatek.hardware.gnss@1.1-service uses the common
@@ -160,14 +155,15 @@ add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 type aee_core_forwarder_vendor_exec, exec_type, vendor_file_type, file_type;
 typeattribute kernel system_executes_vendor_violators;
 allow kernel aee_core_forwarder_vendor_exec:file { read getattr map execute open };
-allow kernel aee_core_forwarder:process transition;
+# kernel -> aee_core_forwarder process transition is already granted by common
+# plat_private/kernel.te domain_auto_trans().
 type_transition kernel aee_core_forwarder_vendor_exec:process aee_core_forwarder;
 allow aee_core_forwarder aee_core_forwarder_vendor_exec:file { read getattr map execute entrypoint open };
 allow aee_core_forwarder vendor_data_file:dir { create add_name write search };
 allow aee_core_forwarder aee_core_vendor_file:dir create_dir_perms;
 allow aee_core_forwarder aee_core_vendor_file:file create_file_perms;
-allow aee_core_forwarder kernel:fd use;
-allow aee_core_forwarder kernel:fifo_file read;
+# kernel:fd use and kernel:fifo_file read are already granted by common
+# plat_private/aee_core_forwarder.te.
 allow aee_core_forwarder aee_aedv:unix_stream_socket connectto;
 
 
@@ -178,7 +174,8 @@ allow aee_core_forwarder aee_aedv:unix_stream_socket connectto;
 # transition.
 type connsyslogger_vendor_exec, exec_type, vendor_file_type, file_type;
 allow init connsyslogger_vendor_exec:file { read getattr map execute open };
-allow init connsyslogger:process transition;
+# init -> connsyslogger process transition is already granted by common
+# plat_private/connsyslogger.te init_daemon_domain().
 type_transition init connsyslogger_vendor_exec:process connsyslogger;
 allow connsyslogger connsyslogger_vendor_exec:file { read getattr map execute entrypoint open };
 
