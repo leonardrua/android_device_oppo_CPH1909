@@ -1,0 +1,7 @@
+[
+    {
+        "repository": "LineageOS/android_device_mediatek_sepolicy",
+        "path": "device/mediatek/sepolicy",
+        "branch": "lineage-17.1"
+    }
+]

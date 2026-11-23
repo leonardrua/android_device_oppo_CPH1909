@@ -497,6 +497,9 @@ jobs:
           fetch_tree "$(repo_url "$DEVICE_REPO")" "$DEVICE_BRANCH" "device/oppo/$DEVICE"
           fetch_tree "$(repo_url "$VENDOR_REPO")" "$VENDOR_BRANCH" "vendor/oppo/$DEVICE"
           fetch_tree "$(repo_url "$KERNEL_REPO")" "$KERNEL_BRANCH" "kernel/oppo/$DEVICE"
+          # BoardConfig.mk includes device/mediatek/sepolicy/sepolicy.mk unconditionally.
+          fetch_tree "$(repo_url "LineageOS/android_device_mediatek_sepolicy")" \
+            "lineage-17.1" "device/mediatek/sepolicy"
 
           ls -A "device/oppo/$DEVICE" | sed -n '1,60p'
           ls -A "vendor/oppo/$DEVICE" | sed -n '1,40p'
