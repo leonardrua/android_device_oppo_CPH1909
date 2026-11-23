@@ -1,0 +1,10 @@
+# Adapted from Lotus lineage-17.1 commits 72c0c028 (initial getattr/read/open
+# grant) and d85d21ac (replace with macro). The final upstream form is kept:
+#
+#   allow hal_health_default sysfs:file rw_file_perms;
+#
+# Our device also labels the two CPH1909 fuel-gauge power_supply paths as
+# sysfs_batteryinfo in genfs_contexts, so AOSP's r_dir_file(hal_health_server,
+# sysfs_batteryinfo) covers those; this generic grant covers any remaining
+# battery sysfs files that are still labelled plain sysfs.
+allow hal_health_default sysfs:file rw_file_perms;
