@@ -117,7 +117,6 @@ init_daemon_domain(mtk_volte_stack)
 
 add_hwservice(volte_ua, volte_rcs_ua_hwservice)
 
-type mtk_ttyc_device, dev_type;
 
 ### NVRAM / persistent factory data ###
 type mtk_sysenv, domain;

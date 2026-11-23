@@ -44,7 +44,6 @@
 /dev/wmtdetect                                                                                u:object_r:mtk_stpwmt_device:s0
 
 ### Device nodes without a common-tree label ###
-/dev/ttyC[0-9]*                                                                               u:object_r:mtk_ttyc_device:s0
 /dev/gps                                                                                      u:object_r:gps_device:s0
 /dev/mtk_fb                                                                                   u:object_r:graphics_device:s0
 /dev/mtk_mdp                                                                                  u:object_r:video_device:s0
