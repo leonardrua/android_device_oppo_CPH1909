@@ -563,6 +563,54 @@ type mtk_fuelgauged_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_fuelgauged)
 
 ###
+### Offline charging (KPOC)
+###
+# The stock kpoc_charger.rc starts /system/bin/kpoc_charger with class charger;
+# AOSP's init.rc "on charger" is the only path into offline charging on this
+# device. The 8.1 nonplat policy supplied a kpoc_charger domain, but this Q
+# build compiles only sepolicy/vendor, so without these declarations init
+# executes the binary in its own domain: it then has framebuffer/input/battery
+# denials and the charging animation never appears.
+# Domains entered from /system must carry coredomain and their exec types must
+# carry system_file_type (treble_sepolicy_tests / sepolicy_tests).
+type kpoc_charger, domain, coredomain;
+type kpoc_charger_exec, exec_type, system_file_type, file_type;
+init_daemon_domain(kpoc_charger)
+
+# Battery nodes: our genfscon fix relabels the real power_supply directories to
+# sysfs_batteryinfo, so the generic sysfs grants do not cover them.
+allow kpoc_charger sysfs:dir r_dir_perms;
+allow kpoc_charger sysfs:file rw_file_perms;
+allow kpoc_charger sysfs:lnk_file read;
+allow kpoc_charger sysfs_batteryinfo:dir r_dir_perms;
+allow kpoc_charger sysfs_batteryinfo:file r_file_perms;
+allow kpoc_charger sysfs_batteryinfo:lnk_file read;
+allow kpoc_charger sysfs_leds:dir r_dir_perms;
+allow kpoc_charger sysfs_leds:file rw_file_perms;
+allow kpoc_charger sysfs_wake_lock:file rw_file_perms;
+
+# Animation output and power-key input.
+allow kpoc_charger block_device:dir search;
+allow kpoc_charger logo_block_device:blk_file { read open };
+allow kpoc_charger graphics_device:dir search;
+allow kpoc_charger graphics_device:chr_file { ioctl read write getattr open };
+allow kpoc_charger input_device:dir r_dir_perms;
+allow kpoc_charger input_device:chr_file { ioctl read write open };
+
+# Logging, RTC/alarm and init property socket used by the stock binary.
+allow kpoc_charger kmsg_device:chr_file { write open };
+allow kpoc_charger rtc_device:chr_file { read write open };
+allow kpoc_charger alarm_device:chr_file write;
+allow kpoc_charger mtd_device:dir search;
+allow kpoc_charger mtd_device:chr_file read;
+allow kpoc_charger property_socket:sock_file write;
+allow kpoc_charger init:unix_stream_socket connectto;
+
+allow kpoc_charger self:capability { sys_nice sys_boot };
+allow kpoc_charger self:capability2 block_suspend;
+allow kpoc_charger self:netlink_kobject_uevent_socket { create bind read setopt };
+
+###
 ### Misc MediaTek device nodes
 ###
 type mtk_smi_device, dev_type;
