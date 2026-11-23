@@ -108,6 +108,11 @@ PRODUCT_COPY_FILES += \
 #                forwards to the legacy libhardware power module (power.mt6765).
 #                Lineage 17.1 PowerManagerService calls IPower@1.0 setFeature for
 #                double-tap-to-wake; the shim writes TARGET_TAP_TO_WAKE_NODE.
+#                The service uses defaultPassthroughServiceImplementation<IPower>(),
+#                which dlopens /vendor/lib64/hw/android.hardware.power@1.0-impl.so
+#                at runtime -- that module must be in PRODUCT_PACKAGES explicitly,
+#                otherwise the service logs "Could not get passthrough
+#                implementation" and DT2W never works (seen in the first OTA).
 #
 # libdrmclearkeyplugin and libclearkeycasplugin are already part of
 # base_vendor.mk, so the DRM/CAS software plugins come from AOSP as well.
@@ -115,6 +120,7 @@ PRODUCT_PACKAGES += \
     android.hardware.drm@1.2-service.clearkey \
     android.hardware.health@2.0-service \
     android.hardware.power@1.0-service \
+    android.hardware.power@1.0-impl \
     android.hardware.usb@1.0-service.basic \
     power.mt6765
 
