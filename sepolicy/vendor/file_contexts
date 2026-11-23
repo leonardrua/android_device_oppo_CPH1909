@@ -5,7 +5,7 @@
 ### CPH1909-specific HAL versions/paths not present in the common tree ###
 /(vendor|system/vendor)/bin/hw/android\.hardware\.audio@2\.0-service-mediatek                 u:object_r:hal_audio_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.light@2\.0-service\.CPH1909                u:object_r:hal_light_default_exec:s0
-/(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.gnss@1\.1-service                  u:object_r:hal_gnss_default_exec:s0
+/(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.gnss@1\.1-service                  u:object_r:mtk_hal_gnss_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.keymaster_attestation@1\.1-service u:object_r:hal_keymaster_attestation_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.mms@1\.5-service                   u:object_r:mtk_hal_mms_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.mtkcodecservice@1\.1-service       u:object_r:MtkCodecService_exec:s0

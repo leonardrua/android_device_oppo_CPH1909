@@ -136,8 +136,13 @@ allow init {
     oppo_reserve_file
 }:dir mounton;
 
-### GNSS datagram channel (mnld is not a hal_gnss server/client) ###
-allow mnld hal_gnss_default:unix_dgram_socket sendto;
+### GNSS HAL ###
+# The CPH1909 vendor.mediatek.hardware.gnss@1.1-service uses the common
+# mtk_hal_gnss domain, so common mnld.te already grants
+#   allow mnld mtk_hal_gnss:unix_dgram_socket sendto;
+# The stock binary also opens /dev/binder, which common mtk_hal_gnss.te does
+# not grant (it only has vndbinder_use).
+binder_use(mtk_hal_gnss)
 
 ### WiFi / connectivity device-private domains ###
 
