@@ -37,11 +37,6 @@
 /(vendor|system/vendor)/bin/oppoalgo_daemon                                                   u:object_r:oppoalgo_daemon_exec:s0
 
 ### WMT / STP labels -- kept verbatim, do not touch ###
-/(vendor|system/vendor)/bin/wmt_loader                                                        u:object_r:mtk_wmt_loader_exec:s0
-/(vendor|system/vendor)/bin/wmt_launcher                                                      u:object_r:mtk_wmt_loader_exec:s0
-/dev/stpwmt                                                                                      u:object_r:stpwmt_device:s0
-/dev/wmtWifi                                                                                     u:object_r:wmtWifi_device:s0
-/dev/wmtdetect                                                                                u:object_r:mtk_stpwmt_device:s0
 
 ### Device nodes without a common-tree label ###
 /dev/gps                                                                                      u:object_r:gps_device:s0

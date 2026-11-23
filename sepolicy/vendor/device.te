@@ -51,7 +51,7 @@ set_prop(rild, mtk_persist_prop)
 set_prop(mtk_ccci, mtk_persist_prop)
 set_prop(epdg_wod, mtk_persist_prop)
 set_prop(stp_dump3, mtk_persist_prop)
-set_prop(mtk_wmt_loader, mtk_persist_prop)
+set_prop(wmt_loader, mtk_persist_prop)
 set_prop(volte_imcb, mtk_persist_prop)
 set_prop(volte_imsm_93, mtk_persist_prop)
 set_prop(mtk_volte_stack, mtk_persist_prop)
@@ -140,18 +140,12 @@ allow init {
 allow mnld hal_gnss_default:unix_dgram_socket sendto;
 
 ### WiFi / connectivity device-private domains ###
-type mtk_wmt_loader, domain;
-type mtk_wmt_loader_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(mtk_wmt_loader)
 
 type mtk_netdagent, domain;
 type mtk_netdagent_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_netdagent)
 add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 
-# /dev/wmtdetect keeps the device-specific mtk_stpwmt_device label (WMT scope
-# left untouched); stpwmt/wmtWifi themselves use common device-node types.
-type mtk_stpwmt_device, dev_type;
 
 ### AEE core_pattern usermodehelper ###
 typeattribute kernel system_executes_vendor_violators;
@@ -220,7 +214,6 @@ permissive mtk_ccci;
 permissive mtk_md_ctrl;
 permissive mtk_volte_stack;
 permissive mtk_sysenv;
-permissive mtk_wmt_loader;
 permissive mtk_netdagent;
 permissive aee_core_forwarder;
 
