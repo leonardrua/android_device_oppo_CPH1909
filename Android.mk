@@ -276,26 +276,47 @@ ALL_DEFAULT_INSTALLED_MODULES += $(VENDOR_CORE_LIB_COPIES)
 # TARGET_BUILD_APPS (sdk) builds, so nothing flagged it on a normal ROM build.
 # Hence all-makefiles-under: any future subdirectory module is picked up
 # automatically instead of being dropped the same way.
-# --- Runtime APEX library symlinks -------------------------------------------
-# Android 10's com.android.runtime APEX contains /apex/com.android.runtime/
-# lib[64]/libart.so, but the linker config's [system] default namespace only
-# searches /system/${LIB} (and product), not the APEX. JniInvocation's
-# dlopen("libart.so") therefore failed on the published image, leaving the
-# JNI_CreateJavaVM function pointer NULL: zygote64 crashed with SIGSEGV at
-# pc=0 from AndroidRuntime::startVm() (tombstone_02, pmsg "Failed to dlopen
-# libart.so"), and the framework never came up. Provide the standard symlinks
-# so the name resolves through the normal /system/${LIB} search path.
-ART32_SYMLINK := $(TARGET_OUT)/lib/libart.so
-$(ART32_SYMLINK):
-	@mkdir -p $(dir $@)
-	$(hide) ln -sf /apex/com.android.runtime/lib/libart.so $@
+# --- Runtime APEX namespace for JniInvocation --------------------------------
+# libnativehelper.so is installed as a real file at /system/lib[64] by Soong,
+# so zygote loads it into the [system] default linker namespace. Its
+# JniInvocation::OpenLibrary() calls dlopen("libart.so"), but libart.so exists
+# only in the Runtime APEX at /apex/com.android.runtime/lib[64].
+#
+# The default namespace's search paths are /system/${LIB} and product, and its
+# permitted paths include only /apex/com.android.runtime/${LIB}/bionic -- not
+# the APEX lib[64] root. bionic rejects the APEX realpath:
+#
+#   library "libart.so" ("/apex/com.android.runtime/lib64/libart.so") needed or
+#   dlopened by "/system/lib64/libnativehelper.so" is not accessible for the
+#   namespace "(default)"
+#
+# JniInvocation then leaves JNI_CreateJavaVM NULL, AndroidRuntime::startVm()
+# jumps through it and zygote64 dies with SIGSEGV at pc=0 (34 of the 44
+# non-empty fresh tombstones).
+#
+# AOSP's documented fallback is namespace.default.link.runtime.shared_libs:
+# if a name cannot be loaded in the default namespace, bionic loads it into
+# the linked "runtime" namespace, whose search path IS the APEX lib[64].
+# Add libart.so to that existing whitelist in the generated versioned config.
+#
+# Note: adding only /system/lib[64]/libart.so symlinks (an earlier attempt)
+# made the linker find the APEX realpath and then reject it, so those symlinks
+# are deliberately not installed here.
+LIBART_LD_CONFIG_VER := $(if $(strip $(PLATFORM_VNDK_VERSION)),$(PLATFORM_VNDK_VERSION),29)
+LIBART_LD_CONFIG := $(TARGET_OUT_ETC)/ld.config.$(LIBART_LD_CONFIG_VER).txt
+LIBART_LD_CONFIG_STAMP := $(TARGET_OUT_INTERMEDIATES)/libart_linker_namespace_fix
 
-ART64_SYMLINK := $(TARGET_OUT)/lib64/libart.so
-$(ART64_SYMLINK):
-	@mkdir -p $(dir $@)
-	$(hide) ln -sf /apex/com.android.runtime/lib64/libart.so $@
+$(LIBART_LD_CONFIG_STAMP): $(LIBART_LD_CONFIG)
+	$(hide) if ! sed -n '/^\[system\]/,/^\[vendor\]/p' $< | \
+		grep -q '^namespace\.default\.link\.runtime\.shared_libs += libart\.so$$'; then \
+		sed -i '/^\[system\]/,/^\[vendor\]/ s|^namespace\.default\.link\.runtime\.shared_libs  = libdexfile_external\.so|&\nnamespace.default.link.runtime.shared_libs += libart.so|' $<; \
+	fi
+	$(hide) sed -n '/^\[system\]/,/^\[vendor\]/p' $< | \
+		grep -q '^namespace\.default\.link\.runtime\.shared_libs += libart\.so$$' || \
+		(echo "ERROR: could not add libart.so to $(LIBART_LD_CONFIG)" && exit 1)
+	$(hide) touch $@
 
-ALL_DEFAULT_INSTALLED_MODULES += $(ART32_SYMLINK) $(ART64_SYMLINK)
+ALL_DEFAULT_INSTALLED_MODULES += $(LIBART_LD_CONFIG_STAMP)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
 
