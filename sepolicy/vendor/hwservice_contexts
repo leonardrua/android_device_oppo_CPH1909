@@ -1,23 +1,5 @@
-# HwBinder service labels for vendor HALs.
-#
-# Entries transcribed from the stock 8.1 vendor
-# /vendor/etc/selinux/nonplat_hwservice_contexts, restricted to interfaces
-# that actually appear in the device manifest.xml (vendor.mediatek.hardware.*,
-# vendor.oppo.hardware.*, vendor.silead.*, vendor.egistec.*, and
-# vendor.qti.hardware.soter). Interfaces that exist in the stock policy but
-# are not declared in this tree's manifest are omitted.
-#
-# Without these entries, every vendor HIDL service registers as
-# default_hwservice, which the AOSP hwservicemanager allows but which makes
-# the per-interface type transitions in device.te impossible. Under the
-# bring-up permissive policy this only logs avc denials; on an enforcing
-# build the HALs would be unable to find each other.
-#
-# The key format is <package>::<interface>, omitting the @version and
-# instance suffix, matching the stock O-MR1 convention and every other
-# HIDL entry in AOSP's vendor/hwservice_contexts.
-
-# --- MediaTek vendor HALs ---
+# HwBinder service labels absent from common non_plat/hwservice_contexts.
+# Key format <package>::<interface>; final newline is REQUIRED (m4 fusion bug).
 
 vendor.mediatek.hardware.gnss::IMtkGnss	u:object_r:hal_gnss_hwservice:s0
 vendor.mediatek.hardware.radio::IRadio	u:object_r:mtk_hal_rild_hwservice:s0
@@ -35,35 +17,11 @@ vendor.mediatek.hardware.mtkcodecservice::IMtkCodecService	u:object_r:hal_mtkcod
 vendor.mediatek.hardware.netdagent::INetdagent	u:object_r:mtk_hal_netdagent_hwservice:s0
 vendor.mediatek.hardware.rcs::IRcs	u:object_r:volte_rcs_ua_hwservice:s0
 vendor.mediatek.hardware.mwis::IMwis	u:object_r:mtk_hal_mwis_hwservice:s0
-
-# Factory-mode services. Stock 8.1 used one hwservice type for both.
 interfaces.factoryAta::IFactoryAta	u:object_r:factory_interface_hwservice:s0
 interfaces.factoryInterface::IFactoryInterface	u:object_r:factory_interface_hwservice:s0
-
-# --- OPPO vendor HALs ---
-
 vendor.oppo.hardware.biometrics.face::IBiometricsFace	u:object_r:hal_face_hwservice:s0
 vendor.oppo.hardware.cryptoeng::ICryptoeng	u:object_r:hal_cryptoeng_hwservice:s0
 vendor.oppo.hardware.biometrics.fingerprintpay::IFingerprintPay	u:object_r:hal_fingerprintpay_hwservice:s0
-
-# --- Fingerprint vendor HALs ---
-
 vendor.silead.hardware.fingerprintext::ISileadFingerprint	u:object_r:hal_fingerprint_hwservice:s0
 vendor.egistec.hardware.fingerprint::IBiometricsFingerprintRbs	u:object_r:hal_fingerprint_hwservice:s0
-
-# --- Soter (Trustonic TEE) ---
-
-# vendor.trustonic.soter@1.0-service (mtk_hal_soter) implements the
-# vendor.qti.hardware.soter@1.0 HAL and registers its ISoter interface with
-# hwservicemanager. The only client is SoterService
-# (com.tencent.soter.soterserver), which runs in the system_app domain.
-#
-# IMPORTANT: keep this file's final newline. system/sepolicy/Android.mk defines
-# an `add_nl` helper for exactly this case ("allow OEM policy configuration
-# files without a final newline (0x0A) to be built correctly by the m4(1) macro
-# processor"), but hwservice_contexts.mk does not apply it -- it hands the raw
-# file list straight to m4. Without the trailing newline, m4 fuses this file's
-# last line into the first line of the next contexts file (LineageOS's
-# vendor.lineage.biometrics.fingerprint.inscreen), and checkfc dies with:
-#   invalid MLS context s0vendor.lineage.biometrics.fingerprint.inscreen::IFingerprintInscreen
 vendor.qti.hardware.soter::ISoter	u:object_r:hal_soter_hwservice:s0

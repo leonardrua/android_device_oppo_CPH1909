@@ -1,32 +1,6 @@
-# Vendor property contexts for the MediaTek / OPPO blobs.
-#
-# Android 10 has no equivalent of the stock 8.1
-# /vendor/etc/selinux/nonplat_property_contexts (the stock image shipped 70
-# rules). Without a vendor file every persist.* key the blobs use falls back to
-# whatever the platform claims, and AOSP's
-#     neverallow { domain -init -vendor_init } default_prop:property_service set;
-# (system/sepolicy/public/domain.te) means no HAL can *write* a default_prop key.
-# Under the current permissive bring-up policy that only logs; on an enforcing
-# build those setprop calls fail and the related feature silently stays off.
-#
-# This file labels only the families AOSP does not already cover. Deliberately
-# NOT re-declared, because AOSP's own rules are already correct and a second,
-# different type for the same prefix would be a conflict:
-#
-#   persist.radio.*        -> radio_prop          (rild may set it)
-#   persist.bluetooth.*    -> bluetooth_prop
-#   persist.debug.*        -> persist_debug_prop
-#   persist.logd.*         -> logd_prop / log_tag_prop
-#   persist.audio.*        -> audio_prop
-#   persist.sys.locale     -> system_prop  (framework-owned)
-#   persist.sys.timezone   -> system_prop  (framework-owned)
-#   persist.sys.usb.config -> system_prop  (framework-owned)
-#   persist.service.bdroid.* -> bluetooth_prop
-#
-# Framework-owned persist.sys.* keys are left alone as well; only the vendor
-# sub-families below are claimed. All of these resolve to mtk_persist_prop,
-# which device.te grants for reading to every domain (get_prop) and for writing
-# to the vendor daemons that own them (set_prop).
+# Vendor property contexts for CPH1909. Zero key overlap with common
+# non_plat/property_contexts (legacy persist.mtk.* vs persist.vendor.mtk.*).
+# All resolve to mtk_persist_prop, whose get/set grants live in device.te.
 
 # --- MTK exception / dump (aee) ---
 persist.aee.				u:object_r:mtk_persist_prop:s0
@@ -50,18 +24,14 @@ persist.service.atci			u:object_r:mtk_persist_prop:s0
 persist.service.rcs			u:object_r:mtk_persist_prop:s0
 persist.service.tag.rcs			u:object_r:mtk_persist_prop:s0
 
-# --- MTK platform keys (aee, camera, glpm, volte, wfc, venc, wcn) ---
+# --- MTK platform keys and IMS/VoLTE/VT switches ---
 persist.mtk.				u:object_r:mtk_persist_prop:s0
-
-# --- MTK IMS / VoLTE / VT feature switches (persist.mtk_*) ---
 persist.mtk_				u:object_r:mtk_persist_prop:s0
 persist.mtkcam.				u:object_r:mtk_persist_prop:s0
 persist.ril.				u:object_r:mtk_persist_prop:s0
 
-# --- MTK connectivity (WCN, wifi combo, bluetooth vendor keys) ---
+# --- connectivity / media / telephony ---
 persist.bt.				u:object_r:mtk_persist_prop:s0
-
-# --- MTK media / codec / video telephony ---
 persist.venc.				u:object_r:mtk_persist_prop:s0
 persist.media.				u:object_r:mtk_persist_prop:s0
 persist.vt.				u:object_r:mtk_persist_prop:s0
@@ -84,24 +54,15 @@ persist.sys.ata_manual			u:object_r:mtk_persist_prop:s0
 persist.sys.embms.			u:object_r:mtk_persist_prop:s0
 persist.sys.extmddlprogress		u:object_r:mtk_persist_prop:s0
 
-# --- fingerprint / face vendor keys ---
+# --- fingerprint / face / audio / log / misc vendor families ---
 persist.sys.fp.				u:object_r:mtk_persist_prop:s0
 persist.oppo.				u:object_r:mtk_persist_prop:s0
-
-# --- audio HAL vendor params (persist.af.*; persist.audio.* is AOSP's) ---
 persist.af.				u:object_r:mtk_persist_prop:s0
 persist.rm.				u:object_r:mtk_persist_prop:s0
-# Dirac: these are build-time defaults in vendor.prop read by the audio stack.
-# No Dirac daemon is shipped in this tree, so no set_prop grant is needed;
-# labelling the family keeps reads on mtk_persist_prop instead of default_prop.
 persist.dirac.				u:object_r:mtk_persist_prop:s0
-
-# --- log / trace helpers not covered by AOSP ---
 persist.logmuch.			u:object_r:mtk_persist_prop:s0
 persist.mtklog.				u:object_r:mtk_persist_prop:s0
 persist.trace.				u:object_r:mtk_persist_prop:s0
-
-# --- misc vendor (gyroscope, wifi-iface tuning, watermark, ss/xcap) ---
 persist.hal3a.				u:object_r:mtk_persist_prop:s0
 persist.ss.				u:object_r:mtk_persist_prop:s0
 persist.wa.				u:object_r:mtk_persist_prop:s0
@@ -110,14 +71,7 @@ persist.qcom.				u:object_r:mtk_persist_prop:s0
 persist.meta.				u:object_r:mtk_persist_prop:s0
 persist.version.			u:object_r:mtk_persist_prop:s0
 
-
 # --- remaining families from the stock 8.1 property contexts ---
-# These are the stock nonplat_property_contexts entries not covered by this
-# file or by AOSP 10. The camera/audio/codec/telephony daemons shipped here
-# reference them (verified with strings(1) on the vendor libraries), and the
-# rc files set several of them. They all map to mtk_persist_prop, matching the
-# single-vendor-property approach used above; the matching set_prop grants are
-# in device.te.
 a2dp.				u:object_r:mtk_persist_prop:s0
 acodec.video.buflogging		u:object_r:mtk_persist_prop:s0
 af.				u:object_r:mtk_persist_prop:s0
@@ -163,8 +117,8 @@ streamout.			u:object_r:mtk_persist_prop:s0
 thermal.manager.data		u:object_r:mtk_persist_prop:s0
 volte.emergency.pdn.protocol	u:object_r:mtk_persist_prop:s0
 vendor.silead.fp.ext.		u:object_r:mtk_persist_prop:s0
-# Exact stock keys that have no trailing dot, so the prefix entries above do
-# not cover the bare key.
+
+# Bare keys with no trailing dot, not covered by the prefix entries above.
 logmuch.detect.delay		u:object_r:mtk_persist_prop:s0
 logmuch.detect.value		u:object_r:mtk_persist_prop:s0
 persist.aee			u:object_r:mtk_persist_prop:s0

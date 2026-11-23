@@ -1,28 +1,7 @@
-# Type declarations and permissive domains for OPPO CPH1909 bring-up.
-#
-# The stock ColorOS policy declares roughly 200 MediaTek/OPPO types that have
-# no Android 10 equivalent. Porting all of it before the device has ever
-# booted would be guesswork, so this file declares the types the labelling in
-# file_contexts refers to and marks the vendor domains permissive.
-#
-# Bring-up order that this supports:
-#   1. Build and boot with these domains permissive.
-#   2. Collect real denials from the device (`dmesg | grep avc`).
-#   3. Convert the denials into allow rules, then drop the permissive lines
-#      one domain at a time.
-#
-# Shipping a release with these permissive lines still present would be a
-# security regression -- they exist only so that a missing rule logs instead
-# of preventing boot.
+# CPH1909/OPPO-only type declarations and grants. Generic MediaTek domains,
+# hwservice types and HAL rules are provided by device/mediatek/sepolicy/non_plat.
 
-###
-### MediaTek HAL domains
-###
-# mtk_hal_dfps, mtk_hal_mms and mtk_hal_pq domains/exec types, their
-# init_daemon_domain()/hwbinder_use() declarations, the hal_dfps attribute and
-# its server/client/hwservice rules all come from the common MediaTek policy.
-# Keep only the device-specific permissive bring-up lines for those domains.
-
+### Device-private HAL domains ###
 type mtk_hal_keyattestation, domain;
 type mtk_hal_keyattestation_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_keyattestation)
@@ -31,16 +10,11 @@ type mtk_hal_mtkcodecservice, domain;
 type mtk_hal_mtkcodecservice_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_mtkcodecservice)
 
+### Trustonic Kinibi TEE ###
 type mtk_hal_soter, domain;
 type mtk_hal_soter_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_soter)
 
-# The Trustonic Soter HAL registers vendor.qti.hardware.soter@1.0::ISoter
-# with hwservicemanager and talks to the Kinibi TEE through
-# /dev/mobicore-user. SoterService (com.tencent.soter.soterserver) runs in the
-# system_app domain and is the only client. These rules mirror the stock
-# O-MR1 vendor policy (hal_soter_trustonic / hal_soter_hwservice), including
-# both binder directions for the HIDL callback objects.
 type hal_soter_hwservice, hwservice_manager_type;
 add_hwservice(mtk_hal_soter, hal_soter_hwservice)
 allow mtk_hal_soter mobicore_device:chr_file { ioctl read write open };
@@ -50,92 +24,36 @@ allow mtk_hal_soter system_app:binder { call transfer };
 allow system_app mtk_hal_soter:fd use;
 allow mtk_hal_soter system_app:fd use;
 
-# HwBinder service types for the MTK/OPPO vendor HALs declared in
-# sepolicy/vendor/hwservice_contexts. Each type is declared here and the
-# corresponding HAL domain is granted add/find on its own hwservice type
-# (plus hidl_base_hwservice for the root descriptor). Clients in the
-# system_app / hal_* domains get find rules where the stock policy has them.
-#
-# The stock 8.1 vendor policy (nonplat_sepolicy.cil) grants these same
-# transitions; without them, every vendor HIDL service registers as
-# default_hwservice and the per-interface type transitions are impossible.
-
-# --- MediaTek hwservice types ---
-# The following types are declared by the common MediaTek policy and are no
-# longer repeated here: mtk_hal_bluetooth_hwservice, mtk_hal_rild_hwservice,
-# mtk_hal_power_hwservice, mtk_hal_lbs_hwservice, mtk_hal_imsa_hwservice,
-# nvram_agent_binder_hwservice, mtk_hal_pq_hwservice,
-# mtk_hal_keyattestation_hwservice, mtk_hal_mms_hwservice,
-# mtk_hal_keyinstall_hwservice, mtk_hal_videotelephony_hwservice and
-# mtk_hal_dfps_hwservice.
+### Device-private hwservice types (see hwservice_contexts) ###
 type mtk_hal_wifi_hostapd_hwservice, hwservice_manager_type;
 type mtk_hal_wfo_hwservice, hwservice_manager_type;
 type volte_uce_ua_hwservice, hwservice_manager_type;
 type hal_mtkcodecservice_hwservice, hwservice_manager_type;
 type mtk_hal_netdagent_hwservice, hwservice_manager_type;
 type volte_rcs_ua_hwservice, hwservice_manager_type;
-# Stock 8.1 labels interfaces.factory{Ata,Interface} with this type. Both are
-# declared in this tree's manifest and implemented by the factory service.
 type factory_interface_hwservice, hwservice_manager_type;
-# IMwis is declared in the device manifest as on stock. No server binary ships
-# in this tree, so there is deliberately no add_hwservice grant yet.
 type mtk_hal_mwis_hwservice, hwservice_manager_type;
-
-# --- OPPO hwservice types ---
 type hal_cryptoeng_hwservice, hwservice_manager_type;
 type hal_fingerprintpay_hwservice, hwservice_manager_type;
 
-# add_hwservice() only grants hwservice_manager { add find } on the interface
-# plus add on hidl_base_hwservice. The server still needs binder access to
-# hwservicemanager to actually make that call; Q provides it via hwbinder_use().
-# Stock 8.1 granted the same binder access to every daemon listed here.
 hwbinder_use(mtk_hal_soter)
 hwbinder_use(mtk_hal_keyattestation)
 hwbinder_use(mtk_hal_mtkcodecservice)
 hwbinder_use(mtk_hal_cryptoeng)
 hwbinder_use(mtk_hal_factory)
-hwbinder_use(volte_imcb)
-hwbinder_use(volte_ua)
-hwbinder_use(vtservice_hidl)
-hwbinder_use(nvram_daemon)
-hwbinder_use(lbs_hidl_service)
 hwbinder_use(mtk_netdagent)
-hwbinder_use(mnld)
 
-# Stock 8.1 grants add/find on these hwservice types to the standard HAL
-# domains that register them. Without these, hwservicemanager denies the
-# registration on an enforcing build even though the interfaces are labelled
-# in hwservice_contexts. (D-03)
+# Grants the common policy does not supply: common's add_hwservice for
+# bluetooth is commented out; power runs as hal_power_default here, not
+# mtk_hal_power; fingerprintpay is OPPO-only.
 add_hwservice(hal_bluetooth_default, mtk_hal_bluetooth_hwservice)
-add_hwservice(rild, mtk_hal_rild_hwservice)
 add_hwservice(hal_power_default, mtk_hal_power_hwservice)
-add_hwservice(hal_wifi_hostapd_default, mtk_hal_wifi_hostapd_hwservice)
 add_hwservice(hal_fingerprint_default, hal_fingerprintpay_hwservice)
 
-# Property type for the MediaTek / OPPO persist keys labelled in
-# sepolicy/vendor/property_contexts. AOSP only allows init and vendor_init to
-# set default_prop (public/domain.te), so without a dedicated type no vendor
-# daemon can persist its own settings on an enforcing build.
-#
-# Reads are granted to every domain below so no consumer loses access to a key
-# it already reads; writes go to the daemons that own them.
+### Vendor property type and writers (must match property_contexts) ###
 type mtk_persist_prop, property_type;
 get_prop(domain, mtk_persist_prop)
 
-# Writers, by the rc service / blob that sets each family:
-#   rild, mtk_ccci, epdg_wod, stp_dump3, mtk_wmt_loader  - radio / modem /
-#       connectivity feature switches and persist.mtk_*
-#   volte_imcb, volte_imsm_93, mtk_volte_stack,
-#   volte_ua, vtservice_hidl                           - IMS / VT keys
-#   mnld                                              - persist.radio.mnl.prop
-#   aee_aedv, mcd                                          - aee / dumpstate keys
-#   mtk_hal_pq, hal_graphics_composer_default              - display/PQ keys
-#   hal_audio_default                                     - persist.af.*
-#   hal_bluetooth_default                                 - persist.bt.*
-#   hal_camera_default                                    - persist.camera.*
-#   mtk_factory_bin                                       - factory keys
-#   system_app                                            - the IMS APK
-#       (com.mediatek.ims) writes persist.mtk_* through SystemProperties.set
 set_prop(rild, mtk_persist_prop)
 set_prop(mtk_ccci, mtk_persist_prop)
 set_prop(epdg_wod, mtk_persist_prop)
@@ -156,16 +74,6 @@ set_prop(hal_bluetooth_default, mtk_persist_prop)
 set_prop(hal_camera_default, mtk_persist_prop)
 set_prop(mtk_factory_bin, mtk_persist_prop)
 set_prop(system_app, mtk_persist_prop)
-
-# Additional writers evidenced by the stock 8.1 policy
-# (vendor/etc/selinux/nonplat_sepolicy.cil in the dump), for families that are
-# labelled in property_contexts but were missing a set_prop grant:
-#   hal_fingerprint_default, mtk_hal_silead - vendor.silead.fp.ext.*
-#   mtk_netdagent                           - mtk.netdagent.*
-#   hal_keymaster_default, mtk_hal_soter    - soter.teei.* / GK/KM.server.status
-#   system_server                           - media.wfd.*
-#   platform_app                            - gps.* (mnld props)
-#   shell                                   - mtkcam.*
 set_prop(hal_fingerprint_default, mtk_persist_prop)
 set_prop(mtk_hal_silead, mtk_persist_prop)
 set_prop(mtk_netdagent, mtk_persist_prop)
@@ -175,116 +83,32 @@ set_prop(system_server, mtk_persist_prop)
 set_prop(platform_app, mtk_persist_prop)
 set_prop(shell, mtk_persist_prop)
 
-# --- HAL domains: add/find on their own hwservice type ---
-#
-# Rules for a HAL service type must go through the attribute macros, not raw
-# allow rules. hal_attribute_hwservice() in system/sepolicy/public/te_macros
-# generates, for hal_gnss:
-#
-#     allow hal_gnss_client hal_gnss_hwservice:hwservice_manager find;
-#     add_hwservice(hal_gnss_server, hal_gnss_hwservice)
-#       -> allow hal_gnss_server hal_gnss_hwservice:hwservice_manager { add find };
-#       -> neverallow { domain -hal_gnss_server } hal_gnss_hwservice:hwservice_manager add;
-#
-# and build_test_only adds
-#
-#     neverallow { domain -hal_gnss_client -hal_gnss_server } \
-#         hal_gnss_hwservice:hwservice_manager find;
-#
-# Raw `allow ... hal_gnss_hwservice ...` rules for mnld would violate both
-# neverallows because mnld is neither a hal_gnss client nor server in this port;
-# see the GNSS section for its actual datagram-channel access.
-
-# MediaTek daemons with device-private hwservice types. Those types are
-# declared in this file, not in AOSP, so there is no platform neverallow naming
-# the type itself and a plain allow would satisfy checkpolicy -- but that is
-# exactly why add_hwservice() is used instead. Its second line,
-# `allow $1 hidl_base_hwservice:hwservice_manager add`, is not optional: a
-# domain registering a service through hwservicemanager needs add on the base
-# descriptor, and public/domain.te:521 neverallows `find` on
-# hidl_base_hwservice, leaving `add` as the only permitted verb. AOSP grants it
-# in every add_hwservice() call, so all twelve of these servers had their
-# service type covered while missing the base-descriptor grant. The macro also
-# adds the neverallow { domain -$1 } that keeps other domains from registering
-# the same type.
-# hal_dfps server/client/hwservice bindings now come from the common MediaTek
-# policy (non_plat/mtk_hal_dfps.te, hal_dfps.te, surfaceflinger.te,
-# system_server.te and mtk_hal_power.te).
 add_hwservice(mtk_hal_keyattestation, mtk_hal_keyattestation_hwservice)
-add_hwservice(mtk_hal_mms, mtk_hal_mms_hwservice)
 add_hwservice(mtk_hal_mtkcodecservice, hal_mtkcodecservice_hwservice)
-add_hwservice(mtk_hal_pq, mtk_hal_pq_hwservice)
-
-# --- Client find rules ---
-#
-# system_server already gets hal_gnss_hwservice find from AOSP's
-# `hal_client_domain(system_server, hal_gnss)` in private/system_server.te,
-# and hal_camera_hwservice find from its own hal_camera_client membership.
-# Repeating either here is redundant and, for hal_camera, a neverallow
-# violation (hal_camera_client is not an attribute system_server carries), so
-# both raw rules are deliberately absent.
 allow system_server mtk_hal_rild_hwservice:hwservice_manager find;
-# rild finds the modem HAL.
-allow rild mtk_hal_rild_hwservice:hwservice_manager find;
 
-###
-### Trustonic Kinibi TEE
-###
+### Trustonic Kinibi TEE (continued) ###
 type mcd, domain;
 type mcd_exec, exec_type, vendor_file_type, file_type;
-# mcd_data_file labels /vendor/app/mcRegistry, which holds 30 read-only Kinibi
-# trustlet/driver blobs shipped on the vendor partition. It therefore needs
-# vendor_file_type ("All types in /vendor", public/attributes:44); sepolicy_tests
-# rejects the build with "The following types on /vendor/ must be associated with
-# the vendor_file_type attribute: mcd_data_file" without it.
-#
-# data_file_type was wrong here and has been dropped. attributes:34 defines it as
-# "All types used for /data files", and AOSP never puts both attributes on one
-# type. The name is a misnomer inherited from the stock policy -- nothing under
-# /vendor/app is writable.
-#
-# The registry directories the daemon actually writes are separate paths that
-# vendor/etc/init/trustonic.rc creates at runtime: /data/misc/mcRegistry and
-# /vendor/persist/mcRegistry (the latter falls under mtk_persist_file). Neither
-# is labelled here; if mcDriverDaemon is denied access to /data/misc/mcRegistry
-# after first boot, that needs its own core_data_file_type type.
 type mcd_data_file, file_type, vendor_file_type;
 init_daemon_domain(mcd)
 
 type mobicore_device, dev_type;
 
-# The MTK keymaster@3.0 service (TlcTeeKeyMaster, implemented in
-# tee_keymaster_device.cpp) opens /dev/mobicore-user to reach the Trustonic
-# Kinibi keymaster TA. Stock 8.1 policy had a separate mobicore_user_device
-# type with exactly this grant for hal_keymaster_default; this port folds both
-# /dev/mobicore and /dev/mobicore-user into mobicore_device, so the grant has
-# to be repeated here. The first OTA showed:
-#   avc: denied { read write } for comm="android.hardwar" name="mobicore-user"
-#        scontext=u:r:hal_keymaster_default:s0
-#        tcontext=u:object_r:mobicore_device:s0 tclass=chr_file permissive=0
-#   mcOpenDevice() returned 6 / Failed to open session to Keymaster TA
-# after which the HIDL service never registered.
+# /dev/mobicore-user is needed by the MTK keymaster TA client; first-OTA AVC:
+# hal_keymaster_default -> mobicore_device:chr_file read write, permissive=0.
 allow hal_keymaster_default mobicore_device:chr_file { open read write ioctl };
 
-# TBaseDeviceBinding is the Trustonic provisioning helper shipped in
-# /vendor/bin. The stock 8.1 policy lets the shell execute it and transitions
-# the child into the Kinibi daemon domain (`mobicore`, which this port calls
-# mcd), because Trustonic's provisioning flow runs it from a shell/su context.
-# The helper needs no init service: it is a short-lived command, not a daemon.
+# TBaseDeviceBinding is a shell-invoked provisioning helper that transitions
+# into the Kinibi daemon domain (mcd).
 type tbase_device_binding_exec, exec_type, vendor_file_type, file_type;
 allow shell tbase_device_binding_exec:file { read getattr execute execute_no_trans open };
 allow shell mcd:process transition;
 allow mcd tbase_device_binding_exec:file entrypoint;
 type_transition shell tbase_device_binding_exec:process mcd;
-# Stock grants the shell direct access to /dev/mobicore-user for this flow.
-# /dev/mobicore and /dev/mobicore-user share mobicore_device here.
 allow shell mobicore_device:chr_file { open read write ioctl };
 
-###
-### Telephony / modem
-###
-
-
+### Telephony / modem device-private domains ###
 type mtk_ccci, domain;
 type mtk_ccci_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_ccci)
@@ -293,11 +117,7 @@ type mtk_md_ctrl, domain;
 type mtk_md_ctrl_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_md_ctrl)
 
-# Keep the four stock MTK IMS daemons in separate domains, as in the stock
-# vendor policy. They remain permissive during bring-up so denials can be
-# collected per process before writing allow rules.
 add_hwservice(volte_imcb, volte_uce_ua_hwservice)
-
 
 type mtk_volte_stack, domain;
 type mtk_volte_stack_exec, exec_type, vendor_file_type, file_type;
@@ -305,55 +125,22 @@ init_daemon_domain(mtk_volte_stack)
 
 add_hwservice(volte_ua, volte_rcs_ua_hwservice)
 
-# vtservice_hidl (vendor/bin/hw/vtservice_hidl, init.vtservice.rc): MTK's
-# VoLTE video-telephony HAL, class hal. The /system/bin/vtservice companion
-# service and its coredomain vtservice_exec label now come from the common
-# MediaTek sepolicy included in BoardConfig.mk; only the vendor-side HIDL
-# service is declared here.
-add_hwservice(vtservice_hidl, mtk_hal_videotelephony_hwservice)
-
 type mtk_ttyc_device, dev_type;
 
-###
-### NVRAM / persistent factory data
-###
-add_hwservice(nvram_daemon, nvram_agent_binder_hwservice)
-
+### NVRAM / persistent factory data ###
 type mtk_sysenv, domain;
 type mtk_sysenv_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_sysenv)
 
-# Stock partition file types. All except oppo_reserve_file live under /vendor,
-# so they carry vendor_file_type (sepolicy_tests requires every /vendor file
-# type to be associated with that attribute). No rules beyond the mounton
-# allows below: AOSP neverallows forbid every domain -- including init -- from
-# create/write/setattr/append/unlink/rename and relabelto on vendor_file_type,
-# so the stock init.mt6765.rc chmod/chown/mkdir on them can only fail in an
-# enforcing build (the dirs exist in the vendor image as mount points created
-# by Android.mk). oppo_reserve_file is mounted at /opporeserve (root, not
-# under /vendor) and stays a plain file_type.
+# Legacy /vendor mount points (common uses /mnt/vendor/* with different types).
 type mtk_nvdata_file, file_type, vendor_file_type;
 type mtk_nvcfg_file, file_type, vendor_file_type;
 type mtk_protect_f_file, file_type, vendor_file_type;
 type mtk_protect_s_file, file_type, vendor_file_type;
 type mtk_persist_file, file_type, vendor_file_type;
 type oppo_reserve_file, file_type;
-
-# nvcfg/protect1/protect2/persist/seccfg/expdb/logo block device types are
-# declared by the common MediaTek policy; only their CPH1909 file_contexts
-# entries remain here.
 type oppo_reserve_block_device, dev_type;
 
-###
-### init access to the OPPO / MediaTek partition mount points
-###
-# fs_mgr, running in init for this legacy-Treble (API 27) device, mounts the
-# vendor subpartitions on directories labelled with the types declared above
-# (the stock factory labels are not in this policy, so the mounted roots are
-# unlabeled). AOSP's mounton allow list covers only the platform types, so
-# these need explicit allows. init is exempt from the
-# { domain -init } mounton neverallow; the vendor_file_type mkdir/setattr/
-# relabelto neverallows cannot be satisfied from here at all.
 allow init {
     mtk_nvdata_file
     mtk_nvcfg_file
@@ -363,65 +150,29 @@ allow init {
     oppo_reserve_file
 }:dir mounton;
 
-###
-### GNSS
-###
-
-# mnld is MTK's standalone GNSS daemon (/vendor/bin/mnld). It is NOT the
-# HIDL server: manifest.xml declares vendor.mediatek.hardware.gnss@1.1::IMtkGnss
-# and file_contexts labels that service hal_gnss_default_exec, so AOSP's
-# hal_gnss_default is the server. The stock O-MR1 policy likewise lists
-# hal_gnss_default/mtk_hal_gnss in hal_gnss_server/system_server in
-# hal_gnss_client, with mnld outside both; mnld talks to the GNSS HAL over
-# datagram sockets. Do not make mnld a hal_gnss server/client here: that would
-# grant it add/find on the standard hal_gnss_hwservice type it never registers.
+### GNSS datagram channel (mnld is not a hal_gnss server/client) ###
 allow mnld hal_gnss_default:unix_dgram_socket sendto;
 
-# mtk_agpsd domain and exec type come from the common MediaTek policy.
-
-add_hwservice(lbs_hidl_service, mtk_hal_lbs_hwservice)
-
-###
-### WiFi / connectivity
-###
+### WiFi / connectivity device-private domains ###
 type mtk_wmt_loader, domain;
 type mtk_wmt_loader_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_wmt_loader)
-
-
 
 type mtk_netdagent, domain;
 type mtk_netdagent_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_netdagent)
 add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 
+# /dev/wmtdetect keeps the device-specific mtk_stpwmt_device label (WMT scope
+# left untouched); stpwmt/wmtWifi themselves use common device-node types.
 type mtk_stpwmt_device, dev_type;
-type mtk_wmtWifi_device, dev_type;
-# fw_log_wifi_device / fw_log_wmt_device come from the common MediaTek
-# sepolicy; the device-specific copies were removed with their file_labels.
 
-# AEE (AAED): MediaTek's exception/dump daemon pair started at on post-fs by
-# init.aee.rc. One type covers both the 32- and 64-bit binaries.
-
-# aee_core_forwarder is the kernel core_pattern helper. init.aee.rc points
-# /proc/sys/kernel/core_pattern at /vendor/bin/aee_core_forwarder, so the
-# kernel usermodehelper execs it outside init; both the init and kernel
-# transitions are declared here, mirroring the stock O-MR1 policy. The core
-# files are written under /data/vendor/core, which the common MediaTek policy
-# labels aee_core_vendor_file (aee_core_data_file is the /data/core type).
-# The domain stays permissive during bring-up like the rest of the AEE stack.
+### AEE core_pattern usermodehelper ###
 type mtk_aee_core_forwarder, domain;
 type mtk_aee_core_forwarder_exec, exec_type, vendor_file_type, file_type;
 allow init mtk_aee_core_forwarder_exec:file { read getattr map execute open };
 allow init mtk_aee_core_forwarder:process transition;
 type_transition init mtk_aee_core_forwarder_exec:process mtk_aee_core_forwarder;
-# The kernel side of that transition is a full-treble exception: kernel is a
-# coredomain, and public/domain.te's "system components must not execute vendor
-# files" neverallow only whitelists init/shell/system_executes_vendor_violators.
-# A kernel usermodehelper exec'ing a /vendor binary is precisely the case that
-# attribute exists for (kernel.te documents domain_auto_trans() for
-# usermodehelpers), so join it. The general vendor-access neverallow already
-# exempts kernel ("loads /vendor/firmware"); only the execute ban needs this.
 typeattribute kernel system_executes_vendor_violators;
 allow kernel mtk_aee_core_forwarder_exec:file { read getattr map execute open };
 allow kernel mtk_aee_core_forwarder:process transition;
@@ -434,54 +185,19 @@ allow mtk_aee_core_forwarder kernel:fd use;
 allow mtk_aee_core_forwarder kernel:fifo_file read;
 allow mtk_aee_core_forwarder aee_aedv:unix_stream_socket connectto;
 
-# stp_dump3: STP coredump dumper for the WCN core (init_connectivity.rc),
-# started when persist.mtk.wcn.coredump.mode is 1 or 2.
-
-# connsyslogger: connectivity logging daemon, class main (consyslogger.rc).
 type mtk_connsyslogger, domain;
 type mtk_connsyslogger_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_connsyslogger)
 
-# The stock Wi-Fi HAL writes the firmware mode and driver state to
-# /dev/wmtWifi. Stock 8.1 policy grants this to the hal_wifi attribute:
-#   (allow hal_wifi wmtWifi_device (chr_file (write lock append map open)))
-# hal_wifi_default inherits hal_wifi through hal_server_domain(), so this
-# attribute rule also covers the stock 1.0 service. w_file_perms expands to
-# { open append write lock map }, the same permission set as the stock rule.
-allow hal_wifi mtk_wmtWifi_device:chr_file w_file_perms;
-
-# connsyslogger opens the WMT/Wi-Fi firmware log character devices.
-# Stock: (allow connsyslogger fw_log_{wifi,wmt}_device (chr_file (ioctl read write open)))
+# Common grants these to connsyslogger, not to our mtk_connsyslogger domain.
 allow mtk_connsyslogger fw_log_wifi_device:chr_file { ioctl read write open };
 allow mtk_connsyslogger fw_log_wmt_device:chr_file { ioctl read write open };
 
-# wfca: MTK Wi-Fi call forward agent, class core (init.wfca.rc).
-# bip: MTK BIP/SAT-transport daemon, started on mtk.md1.status=ready
-# (init.bip.rc).
-
-
-###
-### Thermal / power
-###
-
-
-###
-### Offline charging (KPOC)
-###
-# The stock kpoc_charger.rc starts /system/bin/kpoc_charger with class charger;
-# AOSP's init.rc "on charger" is the only path into offline charging on this
-# device. The 8.1 nonplat policy supplied a kpoc_charger domain, but this Q
-# build compiles only sepolicy/vendor, so without these declarations init
-# executes the binary in its own domain: it then has framebuffer/input/battery
-# denials and the charging animation never appears.
-# Domains entered from /system must carry coredomain and their exec types must
-# carry system_file_type (treble_sepolicy_tests / sepolicy_tests).
+### Offline charging (KPOC) -- kpoc_charger.rc seclabel u:r:kpoc_charger:s0 ###
 type kpoc_charger, domain, coredomain;
 type kpoc_charger_exec, exec_type, system_file_type, file_type;
 init_daemon_domain(kpoc_charger)
 
-# Battery nodes: our genfscon fix relabels the real power_supply directories to
-# sysfs_batteryinfo, so the generic sysfs grants do not cover them.
 allow kpoc_charger sysfs:dir r_dir_perms;
 allow kpoc_charger sysfs:file rw_file_perms;
 allow kpoc_charger sysfs:lnk_file read;
@@ -492,7 +208,6 @@ allow kpoc_charger sysfs_leds:dir r_dir_perms;
 allow kpoc_charger sysfs_leds:file rw_file_perms;
 allow kpoc_charger sysfs_wake_lock:file rw_file_perms;
 
-# Animation output and power-key input.
 allow kpoc_charger block_device:dir search;
 allow kpoc_charger logo_block_device:blk_file { read open };
 allow kpoc_charger graphics_device:dir search;
@@ -500,7 +215,6 @@ allow kpoc_charger graphics_device:chr_file { ioctl read write getattr open };
 allow kpoc_charger input_device:dir r_dir_perms;
 allow kpoc_charger input_device:chr_file { ioctl read write open };
 
-# Logging, RTC/alarm and init property socket used by the stock binary.
 allow kpoc_charger kmsg_device:chr_file { write open };
 allow kpoc_charger rtc_device:chr_file { read write open };
 allow kpoc_charger alarm_device:chr_file write;
@@ -513,154 +227,36 @@ allow kpoc_charger self:capability { sys_nice sys_boot };
 allow kpoc_charger self:capability2 block_suspend;
 allow kpoc_charger self:netlink_kobject_uevent_socket { create bind read setopt };
 
-###
-### Misc MediaTek device nodes
-###
-type mtk_smi_device, dev_type;
-# mtk_sched_device is declared by the common MediaTek policy.
-type mtk_accdet_device, dev_type;
-# mtk_uio_device removed: /dev/uio[0-9]* is already labelled uio_device by
-# plat_file_contexts (AOSP public/device.te:49), and declaring a second type for
-# the same path made checkfc reject file_contexts.bin with "Multiple different
-# specifications". These are ordinary uio character devices.
+### Misc device nodes ###
 type mtk_adsp_device, dev_type;
 type mtk_pq_device, dev_type;
-
-# Android 10 dropped both of these from system/sepolicy/public/device.te, so a
-# device that still has the nodes has to declare them itself:
-#
-#   gps_device    -- /dev/gps and /dev/stpgps. Present in AOSP up to 8.1; the
-#                    GNSS HAL is expected to own the node now, but the MTK stack
-#                    (mnld, mtk_agpsd) opens the character device directly.
-#   sw_sync_device -- /dev/sw_sync. Removed once explicit sync fences replaced
-#                    the legacy sw_sync ioctl interface, which the MT6765
-#                    display driver still exposes.
-#
-# Both are labelled in file_contexts; without the declaration checkfc rejects
-# the whole vendor_file_contexts.
 type gps_device, dev_type;
-# sw_sync_device is declared by the common MediaTek policy.
 
-###
-### rutilsdaemon -- the seclabel MediaTek's rc files name for shell helpers
-###
-# init.mt6765.rc:123-127 defines
-#     service swap_enable_init /system/bin/sh /system/etc/swap_enable.sh
-#     seclabel u:r:rutilsdaemon:s0
-# and `on fs` starts it unconditionally (init.mt6765.rc:141-142). With the domain
-# undeclared, setexeccon fails and the forked child dies before exec
-# (system/core/init/service.cpp:325-327) -- init itself survives, but zram is
-# never configured and the device runs with no swap.
-#
-# No init_daemon_domain() here and no *_exec type: the service execs
-# /system/bin/sh, which plat_file_contexts already labels shell_exec, and a
-# second domain_auto_transition on shell_exec would collide with the shell
-# domain AOSP already defines for it. The transition comes from the seclabel in
-# the rc file instead, which is exactly what seclabel is for.
-#
-# Permissive like the rest of the bring-up domains -- the script writes to
-# /sys/block/zram0/* and /proc/sys/vm/swappiness and calls mkswap/swapon, and the
-# real rule set for that should come from observed denials, not from guessing.
+### rutilsdaemon -- seclabel in init.mt6765.rc (swap_enable.sh) ###
 type rutilsdaemon, domain;
 permissive rutilsdaemon;
 
-###
-### Permissive during bring-up -- REMOVE before any release build
-###
-
-# -- Standard AOSP HAL domains used by MTK vendor blobs --
-#
-# The stock 8.1 daemons (camerahalserver, mtkfusionrild, audio/bluetooth/
-# sensors/light/composer services) are assigned these standard domains by AOSP
-# init; they lack rules for MTK device nodes (/dev/kd_camera_hw, /dev/ccci*,
-# /dev/mtk_sched, /dev/mtk_disp_mgr, etc.). Without permissive during bring-up,
-# denials on these nodes crash the daemons immediately, causing a bootloop.
-permissive hal_audio_default;
-permissive hal_bluetooth_default;
-permissive hal_camera_default;
-# hal_face_default now hosts the source-built android.hardware.biometrics.face@1.0
-# service (biometrics/face/), alongside the stock OPPO face service that shares
-# the type. Keep it permissive during bring-up like the other standard HAL
-# domains so a missing rule logs instead of killing the service.
+### Bring-up permissive domains retained for device-private domains only ###
 permissive hal_face_default;
 permissive hal_fingerprint_default;
-permissive hal_graphics_composer_default;
-# The stock MTK vendor.mediatek.hardware.gnss@1.1-service runs in AOSP's
-# hal_gnss_default domain and opens /dev/binder and /dev/vndbinder. On this
-# enforcing domain those reads are denied (kmsg: "avc: denied { read write }
-# for comm=vendor.mediatek name=binder/vndbinder ... permissive=0"), libbinder's
-# ProcessState::ProcessState() asserts and the service abort-loops (tombstone
-# _01 etc.), so bring it into the permissive set until the explicit rules land.
-permissive hal_gnss_default;
-permissive hal_light_default;
-permissive hal_sensors_default;
-permissive rild;
-
-# -- Custom MTK / OPPO vendor domains --
-permissive mtk_hal_dfps;
 permissive mtk_hal_keyattestation;
-permissive mtk_hal_mms;
 permissive mtk_hal_mtkcodecservice;
-permissive mtk_hal_pq;
 permissive mtk_hal_soter;
 permissive mcd;
-permissive gsm0710muxd;
-permissive muxreport;
 permissive mtk_ccci;
 permissive mtk_md_ctrl;
-permissive volte_imcb;
-permissive volte_imsm_93;
 permissive mtk_volte_stack;
-permissive volte_ua;
-permissive nvram_daemon;
 permissive mtk_sysenv;
-permissive mnld;
-permissive mtk_agpsd;
-permissive lbs_hidl_service;
 permissive mtk_wmt_loader;
-permissive epdg_wod;
-permissive ipsec_mon;
 permissive mtk_netdagent;
-permissive thermal;
-permissive fuelgauged;
-permissive vtservice_hidl;
-permissive aee_aedv;
 permissive mtk_aee_core_forwarder;
-permissive stp_dump3;
 permissive mtk_connsyslogger;
-permissive wfca;
-permissive bip;
 
-###
-### OPPO / Silead biometrics and factory services
-###
-# None of these interfaces exist upstream, so each service gets its own domain,
-# marked permissive for the same reason as the rest of this file: get the device
-# booting first, then convert the denials it logs into rules and drop the
-# permissive lines one domain at a time.
-#
-# The face and fingerprint services keep using hal_face_default_exec /
-# hal_fingerprint_default_exec from AOSP (they implement those standard
-# interfaces), so no new type is declared for them here.
-
-# oppoalgo_daemon: OPPO's camera-algo helper (init.mt6765.rc, started on
-# sys.boot_completed=1).
-#
-# NOTE on the oae service in the same rc file: init.mt6765.rc retains
-#     service oae /system/bin/oae_server -s
-#     seclabel u:r:oae_server:s0
-# for stock-image parity. oae_server is a ColorOS-only system binary absent from
-# both the stock dump and proprietary-files.txt, so init's stat() preflight
-# disables the service before fork; it is not an added capability. No
-# oae_server domain is declared in this policy.
+### OPPO / Silead biometrics and factory services ###
 type oppoalgo_daemon, domain;
 type oppoalgo_daemon_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(oppoalgo_daemon)
 
-# The daemon registers android.OPPO.IOppoAlgoDaemon with the vendor binder
-# service manager (the binary links libbinder only; the stock policy labels
-# this interface in vndservice_contexts). cameraserver and the MediaTek camera
-# HAL are its clients in the stock policy, so the same binder rules are kept.
 type oppoalgo_service, vndservice_manager_type;
 add_service(oppoalgo_daemon, oppoalgo_service)
 vndbinder_use(oppoalgo_daemon)
@@ -670,37 +266,15 @@ allow hal_camera_default oppoalgo_daemon:binder { call transfer };
 allow oppoalgo_daemon hal_camera_default:binder { call transfer };
 allow oppoalgo_daemon hal_graphics_allocator_default:binder call;
 allow oppoalgo_daemon hal_configstore_default:binder call;
+
 type silead_fpd_device, dev_type;
 type egis_device, dev_type;
 
-# Biometrics data files. These names and attributes mirror the stock 8.1
-# vendor policy (vendor/etc/selinux/nonplat_sepolicy.cil in the dump), not
-# the AOSP ones: the stock ROM labels /data/*/silead and the face-unlock
-# dirs with its own types, and the stock allows are written against them.
-# face_data_file and face_picture_file are only used on /data/system/...
-# (never /data/vendor), so they must additionally carry the
-# core_data_file_type attribute; AOSP's sepolicy_tests rejects types on
-# /data/ without it. silead_fpd_data_file labels both /data/vendor and
-# /data/system paths, so it is deliberately not added.
+# Stock 8.1 data types; face_* need core_data_file_type for the /data rule.
 type silead_fpd_data_file, file_type, data_file_type;
 type face_data_file, file_type, data_file_type, core_data_file_type;
 type face_picture_file, file_type, data_file_type, core_data_file_type;
 
-### Biometrics device-node and data access.
-### Mirrors the stock 8.1 allows for hal_fingerprint_default / hal_face
-### (see vendor/etc/selinux/nonplat_sepolicy.cil in the stock dump). The
-### permissive hal_fingerprint_default line above stays during bring-up;
-### these rules are what lets the domain work once it is converted.
-#
-# face_data_file/face_picture_file must carry core_data_file_type for the
-# sepolicy_tests /data/ rule. The AOSP public neverallows then forbid
-# vendor domains (hal_face_default, via the hal_face attribute) from any
-# but append/getattr/ioctl/read/write/map on core_data_file_type files,
-# and from touching core_data_file_type dirs at all. The stock 8.1 face
-# HAL is a vendor service that legitimately uses /data/system/.../facedata,
-# so hal_face_default joins data_between_core_and_vendor_violators — AOSP's
-# designated attribute for exactly this vendor-symbolic data dependency
-# (cf. hal_drm_widevine in LineageOS device trees).
 typeattribute hal_face_default data_between_core_and_vendor_violators;
 allow hal_fingerprint_default silead_fpd_device:chr_file rw_file_perms;
 allow hal_fingerprint_default egis_device:chr_file rw_file_perms;
@@ -714,24 +288,17 @@ type mtk_hal_silead_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_silead)
 permissive mtk_hal_silead;
 
-# cryptoeng backs the OPPO key/attestation extras. It is dormant on a normal
-# boot but its rc file is imported, so its domain has to exist.
 type mtk_hal_cryptoeng, domain;
 type mtk_hal_cryptoeng_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_cryptoeng)
 add_hwservice(mtk_hal_cryptoeng, hal_cryptoeng_hwservice)
 permissive mtk_hal_cryptoeng;
 
-# oppoalgo_daemon is declared here rather than with the mtk_* domains above
-# because init.mt6765.rc starts it directly from an OPPO_EDIT block.
 permissive oppoalgo_daemon;
 
-# Factory / engineering-mode services.
 type mtk_hal_factory, domain;
 type mtk_hal_factory_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(mtk_hal_factory)
-# The stock 8.1 policy grants factory_services add/find on this hwservice;
-# mtk_hal_factory is the bring-up domain for those binaries.
 add_hwservice(mtk_hal_factory, factory_interface_hwservice)
 permissive mtk_hal_factory;
 

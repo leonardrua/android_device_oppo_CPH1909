@@ -1,21 +1,7 @@
-# Android 10's platform policy dropped the stock 8.1 grant:
-#   (allow init socket_device_27_0 (sock_file (create setattr unlink)))
-# and now only gives init "relabelto" on socket_device's directory. The
-# generic /dev/socket(/.*)? label in plat_file_contexts is still
-# socket_device (a dev_type, not a file_type), so init can no longer create
-# the sockets declared by vendor rc files:
-#
-#   vendor/etc/init/mtk_agpsd.rc:
-#     socket agpsd  stream 660 gps system
-#     socket agpsd2 stream 660 gps inet
-#     socket agpsd3 stream 660 gps inet
-#
-# First OTA:
-#   avc: denied { create } comm="init" name="agpsd" (also agpsd2/agpsd3)
-#        scontext=u:r:init:s0 tcontext=u:object_r:socket_device:s0
-#        tclass=sock_file permissive=0
-#
-# Restore the stock grant. This is narrower than making init permissive and
-# mirror-exact to the rule the 8.1 vendor policy shipped. No AOSP neverallow
-# covers init/socket_device:sock_file (only appdomain writes are forbidden).
+# Kept deliberately: this is the only grant for init to create the sockets
+# declared in vendor/etc/init/mtk_agpsd.rc (agpsd/agpsd2/agpsd3), and the stock
+# kpoc_charger.rc "on charger" path needs socket bring-up intact. Android 10
+# platform policy dropped this grant; the common MTK policy does not restore it.
+# Restore the stock 8.1 rule; first-OTA denials were init -> socket_device:sock_file
+# { create } for agpsd/agpsd2/agpsd3.
 allow init socket_device:sock_file { create setattr unlink };

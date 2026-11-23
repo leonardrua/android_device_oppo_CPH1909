@@ -1,11 +1,2 @@
-# Vendor binder service contexts for vndservicemanager.
-#
-# AOSP's vendor/vndservice_contexts already provides the `*` default entry;
-# only the device-specific vendor namespace services are labelled here.
-#
-# oppoalgo_daemon (init.mt6765.rc, started on sys.boot_completed=1) registers
-# android.OPPO.IOppoAlgoDaemon. The binary links libbinder, not
-# libhidltransport/libhwbinder, so this is a vndservice_contexts entry, not a
-# hwservice_contexts one. The stock 8.1 policy labels the same name with
-# oppoalgo_service; device.te declares the type and its service_manager rules.
+# OPPO-only vndbinder service; AOSP provides the '*' default entry.
 android.OPPO.IOppoAlgoDaemon	u:object_r:oppoalgo_service:s0

@@ -1,30 +1,12 @@
-# /proc/touchpanel/double_tap_enable -- the DT2W enable node exposed by the
-# OPPO touchpanel drivers. Written by power.mt6765 (hal_power_default); see
-# file.te for the type and hal_power_default.te for the rule.
+# CPH1909-only genfs labels. Common MTK policy owns /devices/platform/battery
+# and its own vibrator paths; none of the paths below exist in the common tree.
+
+# DT2W node written by power.mt6765 via TARGET_TAP_TO_WAKE_NODE.
 genfscon proc /touchpanel/double_tap_enable u:object_r:proc_dt2w:s0
 
-# The MTK vibrator driver (drivers/misc/mediatek/vibrator/vibrator_drv.c)
-# registers an LEDs-class device named "vibrator" at /sys/class/leds/vibrator,
-# with activate/state/duration attributes. AOSP's genfs_contexts only labels
-# the timed_output node (/sys/devices/virtual/timed_output/vibrator/enable) as
-# sysfs_vibrator, so on this MTK device the node inherits generic sysfs_leds
-# and public/hal_vibrator.te's sysfs_vibrator rules never apply. The AOSP
-# libhardware vibrator module falls back to the LEDs path and fails with
-# "vibrator_open failed: -19" / "Could not get passthrough implementation for
-# android.hardware.vibrator@1.0::IVibrator/default" (see hal_vibrator_default.te
-# for the parent-directory traversal rule).
+# MTK vibrator LEDs-class fallback path (common labels only the odm: path).
 genfscon sysfs /class/leds/vibrator u:object_r:sysfs_vibrator:s0
 
-# health@2.0-service (hal_health_default) enumerates /sys/class/power_supply
-# and reads each supply's "type" file. The class entries are symlinks into the
-# real device paths, so AOSP's public/hal_health.te rule
-#   r_dir_file(hal_health_server, sysfs_batteryinfo)
-# only applies once those real nodes carry sysfs_batteryinfo. On this MT6765
-# device the platform battery node is already covered by the common MediaTek
-# genfs_contexts (genfscon sysfs /devices/platform/battery). Only the two
-# fuel-gauge i2c paths are CPH1909-specific and remain here. Without them the
-# nodes stay generic sysfs, healthd logs
-# "avc: denied { read } name=\"type\" ... tcontext=...sysfs:s0 permissive=0"
-# and reports "healthd: battery none chg=", leaving battery state unknown.
+# CPH1909 i2c fuel gauges; without these healthd reports "battery none chg=".
 genfscon sysfs /devices/platform/11017000.i2c/i2c-5/5-006a/power_supply u:object_r:sysfs_batteryinfo:s0
 genfscon sysfs /devices/platform/11017000.i2c/i2c-5/5-006b/power_supply u:object_r:sysfs_batteryinfo:s0
