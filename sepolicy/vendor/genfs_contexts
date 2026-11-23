@@ -2,3 +2,15 @@
 # OPPO touchpanel drivers. Written by power.mt6765 (hal_power_default); see
 # file.te for the type and hal_power_default.te for the rule.
 genfscon proc /touchpanel/double_tap_enable u:object_r:proc_dt2w:s0
+
+# The MTK vibrator driver (drivers/misc/mediatek/vibrator/vibrator_drv.c)
+# registers an LEDs-class device named "vibrator" at /sys/class/leds/vibrator,
+# with activate/state/duration attributes. AOSP's genfs_contexts only labels
+# the timed_output node (/sys/devices/virtual/timed_output/vibrator/enable) as
+# sysfs_vibrator, so on this MTK device the node inherits generic sysfs_leds
+# and public/hal_vibrator.te's sysfs_vibrator rules never apply. The AOSP
+# libhardware vibrator module falls back to the LEDs path and fails with
+# "vibrator_open failed: -19" / "Could not get passthrough implementation for
+# android.hardware.vibrator@1.0::IVibrator/default" (see hal_vibrator_default.te
+# for the parent-directory traversal rule).
+genfscon sysfs /class/leds/vibrator u:object_r:sysfs_vibrator:s0
