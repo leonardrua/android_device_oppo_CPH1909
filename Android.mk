@@ -276,6 +276,27 @@ ALL_DEFAULT_INSTALLED_MODULES += $(VENDOR_CORE_LIB_COPIES)
 # TARGET_BUILD_APPS (sdk) builds, so nothing flagged it on a normal ROM build.
 # Hence all-makefiles-under: any future subdirectory module is picked up
 # automatically instead of being dropped the same way.
+# --- Runtime APEX library symlinks -------------------------------------------
+# Android 10's com.android.runtime APEX contains /apex/com.android.runtime/
+# lib[64]/libart.so, but the linker config's [system] default namespace only
+# searches /system/${LIB} (and product), not the APEX. JniInvocation's
+# dlopen("libart.so") therefore failed on the published image, leaving the
+# JNI_CreateJavaVM function pointer NULL: zygote64 crashed with SIGSEGV at
+# pc=0 from AndroidRuntime::startVm() (tombstone_02, pmsg "Failed to dlopen
+# libart.so"), and the framework never came up. Provide the standard symlinks
+# so the name resolves through the normal /system/${LIB} search path.
+ART32_SYMLINK := $(TARGET_OUT)/lib/libart.so
+$(ART32_SYMLINK):
+	@mkdir -p $(dir $@)
+	$(hide) ln -sf /apex/com.android.runtime/lib/libart.so $@
+
+ART64_SYMLINK := $(TARGET_OUT)/lib64/libart.so
+$(ART64_SYMLINK):
+	@mkdir -p $(dir $@)
+	$(hide) ln -sf /apex/com.android.runtime/lib64/libart.so $@
+
+ALL_DEFAULT_INSTALLED_MODULES += $(ART32_SYMLINK) $(ART64_SYMLINK)
+
 include $(call all-makefiles-under,$(LOCAL_PATH))
 
 endif
