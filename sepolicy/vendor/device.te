@@ -186,7 +186,8 @@ init_daemon_domain(kpoc_charger)
 
 allow kpoc_charger sysfs:dir r_dir_perms;
 allow kpoc_charger sysfs:file rw_file_perms;
-allow kpoc_charger sysfs:lnk_file read;
+# sysfs:lnk_file read is already granted to all domains by AOSP
+# public/domain.te:201.
 allow kpoc_charger sysfs_batteryinfo:dir r_dir_perms;
 allow kpoc_charger sysfs_batteryinfo:file r_file_perms;
 allow kpoc_charger sysfs_batteryinfo:lnk_file read;
