@@ -1,0 +1,12 @@
+# bootanimation creates its own EGL display/context through the same vendor
+# PowerVR stack as SurfaceFlinger, so it opens the DRM nodes too and reads
+# /proc/ged. AOSP's bootanim domain only grants gpu_device, not
+# graphics_device or the GED proc node.
+#
+#   avc: denied { read write } for name="renderD128"/"card0"
+#        scontext=u:r:bootanim:s0 tcontext=u:object_r:device:s0
+#        tclass=chr_file permissive=0
+#
+allow bootanim graphics_device:dir search;
+allow bootanim graphics_device:chr_file rw_file_perms;
+allow bootanim proc_ged:file r_file_perms;

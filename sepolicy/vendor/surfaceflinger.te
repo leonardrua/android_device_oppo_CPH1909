@@ -1,0 +1,11 @@
+# /proc/ged is read by libged.so during PowerVR EGL initialisation. AOSP only
+# grants surfaceflinger proc_meminfo, so with /proc/ged labelled proc_ged the
+# read would otherwise be denied:
+#
+#   avc: denied { read } for name="ged" dev="proc"
+#        scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:proc:s0
+#        tclass=file permissive=0
+#   GED: failed to open /proc/ged
+#   libEGL: eglInitialize(0x1) failed (EGL_BAD_ALLOC)
+#
+allow surfaceflinger proc_ged:file r_file_perms;
