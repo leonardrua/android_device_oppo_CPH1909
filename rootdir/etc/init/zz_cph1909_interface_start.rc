@@ -1,0 +1,51 @@
+# Give init the FQNAME -> service mappings that hwservicemanager needs when
+# it starts a HAL on demand with ctl.interface_start. The stock/AOSP HAL rc
+# files only declare the service, not the interfaces it provides, so the
+# first OTA logged for each of these:
+#   init: Received control message 'interface_start' for '<fqname>' ...
+#   init: Could not find '<fqname>' for ctl.interface_start
+# Android 10 init's Service::ParseInterface() records the "interface" option
+# as "<interface>/<instance>"; HandleControlMessage() with
+# ControlTarget::INTERFACE then starts every service holding that name.
+#
+# This file is parsed after the other /vendor/etc/init/*.rc files (init sorts
+# the directory), so each "override" replaces the original service definition
+# with an identical one plus the interface directive. The original files'
+# "on" actions (e.g. the audio HAL's /data/vendor/audiohal mkdir) remain
+# registered and are untouched by an override.
+
+service audio-hal-2-0 /vendor/bin/hw/android.hardware.audio@2.0-service-mediatek
+    override
+    interface android.hardware.audio@2.0::IDevicesFactory default
+    class hal
+    user audioserver
+    # media gid needed for /dev/fm (radio) and for /data/misc/media (tee)
+    group audio camera drmrpc inet media mediadrm net_bt net_bt_admin net_bw_acct system sdcard_rw
+    ioprio rt 4
+    writepid /dev/cpuset/foreground/tasks /dev/stune/foreground/tasks
+    # audioflinger restarts itself when it loses connection with the hal
+    oneshot
+
+service configstore-hal-1-0 /vendor/bin/hw/android.hardware.configstore@1.0-service
+    override
+    interface android.hardware.configstore@1.0::ISurfaceFlingerConfigs default
+    class hal animation
+    user system
+    group system
+
+service vendor.keymaster-3-0 /vendor/bin/hw/android.hardware.keymaster@3.0-service
+    override
+    interface android.hardware.keymaster@3.0::IKeymasterDevice default
+    class early_hal
+    user nobody
+    group drmrpc
+
+service camerahalserver /vendor/bin/hw/camerahalserver
+    override
+    interface android.hardware.camera.provider@2.4::ICameraProvider internal/0
+    class main
+    user cameraserver
+    group audio camera input drmrpc sdcard_rw system media graphics
+    ioprio rt 4
+    capabilities SYS_NICE
+    writepid /dev/cpuset/camera-daemon/tasks /dev/stune/top-app/tasks
