@@ -1,0 +1,23 @@
+# mtk_hal_silead is a vendor HAL server (vendor.silead.hardware.fingerprintext
+# @1.0::ISileadFingerprint), but its domain was declared with only
+# init_daemon_domain() and was never added to the halserverdomain attribute.
+# AOSP grants hwservicemanager its binder call / dir search / file read /
+# process getattr rules to halserverdomain, not to each HAL individually:
+#
+#   (allow hwservicemanager halserverdomain (binder (call transfer)))
+#   (allow hwservicemanager halserverdomain (dir (search)))
+#   (allow hwservicemanager halserverdomain (file (read map open)))
+#   (allow hwservicemanager halserverdomain (process (getattr)))
+#
+# First OTA showed the missing link:
+#   avc: denied { call } comm="hwservicemanage"
+#        scontext=u:r:hwservicemanager:s0
+#        tcontext=u:r:mtk_hal_silead:s0 tclass=binder permissive=0
+#   Failed to retrieve interface chain: Status(EX_TRANSACTION_FAILED):
+#        'FAILED_TRANSACTION: '
+#
+# Adding the domain to the standard attribute applies those rules without
+# making either hwservicemanager or mtk_hal_silead permissive. This also picks
+# up halserverdomain's hwservicemanager_prop and system_file reads that the
+# (already permissive) silead HAL was logging denials for.
+typeattribute mtk_hal_silead halserverdomain;
