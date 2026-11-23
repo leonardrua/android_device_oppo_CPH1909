@@ -284,6 +284,19 @@ init_daemon_domain(mcd)
 
 type mobicore_device, dev_type;
 
+# The MTK keymaster@3.0 service (TlcTeeKeyMaster, implemented in
+# tee_keymaster_device.cpp) opens /dev/mobicore-user to reach the Trustonic
+# Kinibi keymaster TA. Stock 8.1 policy had a separate mobicore_user_device
+# type with exactly this grant for hal_keymaster_default; this port folds both
+# /dev/mobicore and /dev/mobicore-user into mobicore_device, so the grant has
+# to be repeated here. The first OTA showed:
+#   avc: denied { read write } for comm="android.hardwar" name="mobicore-user"
+#        scontext=u:r:hal_keymaster_default:s0
+#        tcontext=u:object_r:mobicore_device:s0 tclass=chr_file permissive=0
+#   mcOpenDevice() returned 6 / Failed to open session to Keymaster TA
+# after which the HIDL service never registered.
+allow hal_keymaster_default mobicore_device:chr_file { open read write ioctl };
+
 # TBaseDeviceBinding is the Trustonic provisioning helper shipped in
 # /vendor/bin. The stock 8.1 policy lets the shell execute it and transitions
 # the child into the Kinibi daemon domain (`mobicore`, which this port calls
