@@ -82,23 +82,27 @@ BOARD_KERNEL_PAGESIZE := 2048
 # fstab, which is present in mt6765.dts (see fstab.mt6765 for the full path).
 # Without the property, however, second-stage init has no MediaTek services and
 # the device boots to an empty init and hangs.
-BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.hardware=mt6765
+#
+# BRING-UP ONLY -- remove androidboot.selinux before shipping. Initial bring-up
+# builds run SELinux in permissive mode so early boot can get past policy gaps.
+# init reads androidboot.selinux from the kernel command line
+# (StatusFromCmdline() in system/core/init/selinux.cpp) and switches the policy
+# to permissive before any actions run, which also makes the permissive domains
+# in sepolicy/vendor/device.te redundant. Only builds compiled with
+# ALLOW_PERMISSIVE_SELINUX -- debuggable builds, i.e. userdebug/eng (the CI
+# default is userdebug) -- honour this; user builds ignore it.
+#
+# The token is deliberately FIRST. Stock OPPO LK copies only the first tokens of
+# the boot.img header cmdline: in the captured runtime cmdline the fourth token
+# arrived as a bare "androidboot." and the fifth was dropped entirely, so a
+# trailing androidboot.selinux=permissive never reached init. Bringing it to the
+# front keeps it inside the prefix LK preserves.
+BOARD_KERNEL_CMDLINE := androidboot.selinux=permissive bootopt=64S3,32N2,64N2 androidboot.hardware=mt6765
 
 # If init fails fatally, reboot into recovery instead of hanging at the boot
 # logo. This makes a broken bring-up (a HAL that never starts, for instance)
 # recoverable and is the target the stock boot image uses.
 BOARD_KERNEL_CMDLINE += androidboot.init_fatal_reboot_target=recovery
-
-# BRING-UP ONLY -- remove before shipping. Initial bring-up builds run SELinux
-# in permissive mode so early boot can get past policy/sepolicy gaps without a
-# functional ROM. init reads androidboot.selinux from the kernel command line
-# (StatusFromCmdline() in system/core/init/selinux.cpp) and switches the policy
-# to permissive before any actions run, which also makes the permissive
-# domains in sepolicy/vendor/device.te redundant. Only builds compiled with
-# ALLOW_PERMISSIVE_SELINUX -- debuggable builds, i.e. userdebug/eng (the CI
-# default is userdebug) -- honour this; user builds ignore it. Do not ship a
-# release image with this line.
-BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
 
 BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
