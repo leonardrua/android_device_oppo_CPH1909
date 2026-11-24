@@ -2,9 +2,6 @@
 # non_plat/property_contexts (legacy persist.mtk.* vs persist.vendor.mtk.*).
 # All resolve to mtk_persist_prop, whose get/set grants live in device.te.
 
-# --- MTK exception / dump (aee) ---
-persist.aee.				u:object_r:mtk_persist_prop:s0
-persist.coredump.			u:object_r:mtk_persist_prop:s0
 persist.chiptest.			u:object_r:mtk_persist_prop:s0
 
 # --- modem / RIL (non-radio_prop keys) ---
@@ -121,7 +118,6 @@ vendor.silead.fp.ext.		u:object_r:mtk_persist_prop:s0
 # Bare keys with no trailing dot, not covered by the prefix entries above.
 logmuch.detect.delay		u:object_r:mtk_persist_prop:s0
 logmuch.detect.value		u:object_r:mtk_persist_prop:s0
-persist.aee			u:object_r:mtk_persist_prop:s0
 persist.appdetection.		u:object_r:mtk_persist_prop:s0
 persist.mtklog			u:object_r:mtk_persist_prop:s0
 persist.ril			u:object_r:mtk_persist_prop:s0

@@ -58,7 +58,6 @@ set_prop(mtk_volte_stack, mtk_persist_prop)
 set_prop(volte_ua, mtk_persist_prop)
 set_prop(vtservice_hidl, mtk_persist_prop)
 set_prop(mnld, mtk_persist_prop)
-set_prop(aee_aedv, mtk_persist_prop)
 set_prop(mcd, mtk_persist_prop)
 set_prop(mtk_hal_pq, mtk_persist_prop)
 set_prop(hal_graphics_composer_default, mtk_persist_prop)
@@ -147,26 +146,6 @@ init_daemon_domain(mtk_netdagent)
 add_hwservice(mtk_netdagent, mtk_hal_netdagent_hwservice)
 
 
-### AEE core_pattern usermodehelper ###
-# The platform owns aee_core_forwarder_exec for /system/bin; this vendor image
-# also ships /vendor/bin/aee_core_forwarder as the kernel core_pattern helper,
-# so give that path a vendor-local exec type to keep vendor_policy.cil
-# independent of platform-private types.
-type aee_core_forwarder_vendor_exec, exec_type, vendor_file_type, file_type;
-typeattribute kernel system_executes_vendor_violators;
-allow kernel aee_core_forwarder_vendor_exec:file { read getattr map execute open };
-# kernel -> aee_core_forwarder process transition is already granted by common
-# plat_private/kernel.te domain_auto_trans().
-type_transition kernel aee_core_forwarder_vendor_exec:process aee_core_forwarder;
-allow aee_core_forwarder aee_core_forwarder_vendor_exec:file { read getattr map execute entrypoint open };
-allow aee_core_forwarder vendor_data_file:dir { create add_name write search };
-allow aee_core_forwarder aee_core_vendor_file:dir create_dir_perms;
-allow aee_core_forwarder aee_core_vendor_file:file create_file_perms;
-# kernel:fd use and kernel:fifo_file read are already granted by common
-# plat_private/aee_core_forwarder.te.
-allow aee_core_forwarder aee_aedv:unix_stream_socket connectto;
-
-
 
 ### connsyslogger vendor binary ###
 # connsyslogger domain is platform-public, but connsyslogger_exec is
@@ -233,7 +212,6 @@ permissive mtk_md_ctrl;
 permissive mtk_volte_stack;
 permissive mtk_sysenv;
 permissive mtk_netdagent;
-permissive aee_core_forwarder;
 
 ### OPPO / Silead biometrics and factory services ###
 type oppoalgo_daemon, domain;
