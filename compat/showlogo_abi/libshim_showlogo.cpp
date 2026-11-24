@@ -64,6 +64,14 @@ void shim_scSetLayer(SurfaceControl*, int32_t)
     __asm__("_ZN7android14SurfaceControl8setLayerEi");
 void shim_scSetLayer(SurfaceControl*, int32_t) {}
 
+// libsysenv_system.so (a KPOC charger blob) was built with GCC's 32-bit
+// C++ ABI and imports operator new(unsigned int). Android 10's libc++ only
+// exports operator new(unsigned long). Forward between them.
+extern "C" void* _Znwm(unsigned long size);
+extern "C" void* _Znwj(unsigned int size) {
+    return _Znwm(size);
+}
+
 // Fence's destructor became inline; the blob still imports the out-of-line one.
 void shim_fenceDtor(Fence*)
     __asm__("_ZN7android5FenceD1Ev");

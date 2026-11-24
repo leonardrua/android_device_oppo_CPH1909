@@ -169,6 +169,9 @@ function blob_fixup() {
         system/lib/libshowlogo.so)
             patchelf --add-needed "libshim_showlogo.so" "${2}"
             ;;
+        system/lib/libsysenv_system.so)
+            patchelf --add-needed "libshim_showlogo.so" "${2}"
+            ;;
         vendor/lib*/libavservices_minijail_vendor.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
