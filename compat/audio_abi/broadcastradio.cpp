@@ -20,6 +20,11 @@ enum Band : int32_t {
     DAB = 2,
 };
 
+enum Class : int32_t {
+    CLASS_AM_FM = 0,
+    CLASS_DAB = 1,
+};
+
 std::string toString(Band val) {
     switch (val) {
         case FM:
@@ -27,6 +32,17 @@ std::string toString(Band val) {
         case AM:
             return "AM";
         case DAB:
+            return "DAB";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+std::string toString(Class val) {
+    switch (val) {
+        case CLASS_AM_FM:
+            return "AM_FM";
+        case CLASS_DAB:
             return "DAB";
         default:
             return "UNKNOWN";

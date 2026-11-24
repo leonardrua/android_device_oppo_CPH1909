@@ -118,14 +118,12 @@ function blob_fixup() {
         system/lib*/libsysenv_system.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
-        vendor/bin/hw/android.hardware.drm@1.0-service.widevine)
-            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
-            ;;
         # Android 10 dropped audio::V2_0::toString(Result) from the VNDK
         # audio@2.0 interface lib; the 8.1 vendor HAL still imports it.
         vendor/bin/hw/android.hardware.audio@2.0-service-mediatek)
             patchelf --add-needed "libaudio_abi_v28.so" "${2}"
             ;;
+        vendor/lib*/hw/android.hardware.audio@2.0-impl-mediatek.so | \
         vendor/bin/hw/android.hardware.broadcastradio@1.1-service)
             patchelf --add-needed "libaudio_abi_v28.so" "${2}"
             ;;
@@ -136,11 +134,11 @@ function blob_fixup() {
         vendor/bin/ccci_fsd)
             patchelf --add-needed "libbase_compat.so" "${2}"
             ;;
-        # 8.1 AGPS daemon uses the OpenSSL 1.0 API (SSLv3_client_method),
-        # which BoringSSL no longer exports; the vendor ships -ss copies.
+        # 8.1 AGPS daemon uses SSLv3_client_method, dropped by BoringSSL.
+        # Keep the platform libssl and shim only that symbol; rewriting to
+        # the vendor OpenSSL 1.0 copies loses SSL_is_init_finished.
         vendor/bin/mtk_agpsd)
-            patchelf --replace-needed "libssl.so" "libssl-ss.so" "${2}"
-            patchelf --replace-needed "libcrypto.so" "libcrypto-ss.so" "${2}"
+            patchelf --add-needed "libagps_abi_v28.so" "${2}"
             ;;
         # Android 10 removed MediaCodecsXmlParser::defaultSearchDirs.
         vendor/bin/hw/android.hardware.media.omx@1.0-service)
@@ -162,8 +160,9 @@ function blob_fixup() {
         system/lib/libmtkavenhancements.so)
             patchelf --add-needed "libvtservice_abi_v28.so" "${2}"
             ;;
+        # 8.1 wifi service imports a HIDL toString helper dropped in Android 10.
         vendor/bin/hw/android.hardware.wifi@1.0-service)
-            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            patchelf --add-needed "libwifi_abi_v28.so" "${2}"
             ;;
         vendor/lib*/libavservices_minijail_vendor.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"

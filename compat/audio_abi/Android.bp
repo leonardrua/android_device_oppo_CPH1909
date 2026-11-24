@@ -11,6 +11,7 @@ cc_library_shared {
     srcs: [
         "audio_abi.cpp",
         "broadcastradio.cpp",
+        "audiohal_abi.cpp",
     ],
     shared_libs: [
         "libc++",
