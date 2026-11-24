@@ -131,19 +131,8 @@ function blob_fixup() {
         # These blobs use the v28 LogMessage ABI but their process also loads
         # Android 10 VNDK-SP libs needing the current string_view helpers.
         vendor/bin/hw/android.hardware.drm@1.0-service.widevine | \
-        vendor/bin/hw/android.hardware.wifi@1.0-service | \
-        vendor/bin/ccci_fsd)
+        vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --add-needed "libbase_compat.so" "${2}"
-            ;;
-        # 8.1 AGPS daemon uses SSLv3_client_method, dropped by BoringSSL.
-        # Keep the platform libssl and shim only that symbol; rewriting to
-        # the vendor OpenSSL 1.0 copies loses SSL_is_init_finished.
-        vendor/bin/mtk_agpsd)
-            patchelf --add-needed "libagps_abi_v28.so" "${2}"
-            ;;
-        # Android 10 removed MediaCodecsXmlParser::defaultSearchDirs.
-        vendor/bin/hw/android.hardware.media.omx@1.0-service)
-            patchelf --add-needed "libmedia_abi_v28.so" "${2}"
             ;;
         # Android 10 dropped hidl::base::V1_0::toString(DebugInfo) and
         # changed GraphicBufferMapper::lock's signature. The 8.1 camera
@@ -193,9 +182,6 @@ function blob_fixup() {
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
         vendor/lib*/hw/vendor.mediatek.hardware.nvram@1.0-impl.so)
-            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
-            ;;
-        vendor/bin/hw/android.hardware.media.omx@1.0-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
         vendor/bin/hw/android.hardware.broadcastradio@1.1-service)

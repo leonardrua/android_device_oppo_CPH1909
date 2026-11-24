@@ -234,11 +234,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     libaudio_abi_v28 \
     libbase_compat \
-    libmedia_abi_v28 \
     libcamera_abi_v28 \
     libvtservice_abi_v28 \
     libwifi_abi_v28 \
-    libagps_abi_v28 \
     libradio_abi_v28 \
     libims_abi_v28 \
     libsensor_abi_v28 \
