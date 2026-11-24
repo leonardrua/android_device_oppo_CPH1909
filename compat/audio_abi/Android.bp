@@ -11,11 +11,20 @@ cc_library_shared {
     srcs: [
         "audio_abi.cpp",
         "broadcastradio.cpp",
-        "audiohal_abi.cpp",
+        "HidlUtils.cpp",
     ],
+    local_include_dirs: ["."],
     shared_libs: [
+        "android.hardware.audio.common@2.0",
+        "libhidlbase",
+        "liblog",
+        "libutils",
         "libc++",
         "libc",
+    ],
+    header_libs: [
+        "libaudio_system_headers",
+        "libhardware_headers",
     ],
     cflags: [
         "-Wall",

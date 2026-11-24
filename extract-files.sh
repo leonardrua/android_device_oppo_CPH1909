@@ -124,6 +124,7 @@ function blob_fixup() {
             patchelf --add-needed "libaudio_abi_v28.so" "${2}"
             ;;
         vendor/lib*/hw/android.hardware.audio@2.0-impl-mediatek.so | \
+        vendor/lib*/hw/android.hardware.audio.effect@2.0-impl.so | \
         vendor/bin/hw/android.hardware.broadcastradio@1.1-service)
             patchelf --add-needed "libaudio_abi_v28.so" "${2}"
             ;;
@@ -148,7 +149,9 @@ function blob_fixup() {
         # changed GraphicBufferMapper::lock's signature. The 8.1 camera
         # HALs still import both old forms.
         vendor/lib*/hw/android.hardware.camera.provider@2.4-impl-mediatek.so | \
-        vendor/lib*/hw/vendor.mediatek.hardware.camera.callbackclient@1.0-impl.so)
+        vendor/lib*/hw/vendor.mediatek.hardware.camera.callbackclient@1.0-impl.so | \
+        vendor/lib*/libmtkcam_device1.so | \
+        vendor/lib*/libmtkcam_cct.so)
             patchelf --add-needed "libcamera_abi_v28.so" "${2}"
             ;;
         # 8.1 MTK ViLTE libs import the MediaSource destructor thunk that
@@ -159,6 +162,20 @@ function blob_fixup() {
         system/lib/libstagefright_wfd_mtk.so | \
         system/lib/libmtkavenhancements.so)
             patchelf --add-needed "libvtservice_abi_v28.so" "${2}"
+            ;;
+        # Android 10 no longer exports the radio@1.0 struct helpers the
+        # stock MTK RIL imports.
+        vendor/lib*/vendor.mediatek.hardware.radio@2.0_vendor.so)
+            patchelf --add-needed "libradio_abi_v28.so" "${2}"
+            ;;
+        # 8.1 IMS stack imports HTTPBase socket tagging helpers.
+        system/lib/libimsma_socketwrapper.so)
+            patchelf --add-needed "libims_abi_v28.so" "${2}"
+            ;;
+        # libsensor.so (shipped into /vendor) imports hidden AppOpsManager
+        # symbols; provide them in the process that loads it.
+        vendor/lib*/libFactoryHALSensor.so)
+            patchelf --add-needed "libsensor_abi_v28.so" "${2}"
             ;;
         # 8.1 wifi service imports a HIDL toString helper dropped in Android 10.
         vendor/bin/hw/android.hardware.wifi@1.0-service)

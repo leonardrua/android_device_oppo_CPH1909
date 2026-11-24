@@ -18,3 +18,20 @@ cc_library_shared {
         "-Werror",
     ],
 }
+
+// /system/lib MTK ViLTE libs are the consumers, and the system namespace
+// cannot see /vendor/lib. Provide the same soname in /system/lib.
+cc_library_shared {
+    name: "libvtservice_abi_v28_system",
+    stem: "libvtservice_abi_v28",
+    compile_multilib: "both",
+    srcs: ["vtservice_abi.cpp"],
+    shared_libs: [
+        "libdl",
+        "libc",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}

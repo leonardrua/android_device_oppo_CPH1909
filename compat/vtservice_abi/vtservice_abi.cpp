@@ -13,6 +13,13 @@
 
 #include <dlfcn.h>
 
+// Complete-object destructor thunk: same behaviour as the deleting one on the
+// adjusted pointer. libsource.so/libsink.so import this form as well.
+extern "C" void _ZThn4_N7android11MediaSourceD1Ev(void* self) {
+    extern void _ZThn4_N7android11MediaSourceD0Ev(void*);
+    _ZThn4_N7android11MediaSourceD0Ev(self);
+}
+
 extern "C" void _ZThn4_N7android11MediaSourceD0Ev(void* self) {
     using DeleteDtor = void (*)(void*);
     static DeleteDtor real = reinterpret_cast<DeleteDtor>(
