@@ -545,11 +545,14 @@ found and fixed the remaining gaps. The blob-side changes live in the vendor tre
   was removed in favour of the direct remap.
 * **Compatibility libraries** shipped vendor-local (or system, where the consumer
   is a system binary): `libLLVM.so` (`/vendor/lib64`, for `rs2spir`),
-  `libsuspend.so` (`/system/lib`, for `kpoc_charger`), `libbacktrace.so` +
-  `libunwind.so` (`/vendor/lib[64]`, for `aee_aedv`/`libudf`), and `liblog-v28.so`
+  `libbacktrace.so` + `libunwind.so` (`/vendor/lib[64]`, for
+  `aee_aedv`/`libudf`), and `liblog-v28.so`
   (`/vendor/lib[64]`, the stock 8.1 liblog with soname rewritten, for `aee_aedv`'s
   legacy logprint API removed in AOSP 10; its `DT_NEEDED liblog.so` was rewritten
-  to `liblog-v28.so`).
+  to `liblog-v28.so`). The stock 8.1 `libsuspend.so` was removed: the
+  platform's `libsuspend` exports the same `autosuspend_enable()` /
+  `autosuspend_disable()` C symbols that `kpoc_charger` imports, and shipping a
+  copy duplicated the `/system/lib/libsuspend.so` install rule.
 * **VNDK namespace `DT_NEEDED` trims** (`patchelf --remove-needed` /
   `--replace-needed`) so vendor processes only reference vendor-local or
   LLNDK/VNDK-delegated libs: `sound_trigger.primary.mt6765` and

@@ -178,7 +178,6 @@ system/lib/libion_mtk_sys.so
 system/lib/libion_ulit_sys.so
 system/lib/libpq_prot_mtk.so
 system/lib/libshowlogo.so
-system/lib/libsuspend.so
 system/lib/libsignal.so
 system/lib/libsysenv_system.so
 system/lib/libvt_avsync.so
