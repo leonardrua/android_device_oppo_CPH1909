@@ -10,11 +10,12 @@
 // stock 8.1 vendor service imports. The service is BIND_NOW, so every one of
 // them must resolve at load time or the HAL never starts.
 //
-// The functions are declared extern "C" with the exact mangled identifiers
-// observed in the blob's dynamic symbol table, so the emitted names are
-// compiler-independent. Struct layouts below mirror the HIDL definitions in
-// hardware/interfaces/broadcastradio/{1.0,1.1}/types.hal; hidl_string and
-// hidl_vec come from the real libhidlbase headers to guarantee layout.
+// Each function carries an __asm__ label with the exact mangled identifier
+// observed in the blob's dynamic symbol table. C++ linkage (rather than
+// extern "C") is required because these helpers return std::string, which
+// Clang rejects as an extern "C" return type. Struct layouts mirror the HIDL
+// definitions in hardware/interfaces/broadcastradio/{1.0,1.1}/types.hal;
+// hidl_string and hidl_vec come from the real libhidlbase headers.
 
 #include <hidl/HidlSupport.h>
 
@@ -23,7 +24,7 @@
 using android::hardware::hidl_string;
 using android::hardware::hidl_vec;
 
-namespace {
+namespace shim {
 
 // --- broadcastradio@1.0 layouts -------------------------------------------
 struct AmBandConfig {
@@ -108,45 +109,50 @@ const char* identifierTypeName(uint32_t v) {
     }
 }
 
-}  // namespace
+}  // namespace shim
 
-extern "C" {
+using namespace shim;
 
-// std::string android::hardware::broadcastradio::V1_0::toString(Band)
-std::string _ZN7android8hardware14broadcastradio4V1_08toStringENS2_4BandE(uint32_t v) {
-    return bandName(v);
-}
+// V1_0::toString helpers
+std::string brToStringBand(uint32_t v)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_08toStringENS2_4BandE");
+std::string brToStringClass(uint32_t v)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_08toStringENS2_5ClassE");
+std::string brToStringDirection(uint32_t v)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_08toStringENS2_9DirectionE");
 
-// std::string android::hardware::broadcastradio::V1_0::toString(Class)
-std::string _ZN7android8hardware14broadcastradio4V1_08toStringENS2_5ClassE(uint32_t v) {
-    return className(v);
-}
+// V1_1::toString helpers
+std::string brToStringProgramType(uint32_t v)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_18toStringENS2_11ProgramTypeE");
+std::string brToStringIdentifierType(uint32_t v)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_18toStringENS2_14IdentifierTypeE");
+std::string brToStringVendorKeyValue(const VendorKeyValue& kv)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_18toStringERKNS2_14VendorKeyValueE");
+std::string brToStringProgramSelector(const ProgramSelector& sel)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_18toStringERKNS2_15ProgramSelectorE");
 
-// std::string android::hardware::broadcastradio::V1_0::toString(Direction)
-std::string _ZN7android8hardware14broadcastradio4V1_08toStringENS2_9DirectionE(uint32_t v) {
-    return v == 1 ? "DOWN" : "UP";
-}
+// V1_0::eq helpers
+bool brEqAm(const AmBandConfig& a, const AmBandConfig& b)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_0eqERKNS2_12AmBandConfigES5_");
+bool brEqFm(const FmBandConfig& a, const FmBandConfig& b)
+        __asm__("_ZN7android8hardware14broadcastradio4V1_0eqERKNS2_12FmBandConfigES5_");
 
-// std::string android::hardware::broadcastradio::V1_1::toString(ProgramType)
-std::string _ZN7android8hardware14broadcastradio4V1_18toStringENS2_11ProgramTypeE(uint32_t v) {
-    return programTypeName(v);
-}
+std::string brToStringBand(uint32_t v) { return bandName(v); }
 
-// std::string android::hardware::broadcastradio::V1_1::toString(IdentifierType)
-std::string _ZN7android8hardware14broadcastradio4V1_18toStringENS2_14IdentifierTypeE(uint32_t v) {
-    return identifierTypeName(v);
-}
+std::string brToStringClass(uint32_t v) { return className(v); }
 
-// std::string android::hardware::broadcastradio::V1_1::toString(const VendorKeyValue&)
-std::string _ZN7android8hardware14broadcastradio4V1_18toStringERKNS2_14VendorKeyValueE(
-        const VendorKeyValue& kv) {
+std::string brToStringDirection(uint32_t v) { return v == 1 ? "DOWN" : "UP"; }
+
+std::string brToStringProgramType(uint32_t v) { return programTypeName(v); }
+
+std::string brToStringIdentifierType(uint32_t v) { return identifierTypeName(v); }
+
+std::string brToStringVendorKeyValue(const VendorKeyValue& kv) {
     return "{" + std::string(kv.key.c_str(), kv.key.size()) + ": "
                + std::string(kv.value.c_str(), kv.value.size()) + "}";
 }
 
-// std::string android::hardware::broadcastradio::V1_1::toString(const ProgramSelector&)
-std::string _ZN7android8hardware14broadcastradio4V1_18toStringERKNS2_15ProgramSelectorE(
-        const ProgramSelector& sel) {
+std::string brToStringProgramSelector(const ProgramSelector& sel) {
     std::string out = "{";
     out += programTypeName(sel.programType);
     out += ", ";
@@ -164,18 +170,11 @@ std::string _ZN7android8hardware14broadcastradio4V1_18toStringERKNS2_15ProgramSe
     return out;
 }
 
-// bool android::hardware::broadcastradio::V1_0::eq(const AmBandConfig&, const AmBandConfig&)
-bool _ZN7android8hardware14broadcastradio4V1_0eqERKNS2_12AmBandConfigES5_(
-        const AmBandConfig& lhs, const AmBandConfig& rhs) {
-    return lhs.stereo == rhs.stereo;
+bool brEqAm(const AmBandConfig& a, const AmBandConfig& b) {
+    return a.stereo == b.stereo;
 }
 
-// bool android::hardware::broadcastradio::V1_0::eq(const FmBandConfig&, const FmBandConfig&)
-bool _ZN7android8hardware14broadcastradio4V1_0eqERKNS2_12FmBandConfigES5_(
-        const FmBandConfig& lhs, const FmBandConfig& rhs) {
-    return lhs.deemphasis == rhs.deemphasis && lhs.stereo == rhs.stereo &&
-           lhs.rds == rhs.rds && lhs.ta == rhs.ta && lhs.af == rhs.af &&
-           lhs.ea == rhs.ea;
+bool brEqFm(const FmBandConfig& a, const FmBandConfig& b) {
+    return a.deemphasis == b.deemphasis && a.stereo == b.stereo &&
+           a.rds == b.rds && a.ta == b.ta && a.af == b.af && a.ea == b.ea;
 }
-
-}  // extern "C"

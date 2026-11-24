@@ -6,19 +6,20 @@
 // The library is BIND_NOW, so the whole radio stack fails to load without
 // them.
 //
-// Functions are declared extern "C" with the exact mangled identifiers from
-// the blob's dynamic symbol table, so the emitted names are
-// compiler-independent. Struct layouts mirror radio/1.0/types.hal and use the
-// real hidl_string for guaranteed layout.
+// Each function carries an __asm__ label with the exact mangled identifier
+// from the blob's dynamic symbol table. C++ linkage (rather than extern "C")
+// is required for the toString helpers, which return std::string. Struct
+// layouts mirror radio/1.0/types.hal and use the real hidl_string/hidl_vec
+// for guaranteed layout.
 
 #include <hidl/HidlSupport.h>
 
-#include <string>
 #include <cstring>
+#include <string>
 
 using android::hardware::hidl_string;
 
-namespace {
+namespace shim {
 
 enum OperatorStatus : int32_t {
     OPERATOR_UNKNOWN = 0,
@@ -102,25 +103,45 @@ bool sameString(const hidl_string& a, const hidl_string& b) {
     return a.size() == b.size() && memcmp(a.c_str(), b.c_str(), a.size()) == 0;
 }
 
-}  // namespace
+}  // namespace shim
 
-extern "C" {
+using namespace shim;
 
-bool _ZN7android8hardware5radio4V1_0eqERKNS2_12OperatorInfoES5_(
-        const OperatorInfo& a, const OperatorInfo& b) {
+// operator== / operator!=
+bool rEqOperator(const OperatorInfo& a, const OperatorInfo& b)
+        __asm__("_ZN7android8hardware5radio4V1_0eqERKNS2_12OperatorInfoES5_");
+bool rNeOperator(const OperatorInfo& a, const OperatorInfo& b)
+        __asm__("_ZN7android8hardware5radio4V1_0neERKNS2_12OperatorInfoES5_");
+bool rEqProfile(const DataProfileInfo& a, const DataProfileInfo& b)
+        __asm__("_ZN7android8hardware5radio4V1_0eqERKNS2_15DataProfileInfoES5_");
+bool rNeProfile(const DataProfileInfo& a, const DataProfileInfo& b)
+        __asm__("_ZN7android8hardware5radio4V1_0neERKNS2_15DataProfileInfoES5_");
+bool rEqCall(const SetupDataCallResult& a, const SetupDataCallResult& b)
+        __asm__("_ZN7android8hardware5radio4V1_0eqERKNS2_19SetupDataCallResultES5_");
+bool rNeCall(const SetupDataCallResult& a, const SetupDataCallResult& b)
+        __asm__("_ZN7android8hardware5radio4V1_0neERKNS2_19SetupDataCallResultES5_");
+
+// toString helpers
+std::string rToStringClir(uint32_t v)
+        __asm__("_ZN7android8hardware5radio4V1_08toStringENS2_4ClirE");
+std::string rToStringForwardStatus(uint32_t v)
+        __asm__("_ZN7android8hardware5radio4V1_08toStringENS2_21CallForwardInfoStatusE");
+std::string rToStringOperator(const OperatorInfo& info)
+        __asm__("_ZN7android8hardware5radio4V1_08toStringERKNS2_12OperatorInfoE");
+std::string rToStringProfile(const DataProfileInfo& info)
+        __asm__("_ZN7android8hardware5radio4V1_08toStringERKNS2_15DataProfileInfoE");
+std::string rToStringCall(const SetupDataCallResult& res)
+        __asm__("_ZN7android8hardware5radio4V1_08toStringERKNS2_19SetupDataCallResultE");
+
+bool rEqOperator(const OperatorInfo& a, const OperatorInfo& b) {
     return sameString(a.alphaLong, b.alphaLong) &&
            sameString(a.alphaShort, b.alphaShort) &&
-           sameString(a.operatorNumeric, b.operatorNumeric) &&
-           a.status == b.status;
+           sameString(a.operatorNumeric, b.operatorNumeric) && a.status == b.status;
 }
 
-bool _ZN7android8hardware5radio4V1_0neERKNS2_12OperatorInfoES5_(
-        const OperatorInfo& a, const OperatorInfo& b) {
-    return !_ZN7android8hardware5radio4V1_0eqERKNS2_12OperatorInfoES5_(a, b);
-}
+bool rNeOperator(const OperatorInfo& a, const OperatorInfo& b) { return !rEqOperator(a, b); }
 
-bool _ZN7android8hardware5radio4V1_0eqERKNS2_15DataProfileInfoES5_(
-        const DataProfileInfo& a, const DataProfileInfo& b) {
+bool rEqProfile(const DataProfileInfo& a, const DataProfileInfo& b) {
     return a.profileId == b.profileId && sameString(a.apn, b.apn) &&
            sameString(a.protocol, b.protocol) &&
            sameString(a.roamingProtocol, b.roamingProtocol) &&
@@ -130,17 +151,12 @@ bool _ZN7android8hardware5radio4V1_0eqERKNS2_15DataProfileInfoES5_(
            a.waitTime == b.waitTime && a.enabled == b.enabled &&
            a.supportedApnTypesBitmap == b.supportedApnTypesBitmap &&
            a.bearerBitmap == b.bearerBitmap && a.mtu == b.mtu &&
-           a.mvnoType == b.mvnoType &&
-           sameString(a.mvnoMatchData, b.mvnoMatchData);
+           a.mvnoType == b.mvnoType && sameString(a.mvnoMatchData, b.mvnoMatchData);
 }
 
-bool _ZN7android8hardware5radio4V1_0neERKNS2_15DataProfileInfoES5_(
-        const DataProfileInfo& a, const DataProfileInfo& b) {
-    return !_ZN7android8hardware5radio4V1_0eqERKNS2_15DataProfileInfoES5_(a, b);
-}
+bool rNeProfile(const DataProfileInfo& a, const DataProfileInfo& b) { return !rEqProfile(a, b); }
 
-bool _ZN7android8hardware5radio4V1_0eqERKNS2_19SetupDataCallResultES5_(
-        const SetupDataCallResult& a, const SetupDataCallResult& b) {
+bool rEqCall(const SetupDataCallResult& a, const SetupDataCallResult& b) {
     return a.status == b.status && a.suggestedRetryTime == b.suggestedRetryTime &&
            a.cid == b.cid && a.active == b.active && sameString(a.type, b.type) &&
            sameString(a.ifname, b.ifname) && sameString(a.addresses, b.addresses) &&
@@ -148,39 +164,27 @@ bool _ZN7android8hardware5radio4V1_0eqERKNS2_19SetupDataCallResultES5_(
            sameString(a.pcscf, b.pcscf) && a.mtu == b.mtu;
 }
 
-bool _ZN7android8hardware5radio4V1_0neERKNS2_19SetupDataCallResultES5_(
-        const SetupDataCallResult& a, const SetupDataCallResult& b) {
-    return !_ZN7android8hardware5radio4V1_0eqERKNS2_19SetupDataCallResultES5_(a, b);
-}
+bool rNeCall(const SetupDataCallResult& a, const SetupDataCallResult& b) { return !rEqCall(a, b); }
 
-std::string _ZN7android8hardware5radio4V1_08toStringENS2_4ClirE(uint32_t v) {
-    return clirName(v);
-}
+std::string rToStringClir(uint32_t v) { return clirName(v); }
 
-std::string _ZN7android8hardware5radio4V1_08toStringENS2_21CallForwardInfoStatusE(uint32_t v) {
-    return forwardStatusName(v);
-}
+std::string rToStringForwardStatus(uint32_t v) { return forwardStatusName(v); }
 
-std::string _ZN7android8hardware5radio4V1_08toStringERKNS2_12OperatorInfoE(
-        const OperatorInfo& info) {
+std::string rToStringOperator(const OperatorInfo& info) {
     return "{alphaLong: " + std::string(info.alphaLong.c_str(), info.alphaLong.size()) +
            ", alphaShort: " + std::string(info.alphaShort.c_str(), info.alphaShort.size()) +
            ", numeric: " + std::string(info.operatorNumeric.c_str(), info.operatorNumeric.size()) +
            ", status: " + operatorStatusName(info.status) + "}";
 }
 
-std::string _ZN7android8hardware5radio4V1_08toStringERKNS2_15DataProfileInfoE(
-        const DataProfileInfo& info) {
+std::string rToStringProfile(const DataProfileInfo& info) {
     return "{profileId: " + std::to_string(info.profileId) +
            ", apn: " + std::string(info.apn.c_str(), info.apn.size()) +
            ", protocol: " + std::string(info.protocol.c_str(), info.protocol.size()) + "}";
 }
 
-std::string _ZN7android8hardware5radio4V1_08toStringERKNS2_19SetupDataCallResultE(
-        const SetupDataCallResult& res) {
+std::string rToStringCall(const SetupDataCallResult& res) {
     return "{status: " + std::to_string(res.status) +
            ", cid: " + std::to_string(res.cid) +
            ", ifname: " + std::string(res.ifname.c_str(), res.ifname.size()) + "}";
 }
-
-}  // extern "C"
