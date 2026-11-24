@@ -12,6 +12,8 @@
 #include <utils/RefBase.h>
 #include <utils/StrongPointer.h>
 
+#include <stdlib.h>
+
 using namespace android;
 
 // Old createSurface(name, w, h, format, flags, SurfaceControl* parent,
@@ -68,11 +70,15 @@ void shim_scSetLayer(SurfaceControl*, int32_t)
 void shim_scSetLayer(SurfaceControl*, int32_t) {}
 
 // libsysenv_system.so (a KPOC charger blob) was built with GCC's 32-bit
-// C++ ABI and imports operator new(unsigned int). Android 10's libc++ only
-// exports operator new(unsigned long). Forward between them.
-extern "C" void* _Znwm(unsigned long size);
+// C++ ABI and imports operator new(unsigned int), i.e. _Znwj.  On a 32-bit
+// target size_t is unsigned int, so _Znwj is the normal libc++ symbol; the
+// 64-bit _Znwm does not exist in a 32-bit libc++.  Allocate directly instead
+// of forwarding: libc++'s operator delete calls free(), so the malloc/free
+// pairing is ABI-compatible.
 extern "C" void* _Znwj(unsigned int size) {
-    return _Znwm(size);
+    void* p = malloc(size ? size : 1);
+    if (p == nullptr) abort();
+    return p;
 }
 
 // Fence's destructor became inline; the blob still imports the out-of-line one.
