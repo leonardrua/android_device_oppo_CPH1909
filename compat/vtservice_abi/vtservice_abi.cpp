@@ -28,3 +28,13 @@ extern "C" void _ZThn4_N7android11MediaSourceD0Ev(void* self) {
         real(static_cast<char*>(self) - 4);
     }
 }
+
+// Android 10 removed these two debug/trace helpers from libutils/libcutils;
+// the kanged MT6765 ViLTE stack imports them. They only report an sp<> misuse
+// or return the enabled atrace tag mask, so no-ops are safe.
+
+extern "C" void _ZN7android23sp_report_stack_pointerEv() {}
+
+extern "C" unsigned long long atrace_get_enabled_tags() {
+    return 0;  // tracing disabled
+}
