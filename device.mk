@@ -233,7 +233,8 @@ PRODUCT_COPY_FILES += \
 # media.audio_policy never registers, stalling system_server.
 PRODUCT_PACKAGES += \
     libaudio_abi_v28 \
-    libbase_compat
+    libbase_compat \
+    libmedia_abi_v28
 
 # System-side VNDK: the 8.1 /system MTK blobs were linked when the system
 # namespace still searched /vendor/${LIB}. Android 10's [system] namespace is

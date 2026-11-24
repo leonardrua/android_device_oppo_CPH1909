@@ -136,6 +136,16 @@ function blob_fixup() {
         vendor/bin/ccci_fsd)
             patchelf --add-needed "libbase_compat.so" "${2}"
             ;;
+        # 8.1 AGPS daemon uses the OpenSSL 1.0 API (SSLv3_client_method),
+        # which BoringSSL no longer exports; the vendor ships -ss copies.
+        vendor/bin/mtk_agpsd)
+            patchelf --replace-needed "libssl.so" "libssl-ss.so" "${2}"
+            patchelf --replace-needed "libcrypto.so" "libcrypto-ss.so" "${2}"
+            ;;
+        # Android 10 removed MediaCodecsXmlParser::defaultSearchDirs.
+        vendor/bin/hw/android.hardware.media.omx@1.0-service)
+            patchelf --add-needed "libmedia_abi_v28.so" "${2}"
+            ;;
         vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
