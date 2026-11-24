@@ -145,11 +145,9 @@ function blob_fixup() {
             ;;
         # 8.1 MTK ViLTE libs import the MediaSource destructor thunk that
         # Android 10 no longer generates; vtservice cannot link without it.
-        system/bin/vtservice | \
         system/lib/libsource.so | \
         system/lib/libsink.so | \
         system/lib/libimsma.so | \
-        system/lib/libmtk_vt_service.so | \
         system/lib/libstagefright_wfd_mtk.so | \
         system/lib/libmtkavenhancements.so)
             patchelf --add-needed "libvtservice_abi_v28.so" "${2}"
