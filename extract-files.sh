@@ -146,6 +146,13 @@ function blob_fixup() {
         vendor/bin/hw/android.hardware.media.omx@1.0-service)
             patchelf --add-needed "libmedia_abi_v28.so" "${2}"
             ;;
+        # Android 10 dropped hidl::base::V1_0::toString(DebugInfo) and
+        # changed GraphicBufferMapper::lock's signature. The 8.1 camera
+        # HALs still import both old forms.
+        vendor/lib*/hw/android.hardware.camera.provider@2.4-impl-mediatek.so | \
+        vendor/lib*/hw/vendor.mediatek.hardware.camera.callbackclient@1.0-impl.so)
+            patchelf --add-needed "libcamera_abi_v28.so" "${2}"
+            ;;
         vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;

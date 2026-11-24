@@ -1,0 +1,22 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_library_shared {
+    name: "libcamera_abi_v28",
+    proprietary: true,
+    compile_multilib: "both",
+    srcs: ["camera_abi.cpp"],
+    shared_libs: [
+        "libui",
+        "libc++",
+        "libc",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+    ],
+}
