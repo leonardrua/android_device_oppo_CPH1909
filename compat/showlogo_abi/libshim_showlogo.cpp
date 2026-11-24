@@ -26,9 +26,12 @@ sp<SurfaceControl> shim_createSurface(SurfaceComposerClient* self, const String8
                                       uint32_t w, uint32_t h, PixelFormat format,
                                       uint32_t flags, SurfaceControl* parent,
                                       uint32_t, uint32_t) {
+    // Android 10's overload takes a SurfaceControl*, not the 8.1 sp<IBinder>
+    // handle. The charging logo is a root surface; ignoring the parent avoids
+    // interpreting an 8.1 SurfaceControl with the Android 10 layout.
+    (void)parent;
     return self->createSurface(name, w, h, format, flags,
-                               parent ? parent->getHandle() : nullptr,
-                               LayerMetadata{});
+                               nullptr, LayerMetadata{});
 }
 
 // getBuiltInDisplay(index) -> current internal display token.
