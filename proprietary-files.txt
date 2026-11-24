@@ -161,8 +161,6 @@ system/lib/libsink.so
 -system/priv-app/ImsService/ImsService.apk
 -system/priv-app/OppoSimSettings/OppoSimSettings.apk
 system/bin/vtservice
-system/framework/ims-common.jar
-system/framework/mediatek-ims-common.jar
 system/framework/com.coloros.statistics.jar
 system/framework/coloros.support.jar
 system/framework/com.nearme.romupdate.bugly.jar
