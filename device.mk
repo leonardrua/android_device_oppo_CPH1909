@@ -232,7 +232,8 @@ PRODUCT_COPY_FILES += \
 # HAL's DT_NEEDED. Without it audio-hal-2-0 restarts forever and
 # media.audio_policy never registers, stalling system_server.
 PRODUCT_PACKAGES += \
-    libaudio_abi_v28
+    libaudio_abi_v28 \
+    libbase_compat
 
 # System-side VNDK: the 8.1 /system MTK blobs were linked when the system
 # namespace still searched /vendor/${LIB}. Android 10's [system] namespace is

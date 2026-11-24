@@ -129,6 +129,13 @@ function blob_fixup() {
         vendor/bin/hw/android.hardware.broadcastradio@1.1-service)
             patchelf --add-needed "libaudio_abi_v28.so" "${2}"
             ;;
+        # These blobs use the v28 LogMessage ABI but their process also loads
+        # Android 10 VNDK-SP libs needing the current string_view helpers.
+        vendor/bin/hw/android.hardware.drm@1.0-service.widevine | \
+        vendor/bin/hw/android.hardware.wifi@1.0-service | \
+        vendor/bin/ccci_fsd)
+            patchelf --add-needed "libbase_compat.so" "${2}"
+            ;;
         vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
