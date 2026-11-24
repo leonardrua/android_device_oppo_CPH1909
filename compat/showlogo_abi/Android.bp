@@ -3,32 +3,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+// The consumers of this shim are the KPOC charging blobs, which live in
+// /system/lib (libshowlogo.so, libsysenv_system.so). They load in the system
+// namespace, so the shim must be installed to /system/lib — a /vendor/lib copy
+// would be invisible to them. That also means it may link libgui, which is a
+// system-only library.
 
 cc_library_shared {
     name: "libshim_showlogo",
-    proprietary: true,
-    compile_multilib: "32",
-    srcs: ["libshim_showlogo.cpp"],
-    shared_libs: [
-        "libgui",
-        "libui",
-        "libutils",
-        "libc++",
-        "libc",
-    ],
-    cflags: [
-        "-Wall",
-        "-Werror",
-        "-Wno-unused-parameter",
-    ],
-}
-
-// The KPOC charging blobs live in /system/lib, so they resolve DT_NEEDED only
-// in the system namespace. Install an identical copy there with the same
-// soname as the /vendor variant used by vendor blobs.
-cc_library_shared {
-    name: "libshim_showlogo_system",
-    stem: "libshim_showlogo",
     compile_multilib: "32",
     srcs: ["libshim_showlogo.cpp"],
     shared_libs: [

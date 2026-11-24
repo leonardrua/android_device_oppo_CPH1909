@@ -22,9 +22,9 @@ cc_library_shared {
         "libc++",
         "libc",
     ],
-    header_libs: [
-        "libaudio_system_headers",
-        "libhardware_headers",
+    include_dirs: [
+        "system/media/audio/include",
+        "hardware/libhardware/include",
     ],
     cflags: [
         "-Wall",

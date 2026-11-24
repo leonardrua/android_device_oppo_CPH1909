@@ -243,7 +243,6 @@ PRODUCT_PACKAGES += \
     libims_abi_v28 \
     libsensor_abi_v28 \
     libshim_showlogo \
-    libshim_showlogo_system \
     libvtservice_abi_v28_system \
     libims_abi_v28_system
 
