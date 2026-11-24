@@ -16,6 +16,8 @@
 
 #include <string.h>
 
+#include <algorithm>
+
 #include "HidlUtils.h"
 
 using ::android::hardware::audio::common::V2_0::AudioChannelMask;

@@ -14,6 +14,7 @@
 #include <hidl/HidlSupport.h>
 
 #include <string>
+#include <cstring>
 
 using android::hardware::hidl_string;
 
