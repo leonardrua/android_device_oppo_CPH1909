@@ -121,6 +121,14 @@ function blob_fixup() {
         vendor/bin/hw/android.hardware.drm@1.0-service.widevine)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
+        # Android 10 dropped audio::V2_0::toString(Result) from the VNDK
+        # audio@2.0 interface lib; the 8.1 vendor HAL still imports it.
+        vendor/bin/hw/android.hardware.audio@2.0-service-mediatek)
+            patchelf --add-needed "libaudio_abi_v28.so" "${2}"
+            ;;
+        vendor/bin/hw/android.hardware.broadcastradio@1.1-service)
+            patchelf --add-needed "libaudio_abi_v28.so" "${2}"
+            ;;
         vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;

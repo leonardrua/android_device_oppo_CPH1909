@@ -1,0 +1,23 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_library_shared {
+    name: "libaudio_abi_v28",
+    proprietary: true,
+    compile_multilib: "both",
+    srcs: [
+        "audio_abi.cpp",
+        "broadcastradio.cpp",
+    ],
+    shared_libs: [
+        "libc++",
+        "libc",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}

@@ -226,6 +226,14 @@ PRODUCT_COPY_FILES += \
     prebuilts/vndk/v28/arm64/arch-arm-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libbase-v28.so \
     prebuilts/vndk/v28/arm64/arch-arm64-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libbase-v28.so
 
+# Android 10's audio@2.0 VNDK lib dropped android::hardware::audio::V2_0::
+# toString(Result), which the 8.1 vendor audio HAL still imports. The shim in
+# compat/audio_abi/ provides just that symbol; extract-files.sh adds it to the
+# HAL's DT_NEEDED. Without it audio-hal-2-0 restarts forever and
+# media.audio_policy never registers, stalling system_server.
+PRODUCT_PACKAGES += \
+    libaudio_abi_v28
+
 # System-side VNDK: the 8.1 /system MTK blobs were linked when the system
 # namespace still searched /vendor/${LIB}. Android 10's [system] namespace is
 # isolated (search /system/${LIB}, links runtime,resolv), so a /system blob's
