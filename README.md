@@ -129,7 +129,10 @@ vendor tree's README has the full accounting; the highlights:
   `classes.dex` extracted from their `oat/arm64/*.vdex` files (vdexExtractor), so
   they re-sign with this build's platform key — both declare platform shared uids
   (`android.uid.phone`, `android.uid.system`). `SoterService` and `EmCamera` are
-  repacked the same way.
+  repacked the same way. Repacking makes the IMS APK installable, not Android 10
+  compatible: its classes target the 8.1 `com.android.ims` API, while Android 10's
+  `ims-common` uses `android.telephony.ims`; an Android 10-native MTK IMS stack
+  is required for IMS to start.
 * The VoLTE video-telephony chain is imported: `/system/bin/vtservice` and its
   full MTK dependency closure (`libmtk_vt_service.so`, `libsource.so`,
   `libcomutils.so`, `libdpframework_mtk.so`, `libged_sys.so`,
