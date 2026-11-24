@@ -164,6 +164,11 @@ function blob_fixup() {
         vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --add-needed "libwifi_abi_v28.so" "${2}"
             ;;
+        # Android 10 removed the SurfaceFlinger APIs the stock libshowlogo
+        # imports; kpoc_charger cannot start offline charging without it.
+        system/lib/libshowlogo.so)
+            patchelf --add-needed "libshim_showlogo.so" "${2}"
+            ;;
         vendor/lib*/libavservices_minijail_vendor.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;

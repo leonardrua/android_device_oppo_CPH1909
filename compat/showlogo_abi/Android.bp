@@ -1,0 +1,24 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_library_shared {
+    name: "libshim_showlogo",
+    proprietary: true,
+    compile_multilib: "32",
+    srcs: ["libshim_showlogo.cpp"],
+    shared_libs: [
+        "libgui",
+        "libui",
+        "libutils",
+        "libc++",
+        "libc",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+    ],
+}
