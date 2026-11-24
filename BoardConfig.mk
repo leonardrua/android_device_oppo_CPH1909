@@ -92,17 +92,12 @@ BOARD_KERNEL_PAGESIZE := 2048
 # ALLOW_PERMISSIVE_SELINUX -- debuggable builds, i.e. userdebug/eng (the CI
 # default is userdebug) -- honour this; user builds ignore it.
 #
-# The token is deliberately FIRST. Stock OPPO LK copies only the first tokens of
-# the boot.img header cmdline: in the captured runtime cmdline the fourth token
-# arrived as a bare "androidboot." and the fifth was dropped entirely, so a
-# trailing androidboot.selinux=permissive never reached init. Bringing it to the
-# front keeps it inside the prefix LK preserves.
-BOARD_KERNEL_CMDLINE := androidboot.selinux=permissive bootopt=64S3,32N2,64N2 androidboot.hardware=mt6765
-
-# If init fails fatally, reboot into recovery instead of hanging at the boot
-# logo. This makes a broken bring-up (a HAL that never starts, for instance)
-# recoverable and is the target the stock boot image uses.
-BOARD_KERNEL_CMDLINE += androidboot.init_fatal_reboot_target=recovery
+# The token is kept in the middle of the cmdline, not appended at the end.
+# Stock OPPO LK copies only the leading tokens of the boot.img header cmdline:
+# in the captured runtime cmdline the fourth token arrived as a bare
+# "androidboot." and the fifth was dropped entirely, so a trailing
+# androidboot.selinux=permissive never reached init.
+BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.selinux=permissive androidboot.hardware=mt6765
 
 BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
