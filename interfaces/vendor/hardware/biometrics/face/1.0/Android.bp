@@ -37,5 +37,10 @@ hidl_interface {
     interfaces: [
         "android.hidl.base@1.0",
     ],
+    // The stock vendor face service is 32-bit and needs the companion
+    // vendor.oppo.hardware.biometrics.face@1.0.so in /vendor/lib. Without
+    // "both" hidl_interface installs only the primary (64-bit) library and
+    // that service fails with "library ... not found".
+    compile_multilib: "both",
     gen_java: false,
 }
