@@ -10,16 +10,22 @@
       * system/priv-app/OppoSimSettings (com.coloros.simsettings,
         sharedUserId=system)
 
-    Replicates exactly the entries the stock privapp-permissions-mediatek.xml
-    (READ_PRECISE_PHONE_STATE) and privapp-permissions-platform.xml
-    (UPDATE_DEVICE_STATS and the com.coloros.simsettings block) granted those
-    two packages. Without an allowlist entry the system refuses signature|
-    privileged permissions at install time.
+    The `com.mediatek.ims` block follows the Android 10 donor ROM's
+    privapp-permissions-mediatek.xml (READ_PRECISE_PHONE_STATE,
+    READ_NETWORK_USAGE_HISTORY, PACKET_KEEPALIVE_OFFLOAD, CHANGE_WIFI_STATE,
+    NETWORK_SIGNAL_STRENGTH_WAKEUP), plus UPDATE_DEVICE_STATS which the
+    previous 8.1 APK requested. The `com.coloros.simsettings` block replicates
+    the stock privapp-permissions-platform.xml entries. Without an allowlist
+    entry the system refuses signature|privileged permissions at install time.
 
 -->
 <permissions>
     <privapp-permissions package="com.mediatek.ims">
         <permission name="android.permission.READ_PRECISE_PHONE_STATE"/>
+        <permission name="android.permission.READ_NETWORK_USAGE_HISTORY"/>
+        <permission name="android.permission.PACKET_KEEPALIVE_OFFLOAD"/>
+        <permission name="android.permission.CHANGE_WIFI_STATE"/>
+        <permission name="android.permission.NETWORK_SIGNAL_STRENGTH_WAKEUP"/>
         <permission name="android.permission.UPDATE_DEVICE_STATS"/>
     </privapp-permissions>
 

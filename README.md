@@ -124,15 +124,20 @@ installed into `/system/...` by the vendor makefile / prebuilt modules; the
 device tree's blob list documents them in the same file as the vendor blobs. The
 vendor tree's README has the full accounting; the highlights:
 
-* The stock `ImsService.apk` (`com.mediatek.ims`) and `OppoSimSettings.apk`
-  (`com.coloros.simsettings`) are dex-stripped and repacked with an unquickened
-  `classes.dex` extracted from their `oat/arm64/*.vdex` files (vdexExtractor), so
-  they re-sign with this build's platform key — both declare platform shared uids
-  (`android.uid.phone`, `android.uid.system`). `SoterService` and `EmCamera` are
-  repacked the same way. Repacking makes the IMS APK installable, not Android 10
-  compatible: its classes target the 8.1 `com.android.ims` API, while Android 10's
-  `ims-common` uses `android.telephony.ims`; an Android 10-native MTK IMS stack
-  is required for IMS to start.
+* `ImsService.apk` (`com.mediatek.ims`) is the Android 10 (QP1A) build from the
+  Realme C2 RMX1941 donor stack, repacked and re-signed with this build's
+  platform key; unlike the other stock APKs it already carries its own
+  `classes.dex`. It serves the modern binder through
+  `MtkDynamicImsService extends android.telephony.ims.ImsService` and targets
+  API 29, matching LineageOS 17.1's `ims-common` (the stock 8.1 APK targeted
+  `com.android.ims.ImsCallProfile` and could not load). The matching donor boot
+  jars `mediatek-{common,ims-base,ims-common}.jar` are installed as
+  `JAVA_LIBRARIES` prebuilts by the vendor tree and listed in
+  `PRODUCT_BOOT_JARS` below. `OppoSimSettings.apk`
+  (`com.coloros.simsettings`) remains the stock 8.1 ColorOS settings APK,
+  dex-stripped and repacked from its `oat/arm64/*.vdex` (vdexExtractor), like
+  `SoterService` and `EmCamera`; all three declare platform shared uids
+  (`android.uid.phone`, `android.uid.system`).
 * The VoLTE video-telephony chain is imported: `/system/bin/vtservice` and its
   full MTK dependency closure (`libmtk_vt_service.so`, `libsource.so`,
   `libcomutils.so`, `libdpframework_mtk.so`, `libged_sys.so`,

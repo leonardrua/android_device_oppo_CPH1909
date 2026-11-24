@@ -441,6 +441,40 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/init.recovery.mt6765.rc:$(TARGET_COPY_OUT_RECOVERY)/root/init.recovery.mt6765.rc
 
+# MediaTek IMS boot jars (Android 10 donor stack).
+#
+# The stock CPH1909 is an 8.1 ROM, so its ImsService.apk targets the 8.1
+# com.android.ims API and cannot load against LineageOS 17.1's ims-common
+# (android.telephony.ims.ImsCallProfile). The vendor tree now carries the
+# matching Android 10 pair from the Realme C2 (RMX1941) QP1A dump:
+#
+#   * mediatek-ims-base.jar    IMtkImsService / IMtkImsCallSession / IMtkImsUt
+#                              AIDL stubs the donor MtkImsService extends.
+#   * mediatek-common.jar      OperatorCustomizationFactoryLoader, loaded by
+#                              the APK's operator-customization utils.
+#   * mediatek-ims-common.jar  MtkImsManager / MtkImsManagerEx for the legacy
+#                              com.android.ims.ImsServiceBase binder path.
+#
+# The modules themselves are BUILD_PREBUILT JAVA_LIBRARIES in the vendor
+# Android.mk; the jar order matters for class resolution, so keep base before
+# ims-common. The donor APK was verified against these jars (same ROM), and
+# none of the three define android.* or com.android.* classes.
+PRODUCT_PACKAGES += \
+    mediatek-common \
+    mediatek-ims-base \
+    mediatek-ims-common
+
+PRODUCT_BOOT_JARS += \
+    mediatek-common \
+    mediatek-ims-base \
+    mediatek-ims-common
+
+# The AOSP boot-jar package checker only whitelists platform/JDK packages
+# (build/make/core/tasks/check_boot_jars/package_whitelist.txt has no
+# com.mediatek entry), so every MTK boot jar trips it. MTK device trees set
+# this for the same reason; the jars themselves are verified above.
+SKIP_BOOT_JARS_CHECK := true
+
 # IMS (VoLTE) permission declarations
 #
 # Declares the android.hardware.telephony.ims feature (this file ships with

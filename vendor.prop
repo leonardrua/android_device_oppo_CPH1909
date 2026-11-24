@@ -129,6 +129,23 @@ persist.mtk_ct_volte_support=1
 persist.mtk_dynamic_ims_switch=1
 ro.md_auto_setup_ims=1
 
+# Android 10 MTK IMS donor stack (Realme C2 QP1A). The A10 ImsService APK and
+# mediatek-telephony code read the vendor-namespaced property names below,
+# while the stock 8.1 modem/RIL blobs above read the unprefixed persist.mtk_*
+# / ro.md_* names, so both sets are kept.
+persist.vendor.ims_support=1
+persist.vendor.mims_support=2
+persist.vendor.mtk_wfc_support=1
+persist.vendor.mtk_volte_enable=1
+persist.vendor.mtk_vilte_enable=1
+persist.vendor.volte_support=1
+persist.vendor.vilte_support=1
+persist.vendor.viwifi_support=1
+persist.vendor.mtk_ct_volte_support=1
+persist.vendor.mtk_dynamic_ims_switch=1
+ro.vendor.md_auto_setup_ims=1
+ro.vendor.md_mims_support=2
+
 # Modem / CCCI
 ro.num_md_protocol=2
 ro.mtk_protocol1_rat_config=Lf/Lt/W/T/G

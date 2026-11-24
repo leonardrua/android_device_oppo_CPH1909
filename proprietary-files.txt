@@ -130,19 +130,31 @@ system/lib/libsink.so
 #
 # ImsService is com.mediatek.ims (sharedUserId=android.uid.phone) and
 # OppoSimSettings is com.coloros.simsettings (sharedUserId=android.uid.system),
-# so both must be signed with the platform key: the committed APKs are
-# repacked with an unquickened classes.dex extracted from the stock
-# oat/arm64/*.vdex files (the stock APKs are dex-stripped and their vdex files
-# hold Android 8.1 quickened bytecode that Android 10 cannot execute), with
-# META-INF dropped. See the vendor README for the repack step. Re-extracting
-# from a stock dump overwrites the APKs with the dex-stripped stock ones, so
-# re-apply the repack.
+# so both must be signed with the platform key. The committed ImsService.apk is
+# NOT this dump's 8.1 CPH1909 build: that APK targets the 8.1 com.android.ims
+# API and cannot load against LineageOS 17.1's ims-common
+# (android.telephony.ims.ImsCallProfile). It was replaced by the Android 10
+# (QP1A) ImsService from the Realme C2 RMX1941 donor stack, which already
+# contains classes.dex; only META-INF/ was dropped. The matching donor boot
+# jars mediatek-{common,ims-base,ims-common}.jar live in the vendor tree and
+# are installed as JAVA_LIBRARIES prebuilts and PRODUCT_BOOT_JARS entries in
+# device.mk. See the vendor README section C for provenance and ABI checks.
+# Re-extracting from a stock dump overwrites the donor APK with the unusable
+# 8.1 one, so restore it after any re-extract.
+#
+# OppoSimSettings remains this dump's 8.1 ColorOS settings app, repacked with
+# an unquickened classes.dex extracted from its stock oat/arm64/*.vdex (the
+# stock APKs are dex-stripped and their vdex files hold Android 8.1 quickened
+# bytecode that Android 10 cannot execute), with META-INF dropped. See the
+# vendor README for the repack step. Re-extracting from a stock dump overwrites
+# it with the dex-stripped stock one, so re-apply the repack.
 #
 # Similar MTK trees build the IMS service from the (non-dump) MTK framework
-# source; a dump-based port cannot, so the stock APKs are imported like
-# SoterService. The two IMS APKs declare <uses-library> entries with
-# required="false": com.mediatek.op.ims.common (which stock never shipped
-# either) and com.coloros.statistics, so the apps install regardless.
+# source; a dump-based port instead imports the matching Android 10 donor APK
+# and boot jars described above. The two IMS APKs declare <uses-library>
+# entries with required="false" (com.mediatek.op.ims.common and the optional
+# com.mediatek.* plugins on the donor side, com.coloros.statistics on this
+# one), so the apps install regardless.
 #
 # The stub jars (309 bytes, empty manifest only) provide the framework-layout
 # the stock image carried; nothing in this build's boot classpath references
