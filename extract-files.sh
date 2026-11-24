@@ -153,6 +153,15 @@ function blob_fixup() {
         vendor/lib*/hw/vendor.mediatek.hardware.camera.callbackclient@1.0-impl.so)
             patchelf --add-needed "libcamera_abi_v28.so" "${2}"
             ;;
+        # 8.1 MTK ViLTE libs import the MediaSource destructor thunk that
+        # Android 10 no longer generates; vtservice cannot link without it.
+        system/bin/vtservice | \
+        system/lib/libsource.so | \
+        system/lib/libsink.so | \
+        system/lib/libstagefright_wfd_mtk.so | \
+        system/lib/libmtkavenhancements.so)
+            patchelf --add-needed "libvtservice_abi_v28.so" "${2}"
+            ;;
         vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
