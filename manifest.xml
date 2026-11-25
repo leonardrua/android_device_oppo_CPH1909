@@ -283,16 +283,13 @@
         </interface>
         <fqname>@1.0::ISensors/default</fqname>
     </hal>
-    <hal format="hidl">
-        <name>android.hardware.soundtrigger</name>
-        <transport>hwbinder</transport>
-        <version>2.0</version>
-        <interface>
-            <name>ISoundTriggerHw</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@2.0::ISoundTriggerHw/default</fqname>
-    </hal>
+    <!-- android.hardware.soundtrigger@2.0::ISoundTriggerHw/default is omitted
+         intentionally: the 8.1 sound_trigger.primary.mt6765.so cannot be
+         loaded as a 2.0 passthrough HAL on Android 10, so the service never
+         registers. Declaring it makes init loop on ctl.interface_start and
+         blocks system_server's SoundTriggerService.listModules() until the
+         watchdog fires. With no manifest entry getService() returns null
+         immediately and the framework handles the missing HAL gracefully. -->
     <hal format="hidl">
         <name>android.hardware.thermal</name>
         <transport>hwbinder</transport>

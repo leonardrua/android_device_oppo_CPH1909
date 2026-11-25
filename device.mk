@@ -246,11 +246,15 @@ PRODUCT_PACKAGES += \
 #   libminijail              (external/minijail, VNDK + vendor variant)
 #   libavservices_minijail   (frameworks/av/media/module/minijail)
 #   libhwminijail            (system/libhidl/minijail)
+# The kanged OMX service is 32-bit, so both multilib variants of the AV
+# wrapper must be explicitly installed: a bare "libavservices_minijail.vendor"
+# only selects the primary (64-bit) variant and OMX then dies with
+# "library libavservices_minijail.so not found".
 PRODUCT_PACKAGES += \
     libminijail \
     libminijail.vendor \
-    libavservices_minijail \
-    libavservices_minijail.vendor \
+    libavservices_minijail.vendor:32 \
+    libavservices_minijail.vendor:64 \
     libhwminijail
 
 # System-side VNDK: the 8.1 /system MTK blobs were linked when the system
@@ -343,7 +347,8 @@ PRODUCT_PACKAGES += \
 # biometrics/face/OppoFaceHal.h. This does not claim face unlock works.
 PRODUCT_PACKAGES += \
     android.hardware.biometrics.face@1.0-service \
-    vendor.oppo.hardware.biometrics.face@1.0 \
+    vendor.oppo.hardware.biometrics.face@1.0:32 \
+    vendor.oppo.hardware.biometrics.face@1.0:64 \
     android.hardware.biometrics.fingerprint@2.1-service \
     fingerprint.mt6765
 
