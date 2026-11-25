@@ -123,6 +123,7 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     android.hardware.broadcastradio@1.1-service \
     android.hardware.drm@1.2-service.clearkey \
+    android.hardware.health@2.0-impl \
     android.hardware.health@2.0-service \
     android.hardware.power@1.0-service \
     android.hardware.power@1.0-impl \
