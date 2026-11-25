@@ -184,13 +184,6 @@ function blob_fixup() {
         system/lib/libsysenv_system.so)
             patchelf --add-needed "libshim_showlogo.so" "${2}"
             ;;
-        # The kanged A10 OMX service links the stock 8.1
-        # libavservices_minijail_vendor.so, which in turn pulls in the broken
-        # 8.1 minijail. Redirect it to the source-built libavservices_minijail
-        # (built via PRODUCT_PACKAGES in device.mk) which uses source libminijail.
-        vendor/bin/hw/android.hardware.media.omx@1.0-service)
-            patchelf --replace-needed "libavservices_minijail_vendor.so" "libavservices_minijail.so" "${2}"
-            ;;
         vendor/lib*/hw/vendor.mediatek.hardware.nvram@1.0-impl.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
