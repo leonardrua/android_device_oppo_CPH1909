@@ -532,11 +532,14 @@ library is LLNDK or VNDK. The 8.1 blobs' needs are covered three ways:
 * **System-side VNDK copies** (`device.mk`): the 8.1 `/system` MTK blobs were
   linked when the system namespace was reachable; the libraries they need that
   are not LLNDK/VNDK are copied into `/system` for the system-side blobs.
-* **`libbase-v28.so`** (`device.mk`, from `prebuilts/vndk/v28`): the Android 8.1
-  `libbase`, copied into `/vendor/lib[64]` and `/system/lib[64]`. Blobs that import
-  the 5-argument `android::base::LogMessage` constructor removed in AOSP 10
-  (sensors impl, `libnvram`, `libsysenv`, the widevine DRM service, the wifi
+* **`libbase-v28.so`** (`proprietary-files.txt`, with patched SONAME `libbase-v28.so`):
+  the Android 8.1 `libbase`, copied into `/vendor/lib[64]` and `/system/lib[64]`.
+  Blobs that import the 5-argument `android::base::LogMessage` constructor removed
+  in AOSP 10 (sensors impl, `libnvram`, `libsysenv`, the widevine DRM service, the wifi
   service) had their `DT_NEEDED libbase.so` rewritten to `libbase-v28.so`.
+  Patching its SONAME to `libbase-v28.so` ensures the dynamic linker does not treat
+  it as `libbase.so`, preventing it from shadowing platform VNDK-SP `libbase.so`
+  in processes that also load `libhidlbase.so` or `libcutils.so`.
 
 `PRODUCT_EXTRA_VNDK_VERSIONS` is intentionally not used: there is no old VNDK
 snapshot to install for an API 27 vendor.

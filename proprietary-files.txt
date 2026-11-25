@@ -81,7 +81,9 @@ system/lib64/vendor.qti.hardware.soter@1.0.so
 # the DT_NEEDED closure of every HWUI-using process) and ccci_mdinit
 # (modem) cannot start.
 system/lib/libaed.so
+system/lib/libbase-v28.so
 system/lib64/libaed.so
+system/lib64/libbase-v28.so
 system/lib/libmrdump.so
 system/lib64/libmrdump.so
 
@@ -791,7 +793,7 @@ vendor/etc/project_info.txt
 vendor/etc/public.libraries.txt
 vendor/etc/r_submix_audio_policy_configuration.xml
 vendor/etc/seccomp_policy/configstore@1.0.policy
-vendor/etc/seccomp_policy/mediacodec.policy
+#vendor/etc/seccomp_policy/mediacodec.policy
 vendor/etc/seccomp_policy/mediaextractor.policy
 vendor/etc/security/cacerts_supl/594f1775.0
 vendor/etc/security/cacerts_supl/7651b327.0
@@ -1035,6 +1037,7 @@ vendor/lib/libaudiocustparam_vendor.so
 vendor/lib/libaudiodcrflt_vendor.so
 vendor/lib/libaudioloudc.so
 vendor/lib/libaudioprimarydevicehalifclient.so
+vendor/lib/libbase-v28.so
 vendor/lib/libaudiosetting.so
 vendor/lib/libaudiotoolkit_vendor.so
 vendor/lib/libavservices_minijail_vendor.so
@@ -1445,6 +1448,7 @@ vendor/lib64/libaudiocustparam_vendor.so
 vendor/lib64/libaudiodcrflt_vendor.so
 vendor/lib64/libaudioloudc.so
 vendor/lib64/libaudioprimarydevicehalifclient.so
+vendor/lib64/libbase-v28.so
 vendor/lib64/libaudiosetting.so
 vendor/lib64/libaudiotoolkit_vendor.so
 vendor/lib64/libbessound_hd_mtk_vendor.so

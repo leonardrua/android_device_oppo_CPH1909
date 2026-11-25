@@ -45,6 +45,14 @@ TARGET_SCREEN_WIDTH := 720
 DEVICE_PACKAGE_OVERLAYS += \
     $(DEVICE_PATH)/overlay
 
+# Seccomp policy
+# The A10 OMX service loads /system/etc/seccomp_policy/mediacodec.policy and
+# appends /vendor/etc/seccomp_policy/mediacodec.policy. The system policy has
+# @include statements, but minijail rejects nested includes if the vendor policy
+# also had them. Installing an empty vendor policy allows the service to boot cleanly.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/configs/seccomp/mediacodec.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy
+
 # Permissions
 #
 # android.hardware.microphone.xml is deliberately absent: AOSP 10 ships no
@@ -218,18 +226,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     libgui_vendor
 
-# VNDK
-#
-# 8.1 vendor blobs were linked against the v28 libbase ABI. Copy the v28
-# vndk-sp libbase into /vendor and the blob_fixup above rewrites their
-# DT_NEEDED to libbase-v28.so. Paths verified in AOSP 10
-# (prebuilts/vndk/v28/...). Adapted from xiaomi-lotus-devs commit 5e805fb.
-PRODUCT_COPY_FILES += \
-    prebuilts/vndk/v28/arm64/arch-arm-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_VENDOR)/lib/libbase-v28.so \
-    prebuilts/vndk/v28/arm64/arch-arm64-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libbase-v28.so \
-    prebuilts/vndk/v28/arm64/arch-arm-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libbase-v28.so \
-    prebuilts/vndk/v28/arm64/arch-arm64-armv8-a/shared/vndk-sp/libbase.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libbase-v28.so
-
 # Android 10's audio@2.0 VNDK lib dropped android::hardware::audio::V2_0::
 # toString(Result), which the 8.1 vendor audio HAL still imports. The shim in
 # compat/audio_abi/ provides just that symbol; extract-files.sh adds it to the
@@ -338,6 +334,7 @@ PRODUCT_PACKAGES += \
 # biometrics/face/OppoFaceHal.h. This does not claim face unlock works.
 PRODUCT_PACKAGES += \
     android.hardware.biometrics.face@1.0-service \
+    vendor.oppo.hardware.biometrics.face@1.0 \
     android.hardware.biometrics.fingerprint@2.1-service \
     fingerprint.mt6765
 

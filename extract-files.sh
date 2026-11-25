@@ -131,7 +131,8 @@ function blob_fixup() {
         # These blobs use the v28 LogMessage ABI but their process also loads
         # Android 10 VNDK-SP libs needing the current string_view helpers.
         vendor/bin/hw/android.hardware.drm@1.0-service.widevine | \
-        vendor/bin/hw/android.hardware.wifi@1.0-service)
+        vendor/bin/hw/android.hardware.wifi@1.0-service | \
+        vendor/bin/ccci_fsd)
             patchelf --add-needed "libbase_compat.so" "${2}"
             ;;
         # Android 10 dropped hidl::base::V1_0::toString(DebugInfo) and
@@ -145,6 +146,12 @@ function blob_fixup() {
             ;;
         # 8.1 MTK ViLTE libs import the MediaSource destructor thunk that
         # Android 10 no longer generates; vtservice cannot link without it.
+        vendor/lib*/libaudio_param_parser-vnd.so)
+            patchelf --remove-needed "libicuuc.so" "${2}"
+            ;;
+        vendor/bin/hw/vtservice_hidl)
+            patchelf --replace-needed "vendor.mediatek.hardware.videotelephony@1.0.so" "vendor.mediatek.hardware.videotelephony@1.0_vendor.so" "${2}"
+            ;;
         system/lib/libsource.so | \
         system/lib/libsink.so | \
         system/lib/libimsma.so | \

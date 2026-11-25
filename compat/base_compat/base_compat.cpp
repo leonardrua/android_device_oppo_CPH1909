@@ -9,13 +9,27 @@
 
 #include <string_view>
 
+// Several vendor binaries and Android 10 VNDK-SP libraries (libhidlbase.so,
+// libcutils.so) import StartsWith/EndsWith(string_view) using the standard
+// mangled symbol names:
+//   _ZN7android4base10StartsWithENSt3__117basic_string_viewIcNS1_11char_traitsIcEEEES5_
+//   _ZN7android4base8EndsWithENSt3__117basic_string_viewIcNS1_11char_traitsIcEEEES5_
+// We use __asm__ labels with C++ linkage so that regardless of libc++ header
+// inline namespace settings, the exact target symbol is exported.
+
 namespace android {
 namespace base {
+
+bool StartsWith(std::string_view str, std::string_view prefix)
+        __asm__("_ZN7android4base10StartsWithENSt3__117basic_string_viewIcNS1_11char_traitsIcEEEES5_");
 
 bool StartsWith(std::string_view str, std::string_view prefix) {
     return str.size() >= prefix.size() &&
            str.compare(0, prefix.size(), prefix) == 0;
 }
+
+bool EndsWith(std::string_view str, std::string_view suffix)
+        __asm__("_ZN7android4base8EndsWithENSt3__117basic_string_viewIcNS1_11char_traitsIcEEEES5_");
 
 bool EndsWith(std::string_view str, std::string_view suffix) {
     return str.size() >= suffix.size() &&
