@@ -793,6 +793,7 @@ vendor/etc/project_info.txt
 vendor/etc/public.libraries.txt
 vendor/etc/r_submix_audio_policy_configuration.xml
 vendor/etc/seccomp_policy/configstore@1.0.policy
+vendor/etc/seccomp_policy/mediacodec.policy
 vendor/etc/seccomp_policy/mediaextractor.policy
 vendor/etc/security/cacerts_supl/594f1775.0
 vendor/etc/security/cacerts_supl/7651b327.0
