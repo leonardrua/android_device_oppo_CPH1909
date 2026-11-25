@@ -1040,7 +1040,7 @@ vendor/lib/libaudioprimarydevicehalifclient.so
 vendor/lib/libbase-v28.so
 vendor/lib/libaudiosetting.so
 vendor/lib/libaudiotoolkit_vendor.so
-vendor/lib/libavservices_minijail_vendor.so
+# libavservices_minijail_vendor.so dropped: replaced by source-built libavservices_minijail.so
 vendor/lib/libbessound_hd_mtk_vendor.so
 vendor/lib/libblisrc32_vendor.so
 vendor/lib/libbluetooth_hw_test.so
@@ -1550,7 +1550,7 @@ vendor/lib64/libhdrproc.so
 vendor/lib64/libhevce_sb.ca7.android.so
 vendor/lib64/libhwc2on1adapter.so
 vendor/lib64/libhwm.so
-vendor/lib64/libhwminijail.so
+# libhwminijail.so dropped: replaced by source-built libhwminijail
 vendor/lib64/libhwuiext.so
 vendor/lib64/libhydra.so
 vendor/lib64/libifcutils_mtk.so
