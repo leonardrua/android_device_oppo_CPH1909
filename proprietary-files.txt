@@ -1154,7 +1154,8 @@ vendor/lib/libjpeg-alpha.so
 vendor/lib/libjpeg.a
 vendor/lib/libksensor.so
 vendor/lib/liblog-v28.so
-vendor/lib/libmediacodecservice.so
+# libmediacodecservice.so: dropped (8.1 IMediaCodecService/OMXStore/OMX ABI;
+# no consumer; A10 OMX service uses platform libstagefright_omx/xmlparser).
 vendor/lib/libmegface.so
 vendor/lib/libmegsegment.so
 vendor/lib/libmemtrack_GL.so
