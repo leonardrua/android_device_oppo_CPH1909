@@ -351,7 +351,6 @@ vendor/app/mcRegistry/511ead0a000000000000000000000000.tabin
 -vendor/app/sileadManager/sileadManager.apk
 vendor/bin/OppoKeybox
 vendor/bin/TBaseDeviceBinding
-vendor/bin/aeev
 vendor/bin/autobt
 vendor/bin/bip
 vendor/bin/ccci_fsd
@@ -634,7 +633,6 @@ vendor/etc/init/fuelgauged_init.rc
 vendor/etc/init/fuelgauged_nvram_init.rc
 vendor/etc/init/gsm0710muxd.rc
 vendor/etc/init/hostapd.android.rc
-vendor/etc/init/hw/init.aee.rc
 vendor/etc/init/hw/init.connectivity.rc
 vendor/etc/init/hw/init.modem.rc
 vendor/etc/init/hw/init.mt6765.rc
