@@ -134,6 +134,9 @@ BOARD_HAS_LARGE_FILESYSTEM := true
 TARGET_COPY_OUT_VENDOR := vendor
 TARGET_COPY_OUT_ODM := odm
 
+TARGET_COPY_OUT_PRODUCT := system/product
+TARGET_COPY_OUT_SYSTEM_EXT := system/system_ext
+
 # Metadata partition: FDE key storage on this device.
 BOARD_USES_METADATA_PARTITION := true
 
