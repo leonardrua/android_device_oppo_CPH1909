@@ -194,7 +194,11 @@ system/lib/libvt_avsync.so
 system/lib/vendor.mediatek.hardware.videotelephony@1.0.so
 system/lib/vendor.mediatek.hardware.pq@2.0.so
 system/lib/vendor.mediatek.hardware.power@1.1.so
+system/etc/init/emdlogger1.rc
+system/etc/init/emdlogger2.rc
+system/etc/init/emdlogger5.rc
 system/etc/init/kpoc_charger.rc
+system/etc/init/mdlogger.rc
 
 # Additional stock MediaTek/OPPO system/bin helpers referenced by the vendor
 # init scripts and their direct dependency closure. Keep these at their stock
