@@ -236,4 +236,20 @@ setup_vendor "${DEVICE}" "${VENDOR}" "${ANDROID_ROOT}" false "${CLEAN_VENDOR}"
 
 extract "${MY_DIR}/proprietary-files.txt" "${SRC}" "${KANG}" --section "${SECTION}"
 
+# PowerVR GLES support libraries kanged from the CPH2185 vendor tree.
+# They are not present in the stock CPH1909 dump, so restore the saved copies
+# after extraction (extract_utils would otherwise overwrite them with the
+# 8.1 versions). See vendor/oppo/CPH1909/README.md for the compatibility
+# analysis: the kernel-matched libsrv_um 1.9 and the rest of the GLES stack
+# are intentionally left untouched.
+KANG_DIR="${ANDROID_ROOT}/vendor/${VENDOR}/${DEVICE}/kang"
+if [ -d "${KANG_DIR}" ]; then
+    while IFS= read -r -d '' blob; do
+        rel="${blob#"${KANG_DIR}/"}"
+        target="${ANDROID_ROOT}/vendor/${VENDOR}/${DEVICE}/proprietary/${rel}"
+        mkdir -p "$(dirname "${target}")"
+        cp --preserve=mode "${blob}" "${target}"
+    done < <(find "${KANG_DIR}" -type f -print0)
+fi
+
 "${MY_DIR}/setup-makefiles.sh"

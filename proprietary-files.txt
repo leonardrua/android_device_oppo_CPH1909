@@ -1,6 +1,15 @@
 # Proprietary files for OPPO A5s (CPH1909) - LineageOS 17.1
 #
-# Extracted from the stock ColorOS 5.2 (Android 8.1) vendor image.
+# Extracted from the stock ColorOS 5.2 (Android 8.1) vendor image, except for
+# the PowerVR GLES support libraries listed below (libusc, libglslcompiler,
+# libgpu_aux, libged and libgralloc_extra, 32/64-bit, in vendor/lib*). Those
+# are kanged from SPEEDFIRE7/android_device_oppo_CPH2185 vendor-lineage-17.1
+# to fix a GL_INVALID_ENUM abort in SystemUI's SkiaOpenGLPipeline; the
+# original stock versions are not used. extract-files.sh restores them from
+# vendor/oppo/CPH1909/kang after each extraction. The kernel-matched core
+# (libsrv_um 1.9@4971894, libIMGegl, libEGL_mtk, libGLESv2_mtk) is kept from
+# stock: the CPH2185 core is PVR 1.11@5425693 and needs a different kernel
+# module.
 #
 # Deliberately NOT listed (they exist on the stock vendor partition but must not
 # be copied onto an Android 10 build):
