@@ -145,6 +145,9 @@ persist.vendor.mtk_ct_volte_support=1
 persist.vendor.mtk_dynamic_ims_switch=1
 ro.vendor.md_auto_setup_ims=1
 ro.vendor.md_mims_support=2
+# Read by the Android 10 volte_imcb / volte_imsm_93 binaries; all MTK A10
+# device trees set this to 1.
+ro.vendor.md_prop_ver=1
 
 # Modem / CCCI
 ro.num_md_protocol=2

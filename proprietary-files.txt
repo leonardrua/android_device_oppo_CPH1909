@@ -161,6 +161,14 @@ system/lib/libsink.so
 # libvt_avsync.so plus the /system HIDL interface libraries
 # vendor.mediatek.hardware.{videotelephony@1.0,pq@2.0,power@1.1}.so) is
 # imported for the same reason.
+#
+# The VoLTE daemon side is also the Android 10 donor version now (RMX1941),
+# matched to the A10 ImsService APK: vendor/bin/volte_imcb, volte_imsm_93,
+# volte_stack, volte_ua and vendor/lib/libvolte_{core,xdmc}_shr.so plus
+# libipsec_ims_shr.so (32/64-bit). Their init rc files use the donor service
+# names (vendor.volte_imcb / vendor.volte_stack / vendor.volte_ua) but keep
+# this device's legacy mtk.md1.status triggers, because the 8.1 modem/RIL
+# still sets that property. The donor volte_md_status daemon is not shipped.
 
 -system/priv-app/ImsService/ImsService.apk
 system/bin/vtservice

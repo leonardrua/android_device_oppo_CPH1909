@@ -151,6 +151,12 @@ vendor tree's README has the full accounting; the highlights:
   (`coredomain` + `system_file_type`), because domains/types entered from
   `/system` must carry those attributes (`treble_sepolicy_tests` /
   `sepolicy_tests`). Both domains stay permissive during bring-up.
+* The VoLTE daemon side — `vendor/bin/volte_{imcb,imsm_93,stack,ua}` and
+  `vendor/lib/libvolte_{core,xdmc}_shr.so` / `libipsec_ims_shr.so` — is the
+  Android 10 donor stack from RMX1941, matched to the A10 `ImsService` APK.
+  Its init scripts use the donor service names (`vendor.volte_imcb`,
+  `vendor.volte_stack`, `vendor.volte_ua`) with this device's legacy
+  `mtk.md1.status` triggers; the A10 `volte_md_status` daemon is not shipped.
 * Additional stock `/system/bin` helpers referenced by the vendor init tree are
   imported at their original system paths with their direct native-library
   closure (`autochmod.sh`, `emdlogger1/2/5`, `factory`, `iwpriv`, `mdlogger`,
