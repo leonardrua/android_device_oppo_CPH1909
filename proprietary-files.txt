@@ -5,11 +5,12 @@
 # libgpu_aux, libged and libgralloc_extra, 32/64-bit, in vendor/lib*). Those
 # are kanged from SPEEDFIRE7/android_device_oppo_CPH2185 vendor-lineage-17.1
 # to fix a GL_INVALID_ENUM abort in SystemUI's SkiaOpenGLPipeline; the
-# original stock versions are not used. extract-files.sh restores them from
-# vendor/oppo/CPH1909/kang after each extraction. The kernel-matched core
-# (libsrv_um 1.9@4971894, libIMGegl, libEGL_mtk, libGLESv2_mtk) is kept from
-# stock: the CPH2185 core is PVR 1.11@5425693 and needs a different kernel
-# module.
+# original stock versions are not used. They are committed in the vendor tree,
+# not saved in this device tree: re-running extract-files.sh overwrites them
+# and they must be re-fetched from CPH2185 (see vendor/oppo/CPH1909/README.md).
+# The kernel-matched core (libsrv_um 1.9@4971894, libIMGegl, libEGL_mtk,
+# libGLESv2_mtk) is kept from stock: the CPH2185 core is PVR 1.11@5425693 and
+# needs a different kernel module.
 #
 # Deliberately NOT listed (they exist on the stock vendor partition but must not
 # be copied onto an Android 10 build):
