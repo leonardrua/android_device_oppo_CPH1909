@@ -136,7 +136,7 @@ system/lib/libsink.so
 # (QP1A) ImsService from the Realme C2 RMX1941 donor stack, which already
 # contains classes.dex; only META-INF/ was dropped. The matching donor boot
 # jars mediatek-{common,ims-base,ims-common}.jar live in the vendor tree and
-# are installed as JAVA_LIBRARIES prebuilts and PRODUCT_BOOT_JARS entries in
+# are installed as Soong dex_import modules and PRODUCT_BOOT_JARS entries in
 # device.mk. See the vendor README section C for provenance and ABI checks.
 # Re-extracting from a stock dump overwrites the donor APK with the unusable
 # 8.1 one, so restore it after any re-extract.

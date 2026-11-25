@@ -132,7 +132,7 @@ vendor tree's README has the full accounting; the highlights:
   API 29, matching LineageOS 17.1's `ims-common` (the stock 8.1 APK targeted
   `com.android.ims.ImsCallProfile` and could not load). The matching donor boot
   jars `mediatek-{common,ims-base,ims-common}.jar` are installed as
-  `JAVA_LIBRARIES` prebuilts by the vendor tree and listed in
+  Soong `dex_import` modules by the vendor tree and listed in
   `PRODUCT_BOOT_JARS` below. The ColorOS `OppoSimSettings.apk` and the three
   309-byte manifest-only ColorOS stub jars (plus their
   `com.coloros.libraries.xml`) were dropped: no shipped app references them,
