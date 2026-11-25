@@ -185,8 +185,13 @@ function blob_fixup() {
         system/lib/libsysenv_system.so)
             patchelf --add-needed "libshim_showlogo.so" "${2}"
             ;;
+        # The stock 8.1 minijail cannot parse Android 10's seccomp policies
+        # (nested @include statements) and aborts media.codec. Redirect the
+        # AV minijail wrappers to the source-built libminijail.so from
+        # external/minijail (added via PRODUCT_PACKAGES in device.mk).
         vendor/lib*/libavservices_minijail_vendor.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            patchelf --replace-needed "libminijail_vendor.so" "libminijail.so" "${2}"
             ;;
         vendor/lib*/hw/vendor.mediatek.hardware.nvram@1.0-impl.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
@@ -199,6 +204,7 @@ function blob_fixup() {
             ;;
         vendor/lib*/libhwminijail.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
+            patchelf --replace-needed "libminijail_vendor.so" "libminijail.so" "${2}"
             ;;
         vendor/lib*/libwifi-hal.so)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"

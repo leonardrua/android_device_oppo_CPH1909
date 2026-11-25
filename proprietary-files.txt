@@ -1164,7 +1164,7 @@ vendor/lib/libmegsegment.so
 vendor/lib/libmemtrack_GL.so
 vendor/lib/libmfllcore.so
 vendor/lib/libmhalImageCodec.so
-vendor/lib/libminijail_vendor.so
+# libminijail_vendor.so dropped: replaced by source-built libminijail.so
 vendor/lib/libmmprofile.so
 vendor/lib/libmnl.so
 vendor/lib/libmp4enc_sa.ca7.so
@@ -1568,7 +1568,7 @@ vendor/lib64/libmegsegment.so
 vendor/lib64/libmemtrack_GL.so
 vendor/lib64/libmfllcore.so
 vendor/lib64/libmhalImageCodec.so
-vendor/lib64/libminijail_vendor.so
+# libminijail_vendor.so dropped: replaced by source-built libminijail.so
 vendor/lib64/libmmprofile.so
 vendor/lib64/libmpbase.so
 vendor/lib64/libmrdumpv.so

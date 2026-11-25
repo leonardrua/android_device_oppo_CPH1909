@@ -236,6 +236,15 @@ PRODUCT_PACKAGES += \
     libvtservice_abi_v28_system \
     libims_abi_v28_system
 
+# Source-built minijail replaces the stock 8.1 libminijail_vendor.so blob.
+# The stock minijail cannot parse Android 10's seccomp policies (nested
+# @include statements) and aborts media.codec with SIGABRT. The AV minijail
+# wrappers (libavservices_minijail_vendor.so, libhwminijail.so) have their
+# DT_NEEDED rewritten to libminijail.so in extract-files.sh; the vendor
+# variant of external/minijail must therefore be installed into /vendor/lib[64].
+PRODUCT_PACKAGES += \
+    libminijail.vendor
+
 # System-side VNDK: the 8.1 /system MTK blobs were linked when the system
 # namespace still searched /vendor/${LIB}. Android 10's [system] namespace is
 # isolated (search /system/${LIB}, links runtime,resolv), so a /system blob's
