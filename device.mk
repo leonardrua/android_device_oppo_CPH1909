@@ -45,6 +45,14 @@ TARGET_SCREEN_WIDTH := 720
 DEVICE_PACKAGE_OVERLAYS += \
     $(DEVICE_PATH)/overlay
 
+# Seccomp policy
+# The A10 OMX service loads /system/etc/seccomp_policy/mediacodec.policy and
+# appends /vendor/etc/seccomp_policy/mediacodec.policy. The system policy has
+# @include statements, but minijail rejects nested includes if the vendor policy
+# also had them. Installing an empty vendor policy allows the service to boot cleanly.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/configs/seccomp/mediacodec.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy
+
 # Permissions
 #
 # android.hardware.microphone.xml is deliberately absent: AOSP 10 ships no
