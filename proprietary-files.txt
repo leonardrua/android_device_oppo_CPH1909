@@ -358,7 +358,6 @@ vendor/bin/hostapd
 vendor/bin/hostapd_cli
 vendor/bin/hw/android.hardware.audio@2.0-service-mediatek
 vendor/bin/hw/android.hardware.bluetooth@1.0-service-mediatek
-vendor/bin/hw/android.hardware.broadcastradio@1.1-service
 vendor/bin/hw/android.hardware.configstore@1.0-service
 vendor/bin/hw/android.hardware.drm@1.0-service.widevine
 vendor/bin/hw/android.hardware.graphics.allocator@2.0-service
@@ -609,7 +608,6 @@ vendor/etc/fstb.cfg
 vendor/etc/gasryuv.model
 vendor/etc/init/android.hardware.audio@2.0-service-mediatek.rc
 vendor/etc/init/android.hardware.bluetooth@1.0-service-mediatek.rc
-vendor/etc/init/android.hardware.broadcastradio@1.1-service.rc
 vendor/etc/init/android.hardware.configstore@1.0-service.rc
 vendor/etc/init/android.hardware.drm@1.0-service.widevine.rc
 vendor/etc/init/android.hardware.graphics.allocator@2.0-service.rc

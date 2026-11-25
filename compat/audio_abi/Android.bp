@@ -10,7 +10,6 @@ cc_library_shared {
     compile_multilib: "both",
     srcs: [
         "audio_abi.cpp",
-        "broadcastradio.cpp",
         "HidlUtils.cpp",
     ],
     local_include_dirs: ["."],
