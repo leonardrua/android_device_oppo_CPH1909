@@ -124,8 +124,7 @@ function blob_fixup() {
             patchelf --add-needed "libaudio_abi_v28.so" "${2}"
             ;;
         vendor/lib*/hw/android.hardware.audio@2.0-impl-mediatek.so | \
-        vendor/lib*/hw/android.hardware.audio.effect@2.0-impl.so | \
-        vendor/bin/hw/android.hardware.broadcastradio@1.1-service)
+        vendor/lib*/hw/android.hardware.audio.effect@2.0-impl.so)
             patchelf --add-needed "libaudio_abi_v28.so" "${2}"
             ;;
         # These blobs use the v28 LogMessage ABI but their process also loads
@@ -193,9 +192,6 @@ function blob_fixup() {
             patchelf --replace-needed "libavservices_minijail_vendor.so" "libavservices_minijail.so" "${2}"
             ;;
         vendor/lib*/hw/vendor.mediatek.hardware.nvram@1.0-impl.so)
-            patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
-            ;;
-        vendor/bin/hw/android.hardware.broadcastradio@1.1-service)
             patchelf --replace-needed "libbase.so" "libbase-v28.so" "${2}"
             ;;
         vendor/lib*/libFactoryHALCommon.so)

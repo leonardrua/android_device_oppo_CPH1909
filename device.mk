@@ -102,9 +102,10 @@ PRODUCT_COPY_FILES += \
 # also declared in manifest.xml:
 #
 #   health@2.0   8.1 used the in-system healthd; Q wants a vendor HAL service
-#   broadcastradio@2.0
-#                AOSP 10 default virtual radio; replaces the stock 8.1
-#                BroadcastRadioDefault mock and its broadcastradio ABI shim
+#   broadcastradio@1.1
+#                AOSP 10 default virtual radio (IBroadcastRadioFactory 1.0/1.1
+#                default), matching the stock 8.1 service/interface instead of
+#                the 2.0 amfm/dab default; its ABI shim is no longer needed.
 #   usb@1.0      8.1 used the legacy USB gadget init scripts only
 #   drm@1.2      clearkey instance; the stock 1.0 service keeps default/widevine
 #   power@1.0    AOSP HIDL service that serves android.hardware.power@1.0 and
@@ -120,7 +121,7 @@ PRODUCT_COPY_FILES += \
 # libdrmclearkeyplugin and libclearkeycasplugin are already part of
 # base_vendor.mk, so the DRM/CAS software plugins come from AOSP as well.
 PRODUCT_PACKAGES += \
-    android.hardware.broadcastradio@2.0-service \
+    android.hardware.broadcastradio@1.1-service \
     android.hardware.drm@1.2-service.clearkey \
     android.hardware.health@2.0-service \
     android.hardware.power@1.0-service \
