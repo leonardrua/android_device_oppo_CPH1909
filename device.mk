@@ -478,10 +478,10 @@ SKIP_BOOT_JARS_CHECK := true
 # IMS (VoLTE) permission declarations
 #
 # Declares the android.hardware.telephony.ims feature (this file ships with
-# AOSP's frameworks/native) and allows the two stock IMS applications
-# imported in the vendor tree (com.mediatek.ims, com.coloros.simsettings)
-# their signature|privileged permissions at install time. Without the
-# allowlist the framework refuses those permissions at package scan.
+# AOSP's frameworks/native) and allows the Android 10 MTK IMS app imported in
+# the vendor tree (com.mediatek.ims) its signature|privileged permissions at
+# install time. Without the allowlist the framework refuses those permissions
+# at package scan.
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.telephony.ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.telephony.ims.xml \
     $(DEVICE_PATH)/configs/permissions/privapp-permissions-ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-ims.xml

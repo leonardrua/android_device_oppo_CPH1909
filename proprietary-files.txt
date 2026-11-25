@@ -128,11 +128,10 @@ system/lib/libsink.so
 
 # Stock IMS (VoLTE) system-side blobs.
 #
-# ImsService is com.mediatek.ims (sharedUserId=android.uid.phone) and
-# OppoSimSettings is com.coloros.simsettings (sharedUserId=android.uid.system),
-# so both must be signed with the platform key. The committed ImsService.apk is
-# NOT this dump's 8.1 CPH1909 build: that APK targets the 8.1 com.android.ims
-# API and cannot load against LineageOS 17.1's ims-common
+# ImsService is com.mediatek.ims (sharedUserId=android.uid.phone), so it must
+# be signed with the platform key. The committed ImsService.apk is NOT this
+# dump's 8.1 CPH1909 build: that APK targets the 8.1 com.android.ims API and
+# cannot load against LineageOS 17.1's ims-common
 # (android.telephony.ims.ImsCallProfile). It was replaced by the Android 10
 # (QP1A) ImsService from the Realme C2 RMX1941 donor stack, which already
 # contains classes.dex; only META-INF/ was dropped. The matching donor boot
@@ -142,23 +141,18 @@ system/lib/libsink.so
 # Re-extracting from a stock dump overwrites the donor APK with the unusable
 # 8.1 one, so restore it after any re-extract.
 #
-# OppoSimSettings remains this dump's 8.1 ColorOS settings app, repacked with
-# an unquickened classes.dex extracted from its stock oat/arm64/*.vdex (the
-# stock APKs are dex-stripped and their vdex files hold Android 8.1 quickened
-# bytecode that Android 10 cannot execute), with META-INF dropped. See the
-# vendor README for the repack step. Re-extracting from a stock dump overwrites
-# it with the dex-stripped stock one, so re-apply the repack.
-#
 # Similar MTK trees build the IMS service from the (non-dump) MTK framework
 # source; a dump-based port instead imports the matching Android 10 donor APK
-# and boot jars described above. The two IMS APKs declare <uses-library>
-# entries with required="false" (com.mediatek.op.ims.common and the optional
-# com.mediatek.* plugins on the donor side, com.coloros.statistics on this
-# one), so the apps install regardless.
+# and boot jars described above. The donor APK's <uses-library> entries are all
+# required="false" (com.mediatek.op.ims.common and the optional com.mediatek.*
+# plugins), so those libraries need not exist for it to install.
 #
-# The stub jars (309 bytes, empty manifest only) provide the framework-layout
-# the stock image carried; nothing in this build's boot classpath references
-# them. libimsma*.so are the native side of the stock ims stack, required by
+# The stock ColorOS stub jars (com.coloros.statistics.jar, coloros.support.jar,
+# com.nearme.romupdate.bugly.jar) and com.coloros.libraries.xml were dropped:
+# they are 309-byte manifest-only jars with no classes, are not boot jars, and
+# no shipped APK references them after removing the ColorOS OppoSimSettings
+# app (AOSP Settings covers SIM/mobile-network configuration).
+# libimsma*.so are the native side of the stock ims stack, required by
 # system/lib/libmtk_vt_service.so, which is required by system/bin/vtservice
 # (the VoLTE video-telephony service, started by init.vtservice.rc). The VT
 # service's full MTK dependency closure (libmtk_vt_service.so, libsource.so,
@@ -166,16 +160,10 @@ system/lib/libsink.so
 # libion_mtk_sys.so, libion_ulit_sys.so, libpq_prot_mtk.so, libsignal.so,
 # libvt_avsync.so plus the /system HIDL interface libraries
 # vendor.mediatek.hardware.{videotelephony@1.0,pq@2.0,power@1.1}.so) is
-# imported for the same reason. com.coloros.libraries.xml registers the
-# com.coloros.statistics library (all three coloros stub jars are imported
-# verbatim).
+# imported for the same reason.
 
 -system/priv-app/ImsService/ImsService.apk
--system/priv-app/OppoSimSettings/OppoSimSettings.apk
 system/bin/vtservice
-system/framework/com.coloros.statistics.jar
-system/framework/coloros.support.jar
-system/framework/com.nearme.romupdate.bugly.jar
 system/lib/libimsma.so
 system/lib/libimsma_adapt.so
 system/lib/libimsma_rtp.so
@@ -197,7 +185,6 @@ system/lib/vendor.mediatek.hardware.videotelephony@1.0.so
 system/lib/vendor.mediatek.hardware.pq@2.0.so
 system/lib/vendor.mediatek.hardware.power@1.1.so
 system/etc/init/kpoc_charger.rc
-system/etc/permissions/com.coloros.libraries.xml
 
 # Additional stock MediaTek/OPPO system/bin helpers referenced by the vendor
 # init scripts and their direct dependency closure. Keep these at their stock

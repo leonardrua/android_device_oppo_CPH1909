@@ -3,20 +3,19 @@
 
     SPDX-License-Identifier: Apache-2.0
 
-    Device-local signature|privileged permission allowlist for the stock
-    OPPO IMS apps imported by this port:
+    Device-local signature|privileged permission allowlist for the Android 10
+    MTK IMS app imported by this port:
 
       * system/priv-app/ImsService (com.mediatek.ims, sharedUserId=phone)
-      * system/priv-app/OppoSimSettings (com.coloros.simsettings,
-        sharedUserId=system)
 
-    The `com.mediatek.ims` block follows the Android 10 donor ROM's
+    The block follows the Android 10 donor ROM's
     privapp-permissions-mediatek.xml (READ_PRECISE_PHONE_STATE,
     READ_NETWORK_USAGE_HISTORY, PACKET_KEEPALIVE_OFFLOAD, CHANGE_WIFI_STATE,
     NETWORK_SIGNAL_STRENGTH_WAKEUP), plus UPDATE_DEVICE_STATS which the
-    previous 8.1 APK requested. The `com.coloros.simsettings` block replicates
-    the stock privapp-permissions-platform.xml entries. Without an allowlist
-    entry the system refuses signature|privileged permissions at install time.
+    previous 8.1 APK requested. The ColorOS OppoSimSettings app and its
+    permission block were removed: no shipped app depends on it. Without an
+    allowlist entry the system refuses signature|privileged permissions at
+    install time.
 
 -->
 <permissions>
@@ -27,37 +26,5 @@
         <permission name="android.permission.CHANGE_WIFI_STATE"/>
         <permission name="android.permission.NETWORK_SIGNAL_STRENGTH_WAKEUP"/>
         <permission name="android.permission.UPDATE_DEVICE_STATS"/>
-    </privapp-permissions>
-
-    <privapp-permissions package="com.coloros.simsettings">
-        <permission name="android.permission.ACCESS_CACHE_FILESYSTEM"/>
-        <permission name="android.permission.ACCESS_CHECKIN_PROPERTIES"/>
-        <permission name="android.permission.ACCESS_NOTIFICATIONS"/>
-        <permission name="android.permission.BACKUP"/>
-        <permission name="android.permission.BATTERY_STATS"/>
-        <permission name="android.permission.BLUETOOTH_PRIVILEGED"/>
-        <permission name="android.permission.CHANGE_CONFIGURATION"/>
-        <permission name="android.permission.CONNECTIVITY_INTERNAL"/>
-        <permission name="android.permission.CONTROL_VPN"/>
-        <permission name="android.permission.DELETE_PACKAGES"/>
-        <permission name="android.permission.FORCE_STOP_PACKAGES"/>
-        <permission name="android.permission.MANAGE_DEVICE_ADMINS"/>
-        <permission name="android.permission.MANAGE_USB"/>
-        <permission name="android.permission.MANAGE_USERS"/>
-        <permission name="android.permission.MASTER_CLEAR"/>
-        <permission name="android.permission.MODIFY_PHONE_STATE"/>
-        <permission name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
-        <permission name="android.permission.MOVE_PACKAGE"/>
-        <permission name="android.permission.PACKAGE_USAGE_STATS"/>
-        <permission name="android.permission.READ_LOGS"/>
-        <permission name="android.permission.READ_NETWORK_USAGE_HISTORY"/>
-        <permission name="android.permission.READ_SEARCH_INDEXABLES"/>
-        <permission name="android.permission.REAL_GET_TASKS"/>
-        <permission name="android.permission.REBOOT"/>
-        <permission name="android.permission.SET_TIME"/>
-        <permission name="android.permission.STATUS_BAR"/>
-        <permission name="android.permission.WRITE_APN_SETTINGS"/>
-        <permission name="android.permission.WRITE_MEDIA_STORAGE"/>
-        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
     </privapp-permissions>
 </permissions>

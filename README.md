@@ -133,11 +133,13 @@ vendor tree's README has the full accounting; the highlights:
   `com.android.ims.ImsCallProfile` and could not load). The matching donor boot
   jars `mediatek-{common,ims-base,ims-common}.jar` are installed as
   `JAVA_LIBRARIES` prebuilts by the vendor tree and listed in
-  `PRODUCT_BOOT_JARS` below. `OppoSimSettings.apk`
-  (`com.coloros.simsettings`) remains the stock 8.1 ColorOS settings APK,
-  dex-stripped and repacked from its `oat/arm64/*.vdex` (vdexExtractor), like
-  `SoterService` and `EmCamera`; all three declare platform shared uids
-  (`android.uid.phone`, `android.uid.system`).
+  `PRODUCT_BOOT_JARS` below. The ColorOS `OppoSimSettings.apk` and the three
+  309-byte manifest-only ColorOS stub jars (plus their
+  `com.coloros.libraries.xml`) were dropped: no shipped app references them,
+  and AOSP Settings covers SIM/mobile-network configuration. `SoterService` and
+  `EmCamera` are the remaining dex-stripped/repacked stock APKs; they and
+  `ImsService` declare platform shared uids (`android.uid.phone`,
+  `android.uid.system`).
 * The VoLTE video-telephony chain is imported: `/system/bin/vtservice` and its
   full MTK dependency closure (`libmtk_vt_service.so`, `libsource.so`,
   `libcomutils.so`, `libdpframework_mtk.so`, `libged_sys.so`,
