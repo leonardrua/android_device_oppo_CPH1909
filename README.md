@@ -1224,11 +1224,15 @@ The workaround is the one phh's GSI uses for PowerVR Rogue devices:
   (`shaderCaps->fConfigTextureSwizzle`) instead of programming the texture unit.
 * `system.prop` sets `ro.skia.ignore_swizzle=true`. Skia is linked statically
   into `libhwui` (the stock vendor `libskia.so` is not loaded by SystemUI), so
-  the patch must be applied to `external/skia` at build time. `libbase` is added
-  to `libskia` for `GetBoolProperty`; `SK_BUILD_FOR_ANDROID` derives from
-  `__ANDROID__` in `SkPreConfig.h`, so the branch compiles.
-* `.github/workflows/build.yml` applies the patch after `repo sync`, driven by
-  the `patches/<name>.project` companion file, and fails the build if the
+  the patch must be applied to `external/skia` at build time. `SK_BUILD_FOR_ANDROID`
+  derives from `__ANDROID__` in `SkPreConfig.h`, so the branch compiles.
+* `patches/0002-hwui-link-libbase.patch` adds `libbase` to the `hwui_static_deps`
+  defaults in `frameworks/base/libs/hwui/Android.bp`. `GetBoolProperty()` lives
+  in `libbase`, and `libhwui` pulls Skia in through `whole_static_libs`, which
+  does not propagate `libskia`'s own `shared_libs` to the link line — without
+  this, `libhwui.so` fails to link with an undefined `android::base::GetBoolProperty`.
+* `.github/workflows/build.yml` applies both patches after `repo sync`, driven
+  by their `patches/<name>.project` companion files, and fails the build if a
   patch no longer applies.
 
 With the property set, `GrGLGpu::bindTexture()` skips the entire swizzle block,
