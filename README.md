@@ -1135,37 +1135,132 @@ creating volume keys for adoptable storage, and
 
 ### PowerVR texture swizzle and the SystemUI RenderThread abort
 
-The stock 8.1 PowerVR GE8320 driver (`OpenGL ES 3.2 build 1.9@4971894`)
-advertises texture swizzle support but is broken on this platform. Skia then
-takes the texture-unit swizzle path; on this driver that path ends in a
-latched `GL_INVALID_ENUM`, which is fatal to HWUI: `DEBUG_OPENGL` defaults to
-`DEBUG_LEVEL_LOW`, so
-`GL_CHECKPOINT(LOW)` in `SkiaOpenGLPipeline::swapBuffers()` expands to
-`LOG_ALWAYS_FATAL_IF(GLUtils::dumpGLErrors(), ...)`
-(`SkiaOpenGLPipeline.cpp:126`). SystemUI's RenderThread aborts on its first
-frame after boot and restarts in a loop.
+**Status:** root cause established from 50 tombstones, LineageOS 17.1 Skia/HWUI
+sources, and disassembly of the stock PowerVR driver. The fix is committed
+(`d4da4a4`) but **not yet built or flashed** — no CI build was triggered.
+
+#### Symptom
+
+* All 50 tombstones in `/mnt/d/tombstones` are `com.android.systemui`, thread
+  `RenderThread`, SIGABRT.
+* Abort message is identical in all of them:
+  `GL errors! frameworks/base/libs/hwui/pipeline/skia/SkiaOpenGLPipeline.cpp:126`.
+* Backtraces are byte-identical: `abort` → `__android_log_assert` →
+  `SkiaOpenGLPipeline::swapBuffers+172` → `CanvasContext::draw+320` →
+  `DrawFrameTask` → `WorkQueue::process` → `RenderThread::threadLoop`.
+* The only GL-related log line before the fatal is
+  `E OpenGLRenderer: GL error:  GL_INVALID_ENUM`.
+
+#### Where the abort comes from
+
+`libs/hwui/Debug.h` defaults `DEBUG_OPENGL` to `DEBUG_LEVEL_LOW` on userdebug
+builds. `GL_CHECKPOINT(LOW)` is the **first statement** of
+`SkiaOpenGLPipeline::swapBuffers()` and expands to
+`LOG_ALWAYS_FATAL_IF(GLUtils::dumpGLErrors(), ...)`. The invalid call is
+therefore **not** in the swap — the error is latched during the preceding
+`renderFrame()` and merely detected at the swap checkpoint.
+
+#### Tombstone timeline (`tombstone_00`, representative)
+
+| Time | Thread | Event |
+| --- | --- | --- |
+| 00:22:50.833 | 4486 (RenderThread) | `I OpenGLRenderer: Davey! duration=921ms` — previous frame succeeded |
+| 00:22:50.943 | 4453 (main) | `W Gralloc3: allocator 3.x is not supported` — `GraphicBuffer` allocation on the main thread |
+| 00:22:50.987 | 4486 (RenderThread) | `E OpenGLRenderer: GL error:  GL_INVALID_ENUM` |
+| 00:22:50.987 | 4486 (RenderThread) | `F OpenGLRenderer: GL errors! ...SkiaOpenGLPipeline.cpp:126` → abort |
+
+29 of 50 tombstones have exactly this three-line tail; the rest add only
+StatusBar/ImageWallpaper lines from other threads. Red herrings in the same
+tail:
+
+* `ImageWallpaper` draws on its own GL thread (tid 4499) through
+  `ImageGLWallpaper`/raw GLES, not through the HWUI RenderThread. Its lines are
+  coincidental in time.
+* `W Gralloc3: allocator 3.x is not supported` is the normal gralloc3→gralloc2
+  fallback; the allocation it accompanies is relevant, not the warning.
+* The main thread at crash is in `RenderProxy::setStopped` ←
+  `HardwareRenderer.setStopped` ← `ViewRootImpl.performDraw+1232`, i.e. the
+  normal post-draw sync, not a teardown trigger.
+* Early `E ion: ioctl c0044901 failed ... EINVAL` (`ION_IOC_FREE`) is init noise,
+  long before the failing frame.
+
+#### The failing call chain
+
+1. `GrGLCaps::init()` sets `fTextureSwizzleSupport = true` for GLES >= 3.0
+   (`src/gpu/gl/GrGLCaps.cpp:257,261`). The stock driver reports
+   `OpenGL ES 3.2 build 1.9@4971894`, so the flag is on.
+2. A hardware-backed bitmap sampled by HWUI is imported as an `AHardwareBuffer`.
+   `GrAHardwareBufferImageGenerator` passes `isRenderable=false`, so
+   `GrAHardwareBufferUtils::make_gl_backend_texture()` binds it as
+   `GL_TEXTURE_EXTERNAL_OES` (`0x8D65`).
+3. `GrGLGpu::bindTexture()` then enters its swizzle block, gated **only** on
+   `glCaps().textureSwizzleSupport()`, and calls
+   `glTexParameteri(target, GL_TEXTURE_SWIZZLE_R/G/B/A, ...)`
+   (or `glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, ...)`). Non-RGBA
+   configs (e.g. RGBX, whose alpha swizzle is `GL_ONE`) make this path run.
+4. REA of the stock `/vendor/lib64/egl/libGLESv2_mtk.so` (SHA-256
+   `8e846a0186afb469de0823f0a8ddb6ba2d0659d11677341b7ba8b6d431a6bb17`):
+   `glTexParameteri` is `FUN_0017abd8`. For target `0x8D65` its switch accepts
+   only `0x2800`/`0x2801` (MIN/MAG_FILTER), `0x2802`/`0x2803`/`0x8072`
+   (WRAP_S/T/R) and `0x813C` (BASE_LEVEL, value 0). Swizzle pnames
+   `0x8E42`..`0x8E45` are accepted for 2D/cube/array/multisample targets only.
+   Every other pname falls into `LAB_0017ae9c`, which records
+   `GL_INVALID_ENUM` (`0x500`) at `opengles3/tex.c:0x178`.
+5. The driver latches the error; the swap checkpoint turns it fatal.
+
+The exact bitmap that first binds an external-OES texture in the failing frame
+is deliberately not pinned down: the fix does not depend on it, since any
+sampled hardware bitmap follows the same path.
+
+#### The fix
 
 The workaround is the one phh's GSI uses for PowerVR Rogue devices:
 
 * `patches/0001-skia-ignore-vendor-texture-swizzle.patch` (from
-  `AndyCGYan/lineage_patches_unified`, lineage-17.1) makes
-  `GrGLCaps::textureSwizzleSupport()` return false when
-  `ro.skia.ignore_swizzle` is set. Skia then inserts the swizzle into shader
-  code (`shaderCaps->fConfigTextureSwizzle`) instead of programming the
-  texture unit.
+  `AndyCGYan/lineage_patches_unified`, lineage-17.1) makes, under
+  `SK_BUILD_FOR_ANDROID`, `GrGLCaps::textureSwizzleSupport()` return
+  `!GetBoolProperty("ro.skia.ignore_swizzle", false) && fTextureSwizzleSupport`.
+  Skia then inserts the swizzle into shader code
+  (`shaderCaps->fConfigTextureSwizzle`) instead of programming the texture unit.
 * `system.prop` sets `ro.skia.ignore_swizzle=true`. Skia is linked statically
   into `libhwui` (the stock vendor `libskia.so` is not loaded by SystemUI), so
-  the patch must be applied to `external/skia` at build time.
+  the patch must be applied to `external/skia` at build time. `libbase` is added
+  to `libskia` for `GetBoolProperty`; `SK_BUILD_FOR_ANDROID` derives from
+  `__ANDROID__` in `SkPreConfig.h`, so the branch compiles.
 * `.github/workflows/build.yml` applies the patch after `repo sync`, driven by
   the `patches/<name>.project` companion file, and fails the build if the
   patch no longer applies.
 
-This does not replace any GPU blob: the stock `vendor/lib{,64}/egl` and
-`libsrv_um.so` stay untouched. It also leaves HWUI's GL error checks enabled
-for real errors.
+With the property set, `GrGLGpu::bindTexture()` skips the entire swizzle block,
+so none of the rejected calls are made. Filter/wrap parameters sent to external
+OES are accepted, and `BASE_LEVEL`/`MAX_LEVEL` are already suppressed on Android
+(`fDontSetBaseOrMaxLevelForExternalTextures = true`, `GrGLCaps.cpp:2814`). This
+does not replace any GPU blob: the stock `vendor/lib{,64}/egl` and
+`libsrv_um.so` stay untouched, and HWUI's GL checks stay enabled for real errors.
 
-Full evidence chain, including the driver-level call analysis and the tombstone
-timeline: `docs/GL_INVALID_ENUM-root-cause.md`.
+#### Alternatives rejected
+
+* **Kanged CPH2185 GPU blobs** — different PVR stack/kernel ABI; reverted
+  (device `c98d89a`, vendor `4ec6b65`).
+* **Full PVR 1.11 replacement** — needs a 4.9.190 kernel BSP port
+  (`1.9@4971894` vs `1.11@5425693`).
+* **`debug.hwui.renderer=skiavk`** — no vendor Vulkan HAL in the stock dump.
+* **Non-fatal `GLUtils::dumpGLErrors()`** — masks every GL error instead of
+  avoiding the invalid call; kept as a fallback only.
+* **Runtime-only GL workaround** — `GL_CHECKPOINT` is compile-time; no property
+  disables it.
+
+#### Corroboration, caveats and verification
+
+* A same-device GSI built from Andy Yan/phh sources works with this property
+  while carrying the identical fatal checkpoint. Tombstones do not record the
+  offending GL call, so attribution rests on the driver disassembly, the Skia
+  source and that GSI precedent.
+* Modem/airplane-mode initialization is a separate issue (`mtk.md1.status`
+  stops at `bootup`, never `ready`) and is not addressed by this fix.
+* Verification still needed: build and flash the tree with `d4da4a4` applied,
+  confirm SystemUI no longer restarts and `GL error:  GL_INVALID_ENUM` is absent
+  from logcat, and confirm `getprop ro.skia.ignore_swizzle` returns `true`.
 
 ## Known limitations / porting notes
 
