@@ -507,6 +507,58 @@ jobs:
             echo "::warning::lineage_$DEVICE.mk not found in the device tree; lunch may fail"
           fi
 
+      # Device-tree patches for projects that repo sync would otherwise
+      # overwrite. Each <name>.patch has a <name>.project companion listing the
+      # project paths (one per line) it applies to.
+      - name: Apply device source patches
+        working-directory: ${{ env.SRC_DIR }}
+        run: |
+          source "$RUNNER_TEMP/ci-lib.sh"
+
+          patch_dir="$PWD/device/oppo/$DEVICE/patches"
+          if [ ! -d "$patch_dir" ]; then
+            echo "No device patches directory; nothing to apply"
+            exit 0
+          fi
+
+          shopt -s nullglob
+          patches=("$patch_dir"/*.patch)
+          if [ ${#patches[@]} -eq 0 ]; then
+            echo "No device patches; nothing to apply"
+            exit 0
+          fi
+
+          for patch in "${patches[@]}"; do
+            name="$(basename "$patch")"
+            project_file="${patch%.patch}.project"
+            if [ ! -f "$project_file" ]; then
+              echo "::error::Missing $project_file for $name"
+              exit 1
+            fi
+
+            while IFS= read -r project; do
+              project="${project%%#*}"
+              project="$(echo "$project" | xargs)"
+              [ -n "$project" ] || continue
+
+              if [ ! -d "$project" ]; then
+                echo "::error::$project is not checked out for $name"
+                exit 1
+              fi
+
+              if git -C "$project" apply --check --quiet "$patch"; then
+                git -C "$project" apply "$patch"
+                echo "Applied $name to $project"
+              elif git -C "$project" apply --reverse --check --quiet "$patch"; then
+                echo "$name already applied to $project"
+              else
+                echo "::error::$name does not apply to $project"
+                git -C "$project" apply --check "$patch" || true
+                exit 1
+              fi
+            done < "$project_file"
+          done
+
       - name: Keep kernel warnings non-fatal
         working-directory: ${{ env.SRC_DIR }}
         run: |

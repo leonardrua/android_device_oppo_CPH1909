@@ -9,6 +9,17 @@
 # Display
 ro.sf.lcd_density=320
 
+# Graphics
+#
+# The stock 8.1 PowerVR GE8320 driver advertises GLES 3.2 texture swizzle but
+# mishandles it. Skia then takes the texture-unit swizzle path and HWUI aborts
+# SystemUI's RenderThread on the resulting GL_INVALID_ENUM
+# (SkiaOpenGLPipeline.cpp:126). phh's GSI disables swizzle for PowerVR Rogue
+# devices for the same reason. external/skia is patched
+# (patches/0001-skia-ignore-vendor-texture-swizzle.patch) to honour this
+# property; Skia then applies the swizzle in shader code instead.
+ro.skia.ignore_swizzle=true
+
 # Brand
 Build.BRAND=MTK
 

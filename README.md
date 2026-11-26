@@ -1133,6 +1133,37 @@ creating volume keys for adoptable storage, and
   it makes the permissive domains in `sepolicy/vendor/device.te` redundant. Remove
   before shipping a release.
 
+### PowerVR texture swizzle and the SystemUI RenderThread abort
+
+The stock 8.1 PowerVR GE8320 driver (`OpenGL ES 3.2 build 1.9@4971894`)
+advertises texture swizzle support but is broken on this platform. Skia then
+takes the texture-unit swizzle path; on this driver that path ends in a
+latched `GL_INVALID_ENUM`, which is fatal to HWUI: `DEBUG_OPENGL` defaults to
+`DEBUG_LEVEL_LOW`, so
+`GL_CHECKPOINT(LOW)` in `SkiaOpenGLPipeline::swapBuffers()` expands to
+`LOG_ALWAYS_FATAL_IF(GLUtils::dumpGLErrors(), ...)`
+(`SkiaOpenGLPipeline.cpp:126`). SystemUI's RenderThread aborts on its first
+frame after boot and restarts in a loop.
+
+The workaround is the one phh's GSI uses for PowerVR Rogue devices:
+
+* `patches/0001-skia-ignore-vendor-texture-swizzle.patch` (from
+  `AndyCGYan/lineage_patches_unified`, lineage-17.1) makes
+  `GrGLCaps::textureSwizzleSupport()` return false when
+  `ro.skia.ignore_swizzle` is set. Skia then inserts the swizzle into shader
+  code (`shaderCaps->fConfigTextureSwizzle`) instead of programming the
+  texture unit.
+* `system.prop` sets `ro.skia.ignore_swizzle=true`. Skia is linked statically
+  into `libhwui` (the stock vendor `libskia.so` is not loaded by SystemUI), so
+  the patch must be applied to `external/skia` at build time.
+* `.github/workflows/build.yml` applies the patch after `repo sync`, driven by
+  the `patches/<name>.project` companion file, and fails the build if the
+  patch no longer applies.
+
+This does not replace any GPU blob: the stock `vendor/lib{,64}/egl` and
+`libsrv_um.so` stay untouched. It also leaves HWUI's GL error checks enabled
+for real errors.
+
 ## Known limitations / porting notes
 
 * **Fingerprint** is wired to the AOSP biometric stack via
