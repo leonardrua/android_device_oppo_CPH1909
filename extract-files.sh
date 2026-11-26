@@ -130,8 +130,7 @@ function blob_fixup() {
         # These blobs use the v28 LogMessage ABI but their process also loads
         # Android 10 VNDK-SP libs needing the current string_view helpers.
         vendor/bin/hw/android.hardware.drm@1.0-service.widevine | \
-        vendor/bin/hw/android.hardware.wifi@1.0-service | \
-        vendor/bin/ccci_fsd)
+        vendor/bin/hw/android.hardware.wifi@1.0-service)
             patchelf --add-needed "libbase_compat.so" "${2}"
             ;;
         # Android 10 dropped hidl::base::V1_0::toString(DebugInfo) and
