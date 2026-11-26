@@ -998,9 +998,9 @@ because `PRODUCT_COPY_FILES` keeps the first source for a destination.
 
 ### Properties
 
-Both property files were audited against the stock dump (`a5s-dump`:
-`system/build.prop`, `vendor/build.prop` and `vendor/default.prop`) and against the
-Android 10 / LineageOS 17.1 sources that read them. Two rules follow:
+Both property files were audited against the stock firmware dump
+(`system/build.prop`, `vendor/build.prop` and `vendor/default.prop`) and against
+the Android 10 / LineageOS 17.1 sources that read them. Two rules follow:
 
 * The stock 8.1 blobs read the **unprefixed** `ro.mtk_*` names that the stock vendor
   `build.prop` set. The `ro.vendor.mtk_*` names used by Android-10-era MTK trees
@@ -1141,7 +1141,7 @@ sources, and disassembly of the stock PowerVR driver. The fix is committed
 
 #### Symptom
 
-* All 50 tombstones in `/mnt/d/tombstones` are `com.android.systemui`, thread
+* All 50 captured tombstones are `com.android.systemui`, thread
   `RenderThread`, SIGABRT.
 * Abort message is identical in all of them:
   `GL errors! frameworks/base/libs/hwui/pipeline/skia/SkiaOpenGLPipeline.cpp:126`.
@@ -1198,7 +1198,7 @@ tail:
    `glTexParameteri(target, GL_TEXTURE_SWIZZLE_R/G/B/A, ...)`
    (or `glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, ...)`). Non-RGBA
    configs (e.g. RGBX, whose alpha swizzle is `GL_ONE`) make this path run.
-4. REA of the stock `/vendor/lib64/egl/libGLESv2_mtk.so` (SHA-256
+4. REA of the stock PowerVR GLES driver `libGLESv2_mtk.so` (SHA-256
    `8e846a0186afb469de0823f0a8ddb6ba2d0659d11677341b7ba8b6d431a6bb17`):
    `glTexParameteri` is `FUN_0017abd8`. For target `0x8D65` its switch accepts
    only `0x2800`/`0x2801` (MIN/MAG_FILTER), `0x2802`/`0x2803`/`0x8072`
