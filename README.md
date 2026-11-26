@@ -1164,6 +1164,9 @@ This does not replace any GPU blob: the stock `vendor/lib{,64}/egl` and
 `libsrv_um.so` stay untouched. It also leaves HWUI's GL error checks enabled
 for real errors.
 
+Full evidence chain, including the driver-level call analysis and the tombstone
+timeline: `docs/GL_INVALID_ENUM-root-cause.md`.
+
 ## Known limitations / porting notes
 
 * **Fingerprint** is wired to the AOSP biometric stack via
