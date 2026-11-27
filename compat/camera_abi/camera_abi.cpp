@@ -6,11 +6,15 @@
 //    dropped in Android 10; libmtkcam_device3_app.so still imports them.
 // 3) GraphicBufferMapper::lock(const native_handle*, uint32_t, const Rect&,
 //    void**) became a 6-argument function in Android 10; the 8.1 MTK camera
-//    callbackclient HAL still imports the old 4-argument form. Forward that
-//    call to the current libui implementation.
+//    callbackclient HAL and the stock MediaTek OMX video libraries still
+//    import the old 4-argument form. Forward that call to the current libui
+//    implementation.
+// 4) Fence::~Fence() is no longer exported from Android 10's libui, but the
+//    8.1 MTK OMX video libraries import the thunk. Close the legacy fd.
 
 #include <cstdint>
 #include <string>
+#include <unistd.h>
 
 struct native_handle;
 
@@ -90,3 +94,17 @@ _ZN7android19GraphicBufferMapper4lockEPK13native_handlejRKNS_4RectEPPv(
     return static_cast<android::GraphicBufferMapper*>(thiz)->lock(
             handle, usage, region, vptr, &stride, &generation);
 }
+
+// Android 8.1's Fence held a plain int fd and exported ~Fence() from libui;
+// Android 10 keeps the fd in base::unique_fd and inlines the destructor, so
+// libui no longer exports it. The stock MTK OMX video libraries still import
+// the destructor thunk and fail to load without it. Close the legacy fd.
+static void fence_destroy(void* thiz) {
+    int fd = *static_cast<int*>(thiz);
+    if (fd >= 0) {
+        close(fd);
+    }
+}
+
+extern "C" void _ZN7android5FenceD1Ev(void* thiz) { fence_destroy(thiz); }
+extern "C" void _ZN7android5FenceD2Ev(void* thiz) { fence_destroy(thiz); }

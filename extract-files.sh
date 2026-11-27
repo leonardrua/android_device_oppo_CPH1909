@@ -140,7 +140,10 @@ function blob_fixup() {
         vendor/lib*/hw/vendor.mediatek.hardware.camera.callbackclient@1.0-impl.so | \
         vendor/lib*/libmtkcam_device1.so | \
         vendor/lib*/libmtkcam_device3_app.so | \
-        vendor/lib*/libmtkcam_cct.so)
+        vendor/lib*/libmtkcam_cct.so | \
+        vendor/lib*/libcam.client.so | \
+        vendor/lib/libMtkOmxVdecEx.so | \
+        vendor/lib/libMtkOmxVenc.so)
             patchelf --add-needed "libcamera_abi_v28.so" "${2}"
             ;;
         # 8.1 MTK ViLTE libs import the MediaSource destructor thunk that
