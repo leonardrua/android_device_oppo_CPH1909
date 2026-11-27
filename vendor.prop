@@ -49,6 +49,12 @@ ro.mtk_blulight_def_support=1
 ro.mtk_aal_support=1
 ro.mtk_pq_support=2
 ro.mtk_pq_color_mode=1
+# The 8.1 DpAsyncBlitStream calls CMDQ_IOCTL_ASYNC_EXEC (_IOW('x',20,
+# struct mdp_submit)) on /dev/mtk_cmdq. This kernel's MTK_CMDQ v3 driver does
+# not implement that ioctl, so it returns ENOTTY and hwcomposer.mt6765.so
+# aborts in BliterNode::invalidate() during video playback, rebooting the
+# device. Disable the async bliter so video uses the synchronous MDP path.
+debug.hwc.async_bliter=0
 
 # DRM
 drm.service.enabled=true
