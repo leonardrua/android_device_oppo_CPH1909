@@ -204,6 +204,11 @@ function blob_fixup() {
             ;;
         vendor/lib*/libmtk-ril.so)
             patchelf --add-needed "libutilscallstack.so" "${2}"
+            # The 8.1 blob reserves the 8.1 Parcel size (104 bytes), but
+            # Android 10's libbinder Parcel is 120 bytes.  Move the two
+            # thermal-handler Parcels down by 8 bytes and grow the two AGPS
+            # heap allocations; see the script for the full explanation.
+            python3 "${MY_DIR}/tools/patch-mtk-ril-parcel-abi.py" "${2}"
             ;;
         vendor/lib*/libcam.camadapter.so)
             patchelf --add-needed "libutilscallstack.so" "${2}"

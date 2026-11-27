@@ -1026,10 +1026,41 @@ hardware Vorbis codec), so Vorbis playback is the cost of stopping the crash
 loop. Setting `debug.stagefright.c2-poolmask` does *not* work here: on
 LineageOS 17.1 `DEFAULT_LINEAR` resolves to the ION allocator too.
 
-Two unrelated `mtkfusionrild` tombstones show a stack-buffer overflow in the
-stock `libmtk-ril.so`'s `RilOemClient::executeThermal(char*)` while handling a
-`THERMAL,0,0,0,0` OEM indication. It restarts only the RIL process and is not
-part of this crash loop.
+### RIL Parcel ABI (mtkfusionrild)
+
+The same boot log also has `mtkfusionrild` tombstones with `SIGABRT` and
+
+```
+Abort message: 'stack corruption detected (-fstack-protector)'
+#02 pc ... /vendor/lib64/libmtk-ril.so (RilOemClient::executeThermal(char*)+552)
+```
+
+The crash happens while handling the `THERMAL,0,0,0,0` OEM indication, after
+the request has already been parsed and enqueued. The stock blob was built
+against Android 8.1's `libbinder`, where `sizeof(android::Parcel)` is 104
+bytes. LineageOS 17.1 loads `/system/lib64/vndk-29/libbinder.so`, whose
+`Parcel` is 120 bytes: Android 10 inserted `mRequestHeaderPresent` and
+`mWorkSourceRequestHeaderPosition` before the flags, moving the trailing
+`mOpenAshmemSize` from offset 96 to offset 112. `Parcel::initState()` writes
+that field, so every constructor/destructor writes eight bytes past the
+8.1-sized object.
+
+In `executeThermal()` the object is at `sp+8` and the stack canary is at
+`sp+120`; the `mOpenAshmemSize` store lands exactly on the canary, and the
+epilogue calls `__stack_chk_fail`. `executeShutDownByThermal()` has the same
+frame. The two AGPS handlers (`RtcAgpsNSlotController::sendAgpsMessage()` and
+`RtcAgpsdAdapter::processInput()`) allocate the object with `new(0x68)`, so
+the same store overflows the heap allocation.
+
+`tools/patch-mtk-ril-parcel-abi.py` applies six instruction patches to the
+stock blob: it moves the two thermal-handler Parcels from `sp+8` to the
+unused `sp+0..7` slot, so the 120-byte object ends at `sp+120` immediately
+before the canary, and changes the two AGPS allocations from 104 to 120
+bytes. `extract-files.sh` runs the script after adding the
+`libutilscallstack.so` dependency, and the patched blob is committed in the
+vendor tree. The two thermal handlers never call a method on their Parcel;
+the shift keeps the constructor/destructor pair valid without changing the
+request path.
 
 ### Properties
 
