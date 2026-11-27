@@ -1,32 +1,20 @@
 #
 # System properties for OPPO A5s (CPH1909, MT6765).
-#
-# Only properties that the framework/AOSP side needs and that the stock
-# ColorOS system build.prop set for this hardware. Everything the vendor blobs
-# read lives in vendor.prop instead.
+# Framework/AOSP side only; vendor blob properties live in vendor.prop.
 #
 
 # Display
 ro.sf.lcd_density=320
 
 # Graphics
-#
-# The stock 8.1 PowerVR GE8320 driver advertises GLES 3.2 texture swizzle but
-# mishandles it. Skia then takes the texture-unit swizzle path and HWUI aborts
-# SystemUI's RenderThread on the resulting GL_INVALID_ENUM
-# (SkiaOpenGLPipeline.cpp:126). phh's GSI disables swizzle for PowerVR Rogue
-# devices for the same reason. external/skia is patched
-# (patches/0001-skia-ignore-vendor-texture-swizzle.patch) to honour this
-# property; Skia then applies the swizzle in shader code instead.
+# Ignore vendor texture swizzle: stock GE8320 mishandles it and HWUI aborts.
 ro.skia.ignore_swizzle=true
 
 # Brand
 Build.BRAND=MTK
 
 # Radio
-#
-# The MTK RIL blobs are loaded by name through the generic rild shim, so the
-# framework needs these two to pick the right library and device node.
+# MTK RIL blobs are loaded by name; the framework needs these two.
 rild.libpath=mtk-ril.so
 rild.libargs=-d /dev/ttyC0
 
@@ -35,65 +23,34 @@ wifi.interface=wlan0
 wifi.direct.interface=p2p0
 wifi.tethering.interface=ap0
 
-# Wi-Fi feature gates read by the MediaTek wpa_supplicant/wifi blobs. The
-# stock system.prop set all three; without them the blobs fall back to their
-# compiled-in defaults, which disable Wi-Fi Simple Config and Wi-Fi Display.
+# Stock MediaTek wpa_supplicant/wifi feature gates.
 ro.mediatek.wlan.wsc=1
 ro.mediatek.wlan.p2p=1
 mediatek.wlan.ctia=0
 
-# Hardware keys: this device has no capacitive navigation bar
+# Hardware keys: no capacitive navigation bar
 qemu.hw.mainkeys=0
 
 # Camera
-# The stock ROM forced the shutter-sound policy off; without it CameraService
-# falls back to the region default.
+# Stock forced shutter-sound policy off; otherwise CameraService uses the region default.
 ro.camera.sound.forced=0
 
 # Audio
 ro.audio.silent=0
 
 # Codecs
-#
-# Android 10's Codec2 decoder path allocates its linear buffers through the
-# platform ION allocator (allocatorID 16, C2AllocatorIon). On this device's
-# 4.9 kernel the resulting dmabuf mappings fault with a level-3 address size
-# fault (ESR 0x92000043) the first time MediaCodec writes codec-specific data
-# into an input buffer from queueCSDInputBuffer(). That SIGBUS kills both
-# system_server and SystemUI whenever an audio/vorbis stream is opened,
-# putting the device into a crash loop.
-#
-# debug.stagefright.ccodec=0 makes Codec2InfoBuilder leave every c2.* component
-# out of MediaCodecList, so MediaCodec never creates a CCodec and the stream
-# fails to find a decoder instead of crashing the two processes. This device
-# has no working OMX Vorbis decoder either (AOSP 10 no longer builds
-# libstagefright_soft_vorbisdec and stock ColorOS has no MTK hardware Vorbis
-# codec), so losing Vorbis playback is the cost of stopping the crash loop.
+# Codec2 ION dmabuf faults on queueCSDInputBuffer; disable CCodec to stop the crash loop.
 debug.stagefright.ccodec=0
 
 # Dalvik
-#
-# ro.config.low_ram is read by core/jni/AndroidRuntime.cpp and by
-# RoSystemProperties/ActivityManager. The stock device (3/4 GB RAM) is not a
-# low-RAM device.
+# This device (3/4 GB RAM) is not low-RAM.
 ro.config.low_ram=false
 
 # Zygote
-#
-# lineage_CPH1909.mk inherits core_64_bit.mk, which already sets
-# ro.zygote=zygote64_32 through PRODUCT_VENDOR_PROPERTIES. It is deliberately
-# not repeated here: the build-system value is authoritative and a second copy
-# only invites drift.
+# ro.zygote comes from core_64_bit.mk; do not duplicate it here.
 
 # Crypto
-#
-# The fstab uses classic FDE (`encryptable=<metadata partition>`), not
-# dm-default-key metadata encryption and not FBE. Of the ro.crypto.* switches,
-# only allow_encrypt_override is used by the FDE path (vold cryptfs.cpp).
-# `ro.crypto.dm_default_key.options_format.version` does not exist in the
-# Android 10 vold at all (it was added in a later release), and
-# `ro.crypto.volume.filenames_mode` is only consulted for adoptable-storage
-# volume keys, so neither is set here.
+# Classic FDE only; other ro.crypto.* switches do not apply on Android 10 vold.
 ro.crypto.allow_encrypt_override=true
 
 # MediaTek-specific framework bits
@@ -101,10 +58,7 @@ ro.kernel.zio=38,108,105,16
 ro.zygote.preload.enable=0
 
 # Performance
-#
-# MediaTek's framework performance hints: the simple and fast start-window
-# optimizations and the response-time boost. The stock system build.prop set all
-# three; without them the framework skips the MTK perf hints entirely.
+# Stock MTK performance hints.
 ro.mtk_perf_simple_start_win=1
 ro.mtk_perf_fast_start_win=1
 ro.mtk_perf_response_time=1
