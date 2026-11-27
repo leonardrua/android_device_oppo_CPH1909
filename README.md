@@ -1057,10 +1057,11 @@ stock blob: it moves the two thermal-handler Parcels from `sp+8` to the
 unused `sp+0..7` slot, so the 120-byte object ends at `sp+120` immediately
 before the canary, and changes the two AGPS allocations from 104 to 120
 bytes. `extract-files.sh` runs the script after adding the
-`libutilscallstack.so` dependency, and the patched blob is committed in the
-vendor tree. The two thermal handlers never call a method on their Parcel;
-the shift keeps the constructor/destructor pair valid without changing the
-request path.
+`libutilscallstack.so` dependency, and the patched 64-bit blob is committed in
+the vendor tree. (Only `/vendor/lib64/libmtk-ril.so` is loaded by the 64-bit
+`mtkfusionrild`; the script skips the unused 32-bit copy.) The two thermal
+handlers never call a method on their Parcel; the shift keeps the
+constructor/destructor pair valid without changing the request path.
 
 ### Properties
 

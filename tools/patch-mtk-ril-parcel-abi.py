@@ -21,7 +21,8 @@ This script:
   * grows the two heap Parcel allocations from 104 to 120 bytes.
 
 It is idempotent and verifies every original instruction word first, so it
-fails loudly if the blob is not the expected CPH1909 build.
+fails loudly if the blob is not the expected CPH1909 build.  The 32-bit copy
+in /vendor/lib is skipped: only the 64-bit mtkfusionrild loads this library.
 """
 
 import struct
@@ -70,6 +71,14 @@ def main():
     path = sys.argv[1]
     with open(path, "rb") as blob:
         data = bytearray(blob.read())
+
+    if data[:4] != b"\x7fELF":
+        raise SystemExit("%s: not an ELF file" % path)
+    if data[4] == 1:
+        # Only the 64-bit daemon loads libmtk-ril.so; the 32-bit copy in
+        # /vendor/lib is not used by mtkfusionrild.
+        print("%s: 32-bit ELF, skipping (the 64-bit daemon uses lib64)" % path)
+        return
 
     segments = load_segments(data)
     changed = 0
