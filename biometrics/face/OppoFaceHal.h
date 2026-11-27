@@ -39,9 +39,10 @@
  * interface libraries it DT_NEEDEDs are available -- android.frameworks.
  * faceservice@1.0.so is shipped into /vendor/lib{,64} (LineageOS 17.1 does not
  * build that ColorOS-specific interface), and vendor.oppo.hardware.biometrics.
- * face@1.0.so is built from source here. initialize() uses the blocking
- * getService("default", true) because the backend is class late_start and the
- * proxy (class hal) starts first. The forwarding is reverse-engineered and
+ * face@1.0.so is built from source here. initialize() uses
+ * getService("default") (getStub=false) because the backend is binderized;
+ * passing true there requests an in-process passthrough stub that does not
+ * exist and silently returns null. The forwarding is reverse-engineered and
  * UNVERIFIED; no device logs confirm face unlock works.
  *
  * The vendor method mapping is reverse-engineered and UNVERIFIED (the vendor

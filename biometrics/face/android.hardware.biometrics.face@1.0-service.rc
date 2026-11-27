@@ -3,8 +3,8 @@
 # Registers the AOSP face@1.0 interface that the Lineage biometric stack binds
 # to. The implementation forwards to the stock OPPO face backend through
 # OppoFaceHal (see biometrics/face/OppoFaceHal.h); that backend (the vendor.oppo
-# face@1.0 service, enabled in init) is class late_start and starts after this
-# class hal service, so OppoFaceHal connects with a blocking getService retry.
+# face@1.0 service, enabled in init) is binderized and looked up with
+# getService("default") (getStub=false).
 service face_hal_default /vendor/bin/hw/android.hardware.biometrics.face@1.0-service
     class hal
     user system

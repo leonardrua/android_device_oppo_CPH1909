@@ -271,13 +271,16 @@ OppoFaceHal::OppoFaceHal() : mUserId(-1) {}
 OppoFaceHal::~OppoFaceHal() = default;
 
 bool OppoFaceHal::initialize() {
-    /* The stock vendor face backend is class late_start, while this AOSP
-     * face@1.0 service is class hal -- it starts first. A one-shot
-     * tryGetService() would return null before the backend registers and leave
-     * every operation permanently OPERATION_NOT_SUPPORTED. getService("default",
-     * true) retries until the HIDL service is registered, so the proxy connects
-     * once the backend comes up. */
-    mBackend = vface::IBiometricsFace::getService("default", true);
+    /* HIDL's generated getService(serviceName, getStub) treats the second
+     * argument as "getStub" (request a passthrough/SAME-PROCESS implementation),
+     * NOT as a retry flag. The stock vendor face service is binderized per the
+     * VINTF manifest (<transport>hwbinder</transport>) and has no -impl stub,
+     * so getStub=true always returned null -- the proxy never connected and
+     * every operation fell back to OPERATION_NOT_SUPPORTED.
+     *
+     * getService("default") uses getStub=false and waits for the hwbinder
+     * service, which is what a binderized backend needs. */
+    mBackend = vface::IBiometricsFace::getService("default");
     if (mBackend == nullptr) {
         ALOGW("OPPO vendor face service (%s) is not available; registering the "
               "AOSP face@1.0 interface with no backend "
