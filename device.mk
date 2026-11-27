@@ -181,12 +181,11 @@ PRODUCT_PACKAGES += \
 # blobs (adapted from xiaomi-lotus-devs commit f469325, "lotus: Build keymaster
 # from source", for the same MT6765 / Android 8.1 -> 10 bring-up). The keystore
 # Wi-Fi HIDL libraries are consumers of the source-built keymaster service.
-# libkeymaster_cfi_shim neutralizes Android 10's CFI check for this process so
-# the hardware TEE keymaster module can be used; see compat/keymaster_cfi/.
+# patches/0003-keymaster-disable-cfi.patch builds libkeymaster3device without
+# CFI so it can dispatch through the non-instrumented TEE keymaster module.
 PRODUCT_PACKAGES += \
     android.hardware.keymaster@3.0-service \
     android.hardware.keymaster@3.0-impl \
-    libkeymaster_cfi_shim \
     libkeystore-engine-wifi-hidl \
     libkeystore-wifi-hidl
 

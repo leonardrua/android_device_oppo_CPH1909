@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: The LineageOS Project <noreply@lineageos.org>
+Date: Fri, 27 Nov 2026 00:00:00 +0800
+Subject: [PATCH] keymaster: disable CFI for libkeymaster3device
+
+libkeymaster3device dispatches through the legacy keymaster 2.0 HAL ops table.
+The stock MediaTek/Trustonic module (libMcTeeKeymaster.so) is not
+CFI-instrumented, so Android 10 rejects the indirect call in
+Keymaster2PassthroughContext::DeleteKey() and aborts the keymaster HAL during
+fingerprint enrollment. That made keystore return a null credential response
+and crashed Settings.
+
+Follow the upstream AOSP fix for CFI failures in keymaster-adjacent binaries
+("Turn off CFI for the Keymaster VTS", I12b145dad5535846d68c97954d31a93123bb95e7)
+and build libkeymaster3device without CFI.
+---
+ Android.bp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Android.bp b/Android.bp
+index dae6f71..f2222af 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -236,6 +236,9 @@ cc_library_shared {
+ cc_library_shared {
+     name: "libkeymaster3device",
+     vendor: true,
++    sanitize: {
++        cfi: false,
++    },
+     srcs: [
+         "legacy_support/keymaster_passthrough_key.cpp",
+         "legacy_support/keymaster_passthrough_engine.cpp",
+-- 
+2.25.1

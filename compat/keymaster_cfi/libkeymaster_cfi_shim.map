@@ -1,6 +1,0 @@
-LIBC_OMR1 {
-    global:
-        __cfi_slowpath;
-    local:
-        *;
-};

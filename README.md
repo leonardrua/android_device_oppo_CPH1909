@@ -771,12 +771,14 @@ during fingerprint enrollment. A dead keymaster makes
 `ILockSettings.verifyCredential()` return null, and Settings then crashes with
 `NullPointerException` in `LockPatternUtils.checkPattern()`.
 
-`compat/keymaster_cfi/` builds `libkeymaster_cfi_shim.so`, which interposes the
-versioned `__cfi_slowpath` symbol with a no-op. The keymaster service declares
-it via `setenv LD_PRELOAD` in `zz_cph1909_interface_start.rc`, so CFI stays
-enabled for every other process. Credentials enrolled with the TEE keymaster
-remain usable; reflashing a build that instead uses the software keymaster
-invalidates them and requires clearing the lock credential once.
+`patches/0003-keymaster-disable-cfi.patch` adds `sanitize: { cfi: false }` to
+`libkeymaster3device` in `system/keymaster/Android.bp`; the build workflow
+applies it after `repo sync` using its `.project` companion. This follows the
+upstream AOSP fix for CFI failures in keymaster-adjacent binaries ("Turn off CFI
+for the Keymaster VTS", `I12b145dad5535846d68c97954d31a93123bb95e7`). CFI stays
+enabled everywhere else. Credentials enrolled with the TEE keymaster remain
+usable; reflashing a build that instead uses the software keymaster invalidates
+them and requires clearing the lock credential once.
 
 ### Resource overlay
 
