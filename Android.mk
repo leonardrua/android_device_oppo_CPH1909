@@ -31,15 +31,9 @@ ifeq ($(TARGET_DEVICE),CPH1909)
 #   gatekeeper: logs "Unable to open GateKeeper HAL" from
 #               LOG_ALWAYS_FATAL_IF; it has no software fallback and aborts.
 #
-# There is deliberately NO keystore.<variant>.so alias. Aliasing it to
-# libMcTeeKeymaster.so loads the stock 8.1 libkeymaster3device.so, which fails
-# Android 10's CFI check in Keymaster2PassthroughContext::DeleteKey and aborts
-# the keymaster HAL. That made keystore verifyCredential() return null and
-# crashed Settings with a NullPointerException during fingerprint setup. The
-# software keymaster fallback is used instead; it is not hardware-backed, but
-# it does not crash.
-#
-# Gatekeeper still gets its alias: it has no software fallback.
+# Install the names the loader expects as symlinks to the shipped modules.
+# The blobs' HMI ids are already "keystore" and "gatekeeper", so the loader's
+# id check passes.
 #
 # gatekeeper.default.so is only used when no variant candidate exists at all:
 # hw_get_module_by_class() commits to the first candidate whose file is
@@ -50,6 +44,15 @@ ifeq ($(TARGET_DEVICE),CPH1909)
 # kmsetkey needs no alias here: ro.hardware.kmsetkey=trustonic (vendor.prop)
 # takes the class-specific branch above and opens the shipped
 # kmsetkey.trustonic.so directly.
+
+KEYSTORE_SYMLINK += $(TARGET_OUT_VENDOR)/lib/hw/keystore.mt6765.so
+KEYSTORE_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/hw/keystore.mt6765.so
+
+$(KEYSTORE_SYMLINK):
+	@mkdir -p $(dir $@)
+	$(hide) ln -sf libMcTeeKeymaster.so $@
+
+ALL_DEFAULT_INSTALLED_MODULES += $(KEYSTORE_SYMLINK)
 
 GATEKEEPER_SYMLINK += $(TARGET_OUT_VENDOR)/lib/hw/gatekeeper.mt6765.so
 GATEKEEPER_SYMLINK += $(TARGET_OUT_VENDOR)/lib64/hw/gatekeeper.mt6765.so

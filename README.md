@@ -748,24 +748,35 @@ Android locates a HAL implementation with `hw_get_module_by_class()`, which trie
 `"<class>.<ro.hardware>.so"` before falling back to `"<class>.default.so"`. With
 `ro.hardware=mt6765` that means `keystore.mt6765.so` and `gatekeeper.mt6765.so`.
 The vendor image carries no symlinks and ships the MediaTek TEE modules under
-their own names. `Android.mk` deliberately aliases only gatekeeper:
+their own names, so the loader could not find either one and both services came up
+in a degraded mode — keymaster printed "Could not find any keystore module, using
+software-only implementation." and gatekeeper failed to open at all.
+
+`Android.mk` installs the names the loader expects as symlinks next to the blobs:
 
 | module name             | target                 |
 | ----------------------- | ---------------------- |
+| `keystore.mt6765.so`    | `libMcTeeKeymaster.so` |
 | `gatekeeper.mt6765.so`  | `libMcGatekeeper.so`   |
 | `gatekeeper.default.so` | `libSoftGatekeeper.so` |
 
-There is intentionally no `keystore.mt6765.so` alias. `libMcTeeKeymaster.so` pulls
-in the stock 8.1 `libkeymaster3device.so`, whose indirect call in
-`Keymaster2PassthroughContext::DeleteKey()` fails Android 10's CFI check and
-aborts the keymaster HAL. A keystore HAL crash makes `verifyCredential()` return
-null, and fingerprint setup then crashed Settings with
-`NullPointerException: VerifyCredentialResponse.getResponseCode() on a null
-object reference`. Without the alias, keymaster takes its software fallback
-(`libsoftkeymasterdevice.so`): not hardware-backed, but stable.
-
 `kmsetkey` needs no alias: `ro.hardware.kmsetkey=trustonic` in `vendor.prop` makes
 the loader open the shipped `kmsetkey.trustonic.so` directly.
+
+Keeping the TEE keymaster has one consequence: `libMcTeeKeymaster.so` is an 8.1
+blob without CFI instrumentation, while `libkeymaster3device.so` is built from
+17.1 source. Calls through the blob's ops table are rejected by Android 10's CFI
+check, aborting the keymaster HAL in `Keymaster2PassthroughContext::DeleteKey()`
+during fingerprint enrollment. A dead keymaster makes
+`ILockSettings.verifyCredential()` return null, and Settings then crashes with
+`NullPointerException` in `LockPatternUtils.checkPattern()`.
+
+`compat/keymaster_cfi/` builds `libkeymaster_cfi_shim.so`, which interposes the
+versioned `__cfi_slowpath` symbol with a no-op. The keymaster service declares
+it via `setenv LD_PRELOAD` in `zz_cph1909_interface_start.rc`, so CFI stays
+enabled for every other process. Credentials enrolled with the TEE keymaster
+remain usable; reflashing a build that instead uses the software keymaster
+invalidates them and requires clearing the lock credential once.
 
 ### Resource overlay
 
