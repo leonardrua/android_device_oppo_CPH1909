@@ -1052,16 +1052,38 @@ frame. The two AGPS handlers (`RtcAgpsNSlotController::sendAgpsMessage()` and
 `RtcAgpsdAdapter::processInput()`) allocate the object with `new(0x68)`, so
 the same store overflows the heap allocation.
 
-`tools/patch-mtk-ril-parcel-abi.py` applies six instruction patches to the
+`RilClient::requestComplete()` has a third variant: the Parcel starts at
+`sp`, the canary is at `sp+104` and the saved `x25` is at `sp+112`. The
+canary lands in Android 10's `mOwnerCookie`, which `initState()` never
+writes and which is only read when `mOwner` is set (it is always null here),
+so the canary survives. `mOpenAshmemSize` at 112, however, covers the saved
+`x25`; `initState()` zeroes it, so the epilogue restores `x25 = 0` into the
+caller -- a callee-saved register ABI violation.
+
+`RilClient::processCommands()` was audited too and needs no patch: its
+Parcel is at `sp+0x10`, so the 120-byte object ends at `sp+0x88` while the
+canary is at `sp+0xd8`. The 92-byte property buffer at `sp+0x7c` overlaps
+only the object's `mOwnerCookie`/`mOpenAshmemSize` tail, `mOwner` remains
+null, and the destructor never reads those overlapped fields.
+
+Fifteen blobs in the vendor tree reference `android::Parcel`, but only
+`libmtk-ril.so` is loaded by this boot; the rest (camera, codec, DRM and
+video-telephony libraries) never appear in the log. Within `libmtk-ril.so`
+the six constructions above are the only ones, and the blob imports no
+ashmem or `ipcSetDataReference` entry point.
+
+`tools/patch-mtk-ril-parcel-abi.py` applies eight instruction patches to the
 stock blob: it moves the two thermal-handler Parcels from `sp+8` to the
 unused `sp+0..7` slot, so the 120-byte object ends at `sp+120` immediately
-before the canary, and changes the two AGPS allocations from 104 to 120
-bytes. `extract-files.sh` runs the script after adding the
-`libutilscallstack.so` dependency, and the patched 64-bit blob is committed in
-the vendor tree. (Only `/vendor/lib64/libmtk-ril.so` is loaded by the 64-bit
-`mtkfusionrild`; the script skips the unused 32-bit copy.) The two thermal
-handlers never call a method on their Parcel; the shift keeps the
-constructor/destructor pair valid without changing the request path.
+before the canary; changes the two AGPS allocations from 104 to 120 bytes;
+and moves `requestComplete()`'s saved `x25` from `sp+112` to the free
+`sp+120` slot just past the 120-byte object. `extract-files.sh` runs the
+script after adding the `libutilscallstack.so` dependency, and the patched
+64-bit blob is committed in the vendor tree. (Only `/vendor/lib64/libmtk-ril.so`
+is loaded by the 64-bit `mtkfusionrild`; the script skips the unused 32-bit
+copy.) The two thermal handlers never call a method on their Parcel; the
+shift keeps the constructor/destructor pair valid without changing the
+request path.
 
 ### Properties
 

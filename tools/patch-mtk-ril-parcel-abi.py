@@ -14,11 +14,21 @@ THERMAL,0,0,0,0 indication aborts mtkfusionrild with "stack corruption
 detected".  The two AGPS handlers allocate their Parcel with new(0x68), so
 the same store overflows the heap allocation.
 
+RilClient::requestComplete() has a different layout: its Parcel starts at sp,
+the canary is at sp+104 and the saved x25 at sp+112.  Android 10's
+mOwnerCookie (104) therefore covers the canary, but initState() never writes
+that field, so the canary survives.  mOpenAshmemSize (112) covers saved x25,
+and initState() does zero it, so the epilogue restores x25 = 0 into the
+caller -- a callee-saved register ABI violation.  The free sp+120 slot just
+past the 120-byte object is used for the save instead.
+
 This script:
   * moves the Parcel in executeThermal() and executeShutDownByThermal()
     from sp+8 to sp, so the 120-byte object ends at the canary at sp+120
     instead of overwriting it (the old sp+0..7 slot is unused);
-  * grows the two heap Parcel allocations from 104 to 120 bytes.
+  * grows the two heap Parcel allocations from 104 to 120 bytes;
+  * moves requestComplete()'s saved x25 from sp+112 to the free sp+120
+    slot, past the end of the 120-byte Parcel.
 
 It is idempotent and verifies every original instruction word first, so it
 fails loudly if the blob is not the expected CPH1909 build.  The 32-bit copy
@@ -36,6 +46,8 @@ PATCHES = (
     (0x1CAC6C, 0x910023E0, 0x910003E0, "executeShutDownByThermal: Parcel base sp+8 -> sp"),
     (0x1CEAA8, 0x52800D00, 0x52800F00, "sendAgpsMessage: Parcel allocation 104 -> 120"),
     (0x1CF874, 0x52800D00, 0x52800F00, "processInput: Parcel allocation 104 -> 120"),
+    (0x1C8CF0, 0xF9003BF9, 0xF9003FF9, "requestComplete: save x25 at sp+120, past the Parcel"),
+    (0x1C8EAC, 0xF9403BF9, 0xF9403FF9, "requestComplete: restore x25 from sp+120"),
 )
 
 
