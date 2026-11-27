@@ -109,13 +109,7 @@ ro.mtk_perf_simple_start_win=1
 ro.mtk_perf_fast_start_win=1
 ro.mtk_perf_response_time=1
 
-# ADB over USB
-#
-# The stock MTK 4.9 kernel's FunctionFS AIO worker (ffs_user_copy_worker)
-# calls copy_to_user() while fs=KERNEL_DS. Android 10's adbd enables the
-# nonblocking/AIO path by default, so every adb shell/logcat session faults in
-# __arch_copy_to_user ("Accessing user space memory with fs=KERNEL_DS") and
-# the kernel exception-reboots the device. Force adbd's blocking FunctionFS
-# path instead (adb/daemon/usb.cpp:740-748 reads these two properties).
+# ADB: stock 4.9 ffs_user_copy_worker faults with fs=KERNEL_DS on every shell.
+# Disable adbd's nonblocking FunctionFS path (adb/daemon/usb.cpp:740-748).
 persist.adb.nonblocking_ffs=0
 ro.adb.nonblocking_ffs=0
