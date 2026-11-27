@@ -11,6 +11,9 @@
 //    implementation.
 // 4) Fence::~Fence() is no longer exported from Android 10's libui, but the
 //    8.1 MTK OMX video libraries import the thunk. Close the legacy fd.
+// 5) GraphicBuffer::lock(uint32_t, void**) became a 4-argument function in
+//    Android 10. The 8.1 MTK camera client imports the old 2-argument form;
+//    forward it with dummy stride/generation outputs.
 
 #include <cstdint>
 #include <string>
@@ -26,6 +29,11 @@ class GraphicBufferMapper {
  public:
     int lock(const native_handle* handle, uint32_t usage, const Rect& region,
              void** vptr, int* stride, int* generation);
+};
+
+class GraphicBuffer {
+ public:
+    int lock(uint32_t usage, void** vptr, int* stride, int* generation);
 };
 
 namespace hidl {
@@ -108,3 +116,15 @@ static void fence_destroy(void* thiz) {
 
 extern "C" void _ZN7android5FenceD1Ev(void* thiz) { fence_destroy(thiz); }
 extern "C" void _ZN7android5FenceD2Ev(void* thiz) { fence_destroy(thiz); }
+
+// Old ABI: GraphicBuffer::lock(usage, vptr). Android 10's libui only exports
+// the 4-argument overload, so forward with dummy stride/generation outputs.
+// The 8.1 blob imports this from libcam.client.so; without it dlopen() of
+// libmtkcam_device1.so fails and the HAL exposes zero cameras.
+extern "C" int _ZN7android13GraphicBuffer4lockEjPPv(
+        void* thiz, uint32_t usage, void** vptr) {
+    int stride = 0;
+    int generation = 0;
+    return static_cast<android::GraphicBuffer*>(thiz)->lock(
+            usage, vptr, &stride, &generation);
+}
