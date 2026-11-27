@@ -2,7 +2,9 @@
 //
 // 1) hidl::base::V1_0::toString(const DebugInfo&) was removed from Android 10's
 //    libhidlbase; the 8.1 camera provider HAL still imports it.
-// 2) GraphicBufferMapper::lock(const native_handle*, uint32_t, const Rect&,
+// 2) android.hardware.camera.device@3.2's free toString() helpers were
+//    dropped in Android 10; libmtkcam_device3_app.so still imports them.
+// 3) GraphicBufferMapper::lock(const native_handle*, uint32_t, const Rect&,
 //    void**) became a 6-argument function in Android 10; the 8.1 MTK camera
 //    callbackclient HAL still imports the old 4-argument form. Forward that
 //    call to the current libui implementation.
@@ -36,6 +38,44 @@ std::string toString(const DebugInfo& info) {
 }  // namespace V1_0
 }  // namespace base
 }  // namespace hidl
+
+namespace hardware {
+namespace camera {
+namespace device {
+namespace V3_2 {
+
+// Android 10's generated android.hardware.camera.device@3.2.so no longer
+// exports the free toString() helpers that the 8.1 MTK camera HAL imports.
+// These are only used for logging/error strings, so opaque types are enough.
+enum ErrorCode : int32_t {};
+struct StreamConfiguration {};
+struct HalStreamConfiguration {};
+struct Stream {};
+
+std::string toString(ErrorCode code) {
+    (void)code;
+    return std::string("ErrorCode");
+}
+
+std::string toString(const StreamConfiguration& config) {
+    (void)config;
+    return std::string("StreamConfiguration");
+}
+
+std::string toString(const HalStreamConfiguration& config) {
+    (void)config;
+    return std::string("HalStreamConfiguration");
+}
+
+std::string toString(const Stream& stream) {
+    (void)stream;
+    return std::string("Stream");
+}
+
+}  // namespace V3_2
+}  // namespace device
+}  // namespace camera
+}  // namespace hardware
 
 }  // namespace android
 

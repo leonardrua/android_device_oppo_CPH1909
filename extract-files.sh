@@ -139,6 +139,7 @@ function blob_fixup() {
         vendor/lib*/hw/android.hardware.camera.provider@2.4-impl-mediatek.so | \
         vendor/lib*/hw/vendor.mediatek.hardware.camera.callbackclient@1.0-impl.so | \
         vendor/lib*/libmtkcam_device1.so | \
+        vendor/lib*/libmtkcam_device3_app.so | \
         vendor/lib*/libmtkcam_cct.so)
             patchelf --add-needed "libcamera_abi_v28.so" "${2}"
             ;;
