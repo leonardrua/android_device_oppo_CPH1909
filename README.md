@@ -945,56 +945,31 @@ stock file is copied unchanged to `configs/media/media_profiles_V1_0.xml` and
 installed as `/vendor/etc/media_profiles_V1_0.xml`, keeping the device's own
 1080p/720p camcorder profiles and encoder capabilities.
 
-### xHE-AAC decoder
+### AAC decoder
 
-Instagram and Facebook serve some audio tracks as xHE-AAC (`mp4a.40.42`). Neither
-Android 10's C2 AAC decoder nor AOSP's SoftAAC2 OMX decoder can decode that
-profile, and Meta's HeroPlayer picks a decoder by MIME without falling back. The
-build therefore compiles AOSP's libxaac-backed OMX decoder from source and makes it
-the image's AAC decoder:
+The 32-bit vendor OMX service (`/vendor/bin/hw/android.hardware.media.omx@1.0-service`)
+loads `libstagefright_softomx_plugin.so` from `/vendor/lib`, which then dlopens each
+soft codec from the same `sphal` namespace. The installed image contains
+`libstagefright_soft_aacdec.so` but **not** `libstagefright_soft_xaacdec.so`,
+even though `configs/media/media_codecs_google_audio.xml` advertised
+`OMX.google.xaac.decoder` for all of `audio/mp4a-latm`. Facebook/Instagram
+AAC tracks therefore failed to instantiate a decoder:
 
-```make
-PRODUCT_PACKAGES += \
-    libstagefright_softomx \
-    libstagefright_softomx_plugin \
-    libstagefright_soft_xaacdec
+```
+MediaPlayerNative: error (1, -2147483648)
 ```
 
-`libstagefright_soft_xaacdec` is `SoftXAAC` from
-`frameworks/av/media/libstagefright/codecs/xaacdec`, with `external/libxaac` linked
-in statically. It inherits `compile_multilib: "32"` from
-`libstagefright_softomx-defaults`, matching the 32-bit 8.1 vendor OMX service.
+which is what made Facebook videos show a black surface with no sound. The
+device copy now advertises `OMX.google.aac.decoder` (SoftAAC2), whose library is
+present, for AAC-LC/HE-AAC. xHE-AAC (`mp4a.40.42`) is no longer claimed by the
+config; restoring it requires fixing the `libstagefright_soft_xaacdec` build/install
+first.
 
-The platform plugin is loaded by `OMXMaster::addPlatformPlugin()` through
-`android_load_sphal_library()`, i.e. into the isolated `sphal` linker namespace,
-and `SoftOMXPlugin` then `dlopen()`s each codec from that same namespace. On this
-full-VNDK build `sphal` searches only `/odm/${LIB}`, `/vendor/${LIB}` and
-`/vendor/${LIB}/hw` — it never searches `/system/lib`. `libstagefright_softomx-defaults`
-(`frameworks/av media/libstagefright/omx/Android.bp`) is `vendor_available`, so Soong
-installs the plugin **and every soft codec using the defaults** — including
-`libstagefright_soft_xaacdec` — into `/vendor/lib` on its own (verified in the built
-vendor image). An earlier revision kept a `cp` rule here under the belief that the
-codec was not vendor_available; it only duplicated the module's own install command
-and produced `overriding commands for target .../vendor/lib/libstagefright_soft_xaacdec.so`
-warnings (masked by `BUILD_BROKEN_DUP_RULES`), and has been removed.
-
-AOSP's `SoftOMXPlugin.cpp` registers two components for the `audio_decoder.aac`
-role and leaves the selection to the vendor `media_codecs_google_audio.xml`:
-`OMX.google.aac.decoder` (SoftAAC2, stops at HE-AAC) and `OMX.google.xaac.decoder`
-(libxaac, supports AAC-LC, HE-AAC, HE-AACv2 and xHE-AAC). The device copy in
-`configs/media/media_codecs_google_audio.xml` advertises only the xaac component
-for the whole `audio/mp4a-latm` type, so it also serves the plain-AAC slot that
-Facebook Lite selects by MIME. Software OMX audio codecs rank ahead of C2 software
-codecs, so the xaac node is chosen for AAC playback.
-
-`configs/media/media_codecs_google_video_le.xml` replaces the stock Google software
-video list with an empty `<Included>`: installing the platform plugin registers
-Google's software video component names, but their libraries are not built in this
-image and MediaTek's hardware OMX video codecs cover every format the stock file
-listed; the entries would otherwise advertise codecs that fail when instantiated.
-
-Both overrides are listed in `device.mk` before the vendor makefile is inherited,
-because `PRODUCT_COPY_FILES` keeps the first source for a destination.
+`configs/media/media_codecs_google_video_le.xml` stays empty: MediaTek's
+hardware OMX video codecs in `media_codecs_mediatek_video.xml` cover AVC, HEVC,
+VP9 and MPEG4. Both XML overrides are listed in `device.mk` before the vendor
+makefile is inherited, because `PRODUCT_COPY_FILES` keeps the first source for
+a destination.
 
 ### Codec2 ION SIGBUS (SystemUI / system_server)
 

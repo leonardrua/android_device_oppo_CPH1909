@@ -15,29 +15,19 @@
 -->
 
 <!--
-     CPH1909: AOSP's SoftOMXPlugin.cpp registers two implementations for the
-     audio_decoder.aac role and leaves the choice to this file:
-
-       OMX.google.aac.decoder   -> libstagefright_soft_aacdec  (SoftAAC2, no xHE)
-       OMX.google.xaac.decoder  -> libstagefright_soft_xaacdec (libxaac, xHE)
-
-     This image builds only the libxaac implementation, which decodes AAC-LC,
-     HE-AAC, HE-AACv2 and xHE-AAC (mp4a.40.42). Advertising the xaac node for
-     the whole audio/mp4a-latm type makes it the AAC decoder for every profile,
-     including the plain-AAC slot that Facebook Lite selects by MIME.
-
-     The other Google audio entries from the stock 8.1 file are deliberately
-     omitted: their libstagefright_soft_* libraries are not built into this
-     image, so leaving them here would advertise components that fail to
-     instantiate. The C2 software codecs (media_codecs_sw.xml) and MediaTek's
-     hardware audio codecs cover those remaining formats.
+     CPH1909: 32-bit /vendor/lib contains libstagefright_soft_aacdec.so, but
+     libstagefright_soft_xaacdec.so is not installed by the current build.
+     Advertising OMX.google.xaac.decoder for audio/mp4a-latm therefore picks a
+     component that fails to instantiate, so Facebook/Instagram AAC tracks fail
+     with MediaPlayer error (1, -2147483648) and the video appears black and
+     silent. Advertise the SoftAAC2 node whose library is actually present.
 -->
 <Included>
     <Decoders>
-        <MediaCodec name="OMX.google.xaac.decoder" type="audio/mp4a-latm">
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="7350,8000,11025,12000,16000,22050,24000,32000,44100,48000,88200,96000" />
-            <Limit name="bitrate" range="8000-960000" />
+        <MediaCodec name="OMX.google.aac.decoder" type="audio/mp4a-latm">
+            <Limit name="channel-count" max="6" />
+            <Limit name="sample-rate" ranges="7350,8000,11025,12000,16000,22050,24000,32000,44100,48000" />
+            <Limit name="bitrate" range="8000-576000" />
         </MediaCodec>
     </Decoders>
 </Included>
