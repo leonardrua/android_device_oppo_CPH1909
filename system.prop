@@ -53,6 +53,24 @@ ro.camera.sound.forced=0
 # Audio
 ro.audio.silent=0
 
+# Codecs
+#
+# Android 10's Codec2 decoder path allocates its linear buffers through the
+# platform ION allocator (allocatorID 16, C2AllocatorIon). On this device's
+# 4.9 kernel the resulting dmabuf mappings fault with a level-3 address size
+# fault (ESR 0x92000043) the first time MediaCodec writes codec-specific data
+# into an input buffer from queueCSDInputBuffer(). That SIGBUS kills both
+# system_server and SystemUI whenever an audio/vorbis stream is opened,
+# putting the device into a crash loop.
+#
+# debug.stagefright.ccodec=0 makes Codec2InfoBuilder leave every c2.* component
+# out of MediaCodecList, so MediaCodec never creates a CCodec and the stream
+# fails to find a decoder instead of crashing the two processes. This device
+# has no working OMX Vorbis decoder either (AOSP 10 no longer builds
+# libstagefright_soft_vorbisdec and stock ColorOS has no MTK hardware Vorbis
+# codec), so losing Vorbis playback is the cost of stopping the crash loop.
+debug.stagefright.ccodec=0
+
 # Dalvik
 #
 # ro.config.low_ram is read by core/jni/AndroidRuntime.cpp and by

@@ -996,6 +996,41 @@ listed; the entries would otherwise advertise codecs that fail when instantiated
 Both overrides are listed in `device.mk` before the vendor makefile is inherited,
 because `PRODUCT_COPY_FILES` keeps the first source for a destination.
 
+### Codec2 ION SIGBUS (SystemUI / system_server)
+
+A boot log from the reverted-GPU build still showed a crash loop: 44 tombstones
+with `signal 7 (SIGBUS)` in `android::MediaCodec::queueCSDInputBuffer()`, split
+between `com.android.systemui` and `system_server`, and 53 matching kernel lines
+
+```
+Unhandled fault: level 3 address size fault (0x92000043) at 0x...
+```
+
+All crashes are the same 30-byte `memcpy` into a 32 KiB `anon_inode:dmabuf`
+mapping. The source begins with `\x01vorbis`: MediaCodec is queueing the Vorbis
+identification header into `c2.android.vorbis.decoder`'s input buffer. The
+buffer comes from Codec2's platform allocator (`allocatorID 16`,
+`C2AllocatorIon`), and the same boot log shows repeated
+`ion ioctl c0044901 failed with code -1: Invalid argument`. The first write to
+that mapping faults at PTE level, so each attempt to open an `audio/vorbis`
+stream kills both processes and they restart into the same state.
+
+`debug.stagefright.ccodec=0` in `system.prop` is the supported Android 10 knob:
+`Codec2InfoBuilder::buildMediaCodecList()` treats option 0 as "no Codec 2.0
+components are available", so `c2.android.vorbis.decoder` never enters
+`MediaCodecList` and `MediaCodec::GetCodecBase()` never creates a `CCodec`.
+The stream then fails to find a decoder instead of SIGBUS-ing the two
+processes; the device has no working OMX Vorbis decoder either (AOSP 10 no
+longer builds `libstagefright_soft_vorbisdec` and stock ColorOS has no MTK
+hardware Vorbis codec), so Vorbis playback is the cost of stopping the crash
+loop. Setting `debug.stagefright.c2-poolmask` does *not* work here: on
+LineageOS 17.1 `DEFAULT_LINEAR` resolves to the ION allocator too.
+
+Two unrelated `mtkfusionrild` tombstones show a stack-buffer overflow in the
+stock `libmtk-ril.so`'s `RilOemClient::executeThermal(char*)` while handling a
+`THERMAL,0,0,0,0` OEM indication. It restarts only the RIL process and is not
+part of this crash loop.
+
 ### Properties
 
 Both property files were audited against the stock firmware dump
