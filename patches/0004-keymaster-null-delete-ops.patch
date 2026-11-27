@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: The LineageOS Project <noreply@lineageos.org>
+Date: Fri, 27 Nov 2026 00:00:00 +0800
+Subject: [PATCH] keymaster: no-op delete ops when the legacy HAL omits them
+
+The stock MediaTek/Trustonic keymaster 2.0 module (libMcTeeKeymaster.so)
+implements generate/import/begin/update/finish but has no delete_key or
+delete_all_keys ops. Keymaster2PassthroughContext calls those null pointers
+unconditionally, aborting android.hardware.keymaster@3.0-service during
+fingerprint enrollment. Keystore then returns a null credential response and
+Settings crashes.
+
+Return KM_ERROR_OK when the legacy device has no delete op. This replaces the
+earlier "disable CFI" workaround: the CFI abort was itself caused by the null
+indirect-call target, so once the null call is skipped CFI can remain enabled.
+---
+ contexts/keymaster2_passthrough_context.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/contexts/keymaster2_passthrough_context.cpp b/contexts/keymaster2_passthrough_context.cpp
+index 678eaaa..e579745 100644
+--- a/contexts/keymaster2_passthrough_context.cpp
++++ b/contexts/keymaster2_passthrough_context.cpp
+@@ -107,10 +107,15 @@ keymaster_error_t Keymaster2PassthroughContext::ParseKeyBlob(const KeymasterKeyB
+ }
+ 
+ keymaster_error_t Keymaster2PassthroughContext::DeleteKey(const KeymasterKeyBlob& blob) const {
++    // The stock MediaTek/Trustonic keymaster 2.0 module does not implement
++    // delete_key; calling the null ops pointer aborts the HAL. Key blobs are
++    // managed by keystore, so treating deletion as a no-op is safe here.
++    if (!device_->delete_key) return KM_ERROR_OK;
+     return device_->delete_key(device_, &blob);
+ }
+ 
+ keymaster_error_t Keymaster2PassthroughContext::DeleteAllKeys() const {
++    if (!device_->delete_all_keys) return KM_ERROR_OK;
+     return device_->delete_all_keys(device_);
+ }
+ 
+-- 
+2.25.1

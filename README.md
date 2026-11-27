@@ -763,22 +763,24 @@ software-only implementation." and gatekeeper failed to open at all.
 `kmsetkey` needs no alias: `ro.hardware.kmsetkey=trustonic` in `vendor.prop` makes
 the loader open the shipped `kmsetkey.trustonic.so` directly.
 
-Keeping the TEE keymaster has one consequence: `libMcTeeKeymaster.so` is an 8.1
-blob without CFI instrumentation, while `libkeymaster3device.so` is built from
-17.1 source. Calls through the blob's ops table are rejected by Android 10's CFI
-check, aborting the keymaster HAL in `Keymaster2PassthroughContext::DeleteKey()`
-during fingerprint enrollment. A dead keymaster makes
+Keeping the TEE keymaster has one consequence: the stock `libMcTeeKeymaster.so`
+implements generate/import/begin/update/finish but has **no `delete_key` or
+`delete_all_keys` ops**. `Keymaster2PassthroughContext` calls those null
+pointers unconditionally during fingerprint enrollment. Android 10's CFI check
+catches the null indirect target and aborts the keymaster HAL; disabling CFI
+only converted that abort into a `SIGSEGV` at `pc 0x0`. A dead keymaster makes
 `ILockSettings.verifyCredential()` return null, and Settings then crashes with
-`NullPointerException` in `LockPatternUtils.checkPattern()`.
+`NullPointerException` in `LockPatternUtils.checkPattern()`; on a later boot
+it also produced `Failed to decrypt blob` in `system_server`.
 
-`patches/0003-keymaster-disable-cfi.patch` adds `sanitize: { cfi: false }` to
-`libkeymaster3device` in `system/keymaster/Android.bp`; the build workflow
-applies it after `repo sync` using its `.project` companion. This follows the
-upstream AOSP fix for CFI failures in keymaster-adjacent binaries ("Turn off CFI
-for the Keymaster VTS", `I12b145dad5535846d68c97954d31a93123bb95e7`). CFI stays
-enabled everywhere else. Credentials enrolled with the TEE keymaster remain
-usable; reflashing a build that instead uses the software keymaster invalidates
-them and requires clearing the lock credential once.
+`patches/0004-keymaster-null-delete-ops.patch` (applied by the build workflow
+after `repo sync` via its `.project` companion) adds null checks in
+`system/keymaster/contexts/keymaster2_passthrough_context.cpp` and returns
+`KM_ERROR_OK` when the legacy module has no delete op. Key blobs are managed by
+keystore, so a no-op delete is safe here. CFI stays enabled. Credentials
+enrolled with the TEE keymaster remain usable; reflashing a build that instead
+uses the software keymaster invalidates them and requires clearing the lock
+credential once.
 
 ### Resource overlay
 
