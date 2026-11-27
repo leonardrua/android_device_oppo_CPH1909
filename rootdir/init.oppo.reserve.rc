@@ -11,6 +11,12 @@
 ### directory below inherits that label and there is nothing to relabel.
 ##################################################################################
 
+# Android 10's Wi-Fi HAL drives nl80211 directly and never opens /dev/wmtWifi,
+# so MediaTek's WiFi function stays off and no wlan0 is ever created. The stock
+# libwifi-hal used to write "1" here; do the same once WMT is ready.
+on property:service.wcn.driver.ready=yes
+    write /dev/wmtWifi 1
+
 on post-fs-data
     # Android 10's wpa_supplicant requires its config files before it will
     # start. The stock /data image shipped them; a freshly flashed /data does
