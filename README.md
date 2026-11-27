@@ -748,17 +748,21 @@ Android locates a HAL implementation with `hw_get_module_by_class()`, which trie
 `"<class>.<ro.hardware>.so"` before falling back to `"<class>.default.so"`. With
 `ro.hardware=mt6765` that means `keystore.mt6765.so` and `gatekeeper.mt6765.so`.
 The vendor image carries no symlinks and ships the MediaTek TEE modules under
-their own names, so the loader could not find either one and both services came up
-in a degraded mode — keymaster printed "Could not find any keystore module, using
-software-only implementation." and gatekeeper failed to open at all.
-
-`Android.mk` installs the names the loader expects as symlinks next to the blobs:
+their own names. `Android.mk` deliberately aliases only gatekeeper:
 
 | module name             | target                 |
 | ----------------------- | ---------------------- |
-| `keystore.mt6765.so`    | `libMcTeeKeymaster.so` |
 | `gatekeeper.mt6765.so`  | `libMcGatekeeper.so`   |
 | `gatekeeper.default.so` | `libSoftGatekeeper.so` |
+
+There is intentionally no `keystore.mt6765.so` alias. `libMcTeeKeymaster.so` pulls
+in the stock 8.1 `libkeymaster3device.so`, whose indirect call in
+`Keymaster2PassthroughContext::DeleteKey()` fails Android 10's CFI check and
+aborts the keymaster HAL. A keystore HAL crash makes `verifyCredential()` return
+null, and fingerprint setup then crashed Settings with
+`NullPointerException: VerifyCredentialResponse.getResponseCode() on a null
+object reference`. Without the alias, keymaster takes its software fallback
+(`libsoftkeymasterdevice.so`): not hardware-backed, but stable.
 
 `kmsetkey` needs no alias: `ro.hardware.kmsetkey=trustonic` in `vendor.prop` makes
 the loader open the shipped `kmsetkey.trustonic.so` directly.
