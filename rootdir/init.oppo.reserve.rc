@@ -13,8 +13,10 @@
 
 # Android 10's Wi-Fi HAL drives nl80211 directly and never opens /dev/wmtWifi,
 # so MediaTek's WiFi function stays off and no wlan0 is ever created. The stock
-# libwifi-hal used to write "1" here; do the same once WMT is ready.
-on property:service.wcn.driver.ready=yes
+# libwifi-hal used to write "1" here; do the same only after wmt_launcher has
+# configured STP (it sets formeta.ready after "set STP mode success"). Writing
+# earlier makes pwr_on fail and tears down stp_if_tx.
+on property:service.wcn.formeta.ready=yes
     write /dev/wmtWifi 1
 
 on post-fs-data
